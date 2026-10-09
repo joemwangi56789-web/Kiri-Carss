@@ -1,0 +1,633 @@
+
+:root {
+  --blue: #075de8;
+  --blue-dark: #0645b4;
+  --blue-light: #eaf2ff;
+  --white: #ffffff;
+  --background: #f5f8ff;
+  --text: #18243a;
+  --muted: #64748b;
+  --border: #dce5f2;
+  --green: #16864a;
+  --radius: 16px;
+  --shadow: 0 8px 28px rgba(19, 54, 110, 0.09);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text);
+  background: var(--background);
+  line-height: 1.6;
+}
+
+a {
+  color: var(--blue);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+.primary-link,
+.secondary-link,
+.dashboard-link {
+  display: inline-block;
+  border-radius: 10px;
+  padding: 12px 18px;
+  font-weight: 700;
+}
+
+button {
+  border: none;
+  color: var(--white);
+  background: var(--blue);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+button:hover {
+  background: var(--blue-dark);
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--white);
+  color: var(--text);
+  outline: none;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(7, 93, 232, 0.1);
+}
+
+label {
+  display: block;
+  margin: 14px 0 6px;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin-top: 0;
+}
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 6%;
+  background: var(--white);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.brand:hover {
+  text-decoration: none;
+}
+
+.brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--blue);
+  color: var(--white);
+  font-size: 1.3rem;
+}
+
+.main-nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.main-nav a {
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.hero {
+  min-height: 500px;
+  display: flex;
+  align-items: center;
+  padding: 75px 7%;
+  color: var(--white);
+  background:
+    linear-gradient(100deg, rgba(3, 28, 73, 0.93), rgba(7, 93, 232, 0.65)),
+    url("https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1800&q=85")
+    center / cover no-repeat;
+}
+
+.hero-content {
+  max-width: 720px;
+}
+
+.eyebrow {
+  color: var(--blue);
+  font-size: 0.8rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+
+.hero .eyebrow {
+  color: #b9d6ff;
+}
+
+.hero h1 {
+  margin-bottom: 18px;
+  font-size: clamp(2.5rem, 7vw, 4.8rem);
+  line-height: 1.08;
+}
+
+.hero-description {
+  max-width: 580px;
+  font-size: 1.1rem;
+  color: #e6efff;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.primary-link {
+  background: var(--white);
+  color: var(--blue);
+}
+
+.secondary-link {
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  color: var(--white);
+}
+
+.hero-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.hero-values span {
+  padding: 7px 15px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.marketplace-section,
+.about-section {
+  padding: 65px 6%;
+}
+
+.section-heading {
+  margin-bottom: 28px;
+  text-align: center;
+}
+
+.section-heading h2,
+.about-section h2 {
+  margin-bottom: 10px;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+}
+
+.section-heading p:last-child {
+  color: var(--muted);
+}
+
+.filter-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--white);
+  box-shadow: var(--shadow);
+}
+
+.filter-field label {
+  margin-top: 0;
+}
+
+.filter-panel button {
+  align-self: end;
+}
+
+.filter-panel .reset-button {
+  color: var(--blue);
+  background: var(--blue-light);
+}
+
+.results-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 35px 0 18px;
+}
+
+.results-heading h3 {
+  margin-bottom: 0;
+}
+
+.results-heading p {
+  color: var(--muted);
+}
+
+.cars-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.vehicle-card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--white);
+  box-shadow: var(--shadow);
+}
+
+.vehicle-card img {
+  display: block;
+  width: 100%;
+  height: 210px;
+  object-fit: cover;
+  background: var(--blue-light);
+}
+
+.vehicle-card h4 {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+}
+
+.vehicle-card > h4,
+.vehicle-card > p,
+.vehicle-card > button,
+.vehicle-card > a,
+.vehicle-card .vehicle-details {
+  margin-right: 18px;
+  margin-left: 18px;
+}
+
+.vehicle-card > h4 {
+  margin-top: 16px;
+}
+
+.vehicle-price {
+  color: var(--blue);
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.vehicle-details,
+.vehicle-card p {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.vehicle-card > button,
+.vehicle-card > a {
+  margin-bottom: 18px;
+}
+
+.vehicle-card .status-tag {
+  display: inline-block;
+  margin: 0 18px 10px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: var(--blue-light);
+  color: var(--blue-dark);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.about-section {
+  background: var(--white);
+}
+
+.about-content {
+  max-width: 1100px;
+  margin: auto;
+}
+
+.about-content > p:not(.eyebrow) {
+  max-width: 750px;
+  color: var(--muted);
+}
+
+.about-values {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 32px;
+}
+
+.about-values article {
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--background);
+}
+
+.about-values h3 {
+  color: var(--blue);
+}
+
+.site-footer {
+  padding: 35px 6%;
+  text-align: center;
+  background: #071d42;
+  color: #dce8ff;
+}
+
+.footer-brand {
+  margin-bottom: 15px;
+  color: var(--white);
+}
+
+.site-footer p {
+  margin-bottom: 8px;
+}
+
+/* Login page */
+
+.login-container {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: linear-gradient(135deg, #eaf2ff, #ffffff);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 430px;
+  padding: 32px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--white);
+  box-shadow: var(--shadow);
+}
+
+.login-card h1 {
+  margin-bottom: 4px;
+  color: var(--blue);
+}
+
+.login-card > p {
+  color: var(--muted);
+}
+
+.login-card form button {
+  width: 100%;
+  margin-top: 22px;
+}
+
+#message,
+#adminMessage,
+#ownerMessage,
+#formMessage {
+  overflow-wrap: anywhere;
+}
+
+/* Owner and admin dashboards */
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 6%;
+  background: var(--blue);
+  color: var(--white);
+}
+
+.dashboard-header h1 {
+  margin-bottom: 0;
+}
+
+.dashboard-header p {
+  margin-bottom: 0;
+  color: #e4eeff;
+}
+
+.dashboard-header button {
+  color: var(--blue);
+  background: var(--white);
+}
+
+.dashboard-container {
+  max-width: 1200px;
+  margin: auto;
+  padding: 30px 20px 60px;
+}
+
+.welcome-card,
+.dashboard-card {
+  margin-bottom: 24px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--white);
+  box-shadow: var(--shadow);
+}
+
+.welcome-card h2 {
+  color: var(--blue);
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.dashboard-card h3 {
+  color: var(--blue-dark);
+}
+
+.dashboard-card form button {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.dashboard-card > button {
+  margin-top: 10px;
+}
+
+.dashboard-link {
+  margin: 8px 8px 8px 0;
+  background: var(--blue-light);
+}
+
+.admin-list-item {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow-wrap: anywhere;
+}
+
+.admin-list-item p {
+  margin-bottom: 4px;
+}
+
+#myCars {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+#myCars .vehicle-card {
+  padding-bottom: 16px;
+}
+
+#myCars .vehicle-card img {
+  margin-bottom: 14px;
+}
+
+#myCars .vehicle-card button {
+  margin-top: 10px;
+}
+
+/* Responsive layout */
+
+@media (max-width: 850px) {
+  .site-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .main-nav {
+    gap: 12px 18px;
+  }
+
+  .cars-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .filter-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .about-values {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .site-header {
+    padding: 12px 5%;
+  }
+
+  .main-nav {
+    width: 100%;
+    gap: 10px 15px;
+  }
+
+  .main-nav a {
+    font-size: 0.86rem;
+  }
+
+  .hero {
+    min-height: 460px;
+    padding: 55px 6%;
+  }
+
+  .marketplace-section,
+  .about-section {
+    padding: 45px 5%;
+  }
+
+  .filter-panel,
+  .cars-grid,
+  .dashboard-grid,
+  #myCars {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-panel {
+    padding: 18px;
+  }
+
+  .results-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .login-card {
+    padding: 24px;
+  }
+
+  .dashboard-header {
+    padding: 16px 5%;
+  }
+
+  .dashboard-container {
+    padding: 20px 14px 40px;
+  }
+
+  .welcome-card,
+  .dashboard-card {
+    padding: 18px;
+  }
+}

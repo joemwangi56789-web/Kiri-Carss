@@ -1,0 +1,194 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Kiri Cars | Find Your Next Car in Kenya</title>
+
+  <meta
+    name="description"
+    content="Discover locally used, freshly imported and brand-new vehicles with Kiri Cars. Search vehicles by make, model, year, price and type."
+  >
+
+  <meta name="theme-color" content="#075de8">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="Kiri Cars home">
+      <span class="brand-mark">K</span>
+      <span>KIRI CARS</span>
+    </a>
+
+    <nav class="main-nav">
+      <a href="#home">Home</a>
+      <a href="#cars">Browse Cars</a>
+      <a href="#about">About Us</a>
+      <a href="login.html">Dealer Login</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" id="home">
+      <div class="hero-content">
+        <p class="eyebrow">YOUR JOURNEY STARTS HERE</p>
+
+        <h1>Find the car that moves you.</h1>
+
+        <p class="hero-description">
+          Discover quality vehicles from different manufacturers,
+          compare your options, and connect with a dealer through Kiri Cars.
+        </p>
+
+        <div class="hero-actions">
+          <a class="primary-link" href="#cars">Explore Vehicles</a>
+          <a class="secondary-link" href="#about">Discover Kiri Cars</a>
+        </div>
+
+        <div class="hero-values">
+          <span>Choice</span>
+          <span>Trust</span>
+          <span>Value</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="marketplace-section" id="cars">
+      <div class="section-heading">
+        <p class="eyebrow">THE MARKETPLACE</p>
+        <h2>Find your next vehicle</h2>
+        <p>Search available listings and discover your next drive.</p>
+      </div>
+
+      <form id="filterForm" class="filter-panel">
+        <div class="filter-field">
+          <label for="searchInput">Search</label>
+          <input
+            id="searchInput"
+            type="search"
+            placeholder="Make or model"
+          >
+        </div>
+
+        <div class="filter-field">
+          <label for="manufacturerFilter">Manufacturer</label>
+          <select id="manufacturerFilter">
+            <option value="">All manufacturers</option>
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label for="typeFilter">Car type</label>
+          <select id="typeFilter">
+            <option value="">All types</option>
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label for="yearFilter">Year</label>
+          <select id="yearFilter">
+            <option value="">All years</option>
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label for="statusFilter">Vehicle status</label>
+          <select id="statusFilter">
+            <option value="">All statuses</option>
+            <option value="Locally Used">Locally Used</option>
+            <option value="Fresh Import">Fresh Import</option>
+            <option value="Brand New">Brand New</option>
+          </select>
+        </div>
+
+        <div class="filter-field">
+          <label for="minPrice">Minimum price (KSh)</label>
+          <input
+            id="minPrice"
+            type="number"
+            min="0"
+            placeholder="Minimum"
+          >
+        </div>
+
+        <div class="filter-field">
+          <label for="maxPrice">Maximum price (KSh)</label>
+          <input
+            id="maxPrice"
+            type="number"
+            min="0"
+            placeholder="Maximum"
+          >
+        </div>
+
+        <button type="submit">Apply Filters</button>
+        <button type="reset" class="reset-button">Clear Filters</button>
+      </form>
+
+      <div class="results-heading">
+        <h3>Available Vehicles</h3>
+        <p id="resultsCount" aria-live="polite">Loading vehicles...</p>
+      </div>
+
+      <div id="carsGrid" class="cars-grid">
+        <p>Loading vehicle listings...</p>
+      </div>
+    </section>
+
+    <section class="about-section" id="about">
+      <div class="about-content">
+        <p class="eyebrow">ABOUT KIRI CARS</p>
+        <h2>A smarter way to discover vehicles.</h2>
+
+        <p>
+          Kiri Cars brings vehicle listings together in one convenient place.
+          Explore different makes, models, years and prices to find an option
+          that fits your needs.
+        </p>
+
+        <div class="about-values">
+          <article>
+            <h3>Our Mission</h3>
+            <p>
+              Make vehicle discovery simpler by helping buyers explore
+              available options in one marketplace.
+            </p>
+          </article>
+
+          <article>
+            <h3>Our Values</h3>
+            <p>
+              We value clear information, convenient access and better
+              connections between buyers and dealers.
+            </p>
+          </article>
+
+          <article>
+            <h3>Our Goal</h3>
+            <p>
+              Build a useful vehicle marketplace that grows with the needs
+              of Kenyan car buyers and dealerships.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <a class="brand footer-brand" href="#home">
+      <span class="brand-mark">K</span>
+      <span>KIRI CARS</span>
+    </a>
+
+    <p>Find your next drive with Kiri Cars.</p>
+    <p>&copy; <span id="currentYear"></span> Kiri Cars. All rights reserved.</p>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

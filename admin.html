@@ -1,0 +1,150 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard | Kiri Cars</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="dashboard-header">
+    <div>
+      <h1>Kiri Cars</h1>
+      <p>Showroom Admin Dashboard</p>
+    </div>
+    <button id="logoutButton" type="button">Sign Out</button>
+  </header>
+
+  <main class="dashboard-container">
+    <section class="welcome-card">
+      <h2>Manage Your Vehicles</h2>
+      <p>Add vehicles to Kiri Cars and manage the listings you created.</p>
+      <p id="adminMessage" role="status" aria-live="polite">
+        Checking your account...
+      </p>
+    </section>
+
+    <section class="dashboard-card">
+      <h3>Add a Vehicle</h3>
+
+      <form id="carForm">
+        <label for="manufacturer">Manufacturer</label>
+        <input
+          id="manufacturer"
+          type="text"
+          placeholder="e.g. Toyota"
+          required
+        >
+
+        <label for="carType">Car type</label>
+        <select id="carType" required>
+          <option value="">Select car type</option>
+          <option value="SUV">SUV</option>
+          <option value="Sedan">Sedan</option>
+          <option value="Hatchback">Hatchback</option>
+          <option value="Wagon">Wagon</option>
+          <option value="Van">Van / Minivan</option>
+          <option value="Pickup">Pickup</option>
+          <option value="Coupe">Coupe</option>
+          <option value="Other">Other</option>
+        </select>
+
+        <label for="model">Model</label>
+        <input
+          id="model"
+          type="text"
+          placeholder="e.g. Toyota Fielder Hybrid"
+          required
+        >
+
+        <label for="year">Year of manufacture</label>
+        <input
+          id="year"
+          type="number"
+          min="1950"
+          max="2035"
+          placeholder="e.g. 2020"
+          required
+        >
+
+        <label for="price">Price in KSh</label>
+        <input
+          id="price"
+          type="number"
+          min="1"
+          step="1"
+          placeholder="e.g. 1850000"
+          required
+        >
+
+        <label for="status">Vehicle status</label>
+        <select id="status" required>
+          <option value="">Select status</option>
+          <option value="Locally Used">Locally Used</option>
+          <option value="Fresh Import">Fresh Import</option>
+          <option value="Brand New">Brand New</option>
+        </select>
+
+        <label for="mileage">Mileage in kilometres</label>
+        <input
+          id="mileage"
+          type="number"
+          min="0"
+          placeholder="e.g. 45000"
+        >
+
+        <label for="fuel">Fuel type</label>
+        <select id="fuel" required>
+          <option value="">Select fuel type</option>
+          <option value="Petrol">Petrol</option>
+          <option value="Diesel">Diesel</option>
+          <option value="Hybrid">Hybrid</option>
+          <option value="Electric">Electric</option>
+          <option value="Other">Other</option>
+        </select>
+
+        <label for="transmission">Transmission</label>
+        <select id="transmission" required>
+          <option value="">Select transmission</option>
+          <option value="Automatic">Automatic</option>
+          <option value="Manual">Manual</option>
+          <option value="CVT">CVT</option>
+          <option value="Other">Other</option>
+        </select>
+
+        <label for="description">Vehicle description</label>
+        <textarea
+          id="description"
+          rows="4"
+          placeholder="Describe the vehicle, features and condition"
+        ></textarea>
+
+        <label for="imageUrl">Vehicle image URL (optional)</label>
+        <input
+          id="imageUrl"
+          type="url"
+          placeholder="https://example.com/car.jpg"
+        >
+
+        <button id="addCarButton" type="submit">Add Vehicle</button>
+      </form>
+
+      <p id="formMessage" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="dashboard-card">
+      <h3>Your Vehicle Listings</h3>
+      <p>Only vehicles you added can be edited or removed from this dashboard.</p>
+      <button id="reloadCarsButton" type="button">Refresh Listings</button>
+      <div id="myCars">
+        Loading your vehicles...
+      </div>
+    </section>
+
+    <p><a href="index.html">View Public Website</a></p>
+  </main>
+
+  <script type="module" src="admin.js"></script>
+</body>
+</html>

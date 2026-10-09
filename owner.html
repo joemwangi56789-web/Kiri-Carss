@@ -1,0 +1,90 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Owner Dashboard | Kiri Cars</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="dashboard-header">
+    <div>
+      <h1>Kiri Cars</h1>
+      <p>Owner Dashboard</p>
+    </div>
+    <button id="logoutButton" type="button">Sign Out</button>
+  </header>
+
+  <main class="dashboard-container">
+    <section class="welcome-card">
+      <h2>Welcome, Owner</h2>
+      <p>Manage your dealership, administrators, and vehicle listings.</p>
+      <p id="ownerMessage" role="status" aria-live="polite">
+        Loading your account...
+      </p>
+    </section>
+
+    <section class="dashboard-grid">
+      <article class="dashboard-card">
+        <h3>Manage Administrators</h3>
+        <p>Create an administrator account for a showroom owner or staff member.</p>
+
+        <form id="adminForm">
+          <label for="adminName">Full name</label>
+          <input
+            id="adminName"
+            type="text"
+            placeholder="Administrator's name"
+            required
+          >
+
+          <label for="adminEmail">Email address</label>
+          <input
+            id="adminEmail"
+            type="email"
+            placeholder="admin@example.com"
+            required
+          >
+
+          <label for="adminPassword">Temporary password</label>
+          <input
+            id="adminPassword"
+            type="password"
+            placeholder="At least 6 characters"
+            minlength="6"
+            required
+          >
+
+          <button id="createAdminButton" type="submit">
+            Create Administrator
+          </button>
+        </form>
+
+        <p id="adminMessage" role="status" aria-live="polite"></p>
+      </article>
+
+      <article class="dashboard-card">
+        <h3>Vehicle Listings</h3>
+        <p>View vehicles listed on the Kiri Cars marketplace.</p>
+        <a class="dashboard-link" href="index.html">View Public Website</a>
+        <button id="refreshButton" type="button">
+          Refresh Dashboard
+        </button>
+        <p id="carCount">Loading vehicle count...</p>
+      </article>
+
+      <article class="dashboard-card">
+        <h3>Administrator Accounts</h3>
+        <p>Review accounts registered in your dealership system.</p>
+        <button id="loadAdminsButton" type="button">
+          Load Administrators
+        </button>
+        <div id="adminsList"></div>
+      </article>
+    </section>
+  </main>
+
+  <script type="module" src="owner.js"></script>
+</body>
+</html>
