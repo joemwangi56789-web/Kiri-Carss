@@ -68,7 +68,7 @@
 
     function showDiagnostics(details) {
       diagnostics.style.display = "block";
-      diagnostics.textContent = "KIRI CARS DIAGNOSTICS\\n" + details;
+      diagnostics.textContent = "KIRI CARS DIAGNOSTICS\n" + details;
     }
 
     loginForm.addEventListener("submit", async function (event) {
@@ -100,19 +100,25 @@
 
         if (!userSnap.exists()) {
           await signOut(auth);
-          showDiagnostics(diagnosticLines.join("\\n"));
+          showDiagnostics(diagnosticLines.join("\n"));
           showMessage("Firebase login worked, but the account profile document was not found. See diagnostics below.");
           return;
         }
 
         const profile = userSnap.data();
+        const profileKeys = Object.keys(profile);
+        const activeLikeKeys = profileKeys.filter((key) => key.trim() === "active");
         diagnosticLines.push(
-          "Field names returned: " + Object.keys(profile).join(", "),
+          "Field names returned (JSON): " + JSON.stringify(profileKeys),
           "active value: " + JSON.stringify(profile.active),
           "active type: " + typeof profile.active,
-          "role value: " + JSON.stringify(profile.role)
+          "role value: " + JSON.stringify(profile.role),
+          "Keys that look like active after trimming spaces: " + JSON.stringify(activeLikeKeys),
+          ...activeLikeKeys
+            .filter((key) => key !== "active")
+            .map((key) => "Value under suspicious field " + JSON.stringify(key) + ": " + JSON.stringify(profile[key]) + " (type: " + typeof profile[key] + ")")
         );
-        showDiagnostics(diagnosticLines.join("\\n"));
+        showDiagnostics(diagnosticLines.join("\n"));
 
         const role = String(profile.role || "").trim().toLowerCase();
 
@@ -150,7 +156,7 @@
           }
         }
 
-        showDiagnostics("Error code: " + (error.code || "not provided") + "\\nError message: " + (error.message || String(error)));
+        showDiagnostics("Error code: " + (error.code || "not provided") + "\nError message: " + (error.message || String(error)));
 
         let errorText = "Login failed: " + error.message;
 
