@@ -36,6 +36,7 @@
       </form>
 
       <p id="message" role="status" aria-live="polite"></p>
+      <pre id="diagnostics" style="white-space:pre-wrap;overflow-wrap:anywhere;text-align:left;font-size:12px;background:#f2f5f8;color:#18212b;padding:12px;border-radius:8px;display:none;"></pre>
       <a href="index.html">Back to Kiri Cars</a>
     </section>
   </main>
@@ -58,10 +59,16 @@
     const passwordInput = document.getElementById("password");
     const loginButton = document.getElementById("loginButton");
     const message = document.getElementById("message");
+    const diagnostics = document.getElementById("diagnostics");
 
     function showMessage(text, isError = true) {
       message.textContent = text;
       message.style.color = isError ? "#c62828" : "#167a35";
+    }
+
+    function showDiagnostics(details) {
+      diagnostics.style.display = "block";
+      diagnostics.textContent = "KIRI CARS DIAGNOSTICS\\n" + details;
     }
 
     loginForm.addEventListener("submit", async function (event) {
@@ -83,35 +90,35 @@
         const userRef = doc(db, "admins", signedInUser.uid);
         const userSnap = await getDoc(userRef);
 
-        // Temporary diagnostics: these reveal the project, path and fields read by this page.
-        console.info("Kiri Cars diagnostic - Firebase project:", db.app.options.projectId);
-        console.info("Kiri Cars diagnostic - owner document path:", userRef.path);
-        console.info("Kiri Cars diagnostic - document exists:", userSnap.exists());
+        // Show diagnostics on the page so they are available even without a browser console.
+        const diagnosticLines = [
+          "Firebase project ID: " + db.app.options.projectId,
+          "Signed-in UID: " + signedInUser.uid,
+          "Document path checked: " + userRef.path,
+          "Document exists: " + userSnap.exists()
+        ];
 
         if (!userSnap.exists()) {
           await signOut(auth);
-          showMessage(
-            "Your Firebase login worked, but your account profile was not found at " +
-            userRef.path + ". Check the browser Console for diagnostics."
-          );
+          showDiagnostics(diagnosticLines.join("\\n"));
+          showMessage("Firebase login worked, but the account profile document was not found. See diagnostics below.");
           return;
         }
 
         const profile = userSnap.data();
-        console.info("Kiri Cars diagnostic - profile field names:", Object.keys(profile));
-        console.info("Kiri Cars diagnostic - active field value:", profile.active);
-        console.info("Kiri Cars diagnostic - active field type:", typeof profile.active);
-        console.info("Kiri Cars diagnostic - role field value:", profile.role);
+        diagnosticLines.push(
+          "Field names returned: " + Object.keys(profile).join(", "),
+          "active value: " + JSON.stringify(profile.active),
+          "active type: " + typeof profile.active,
+          "role value: " + JSON.stringify(profile.role)
+        );
+        showDiagnostics(diagnosticLines.join("\\n"));
 
         const role = String(profile.role || "").trim().toLowerCase();
 
         if (profile.active !== true) {
           await signOut(auth);
-          showMessage(
-            "Profile read from " + userRef.path +
-            ", but active is not Boolean true (received: " +
-            String(profile.active) + "). Open the browser Console and send me the Kiri Cars diagnostic lines."
-          );
+          showMessage("Profile was found, but active is not Boolean true. See the diagnostics below.");
           return;
         }
 
@@ -143,7 +150,7 @@
           }
         }
 
-        console.error("Kiri Cars login error:", error);
+        showDiagnostics("Error code: " + (error.code || "not provided") + "\\nError message: " + (error.message || String(error)));
 
         let errorText = "Login failed: " + error.message;
 
