@@ -1,54 +1,52 @@
-# Kiri Cars Website
+# Kiri Cars
 
-Kiri Cars is a public vehicle marketplace built with HTML, CSS, JavaScript ES modules, Firebase Authentication, and Cloud Firestore.
+Kiri Cars is a Kenyan vehicle marketplace built with HTML, CSS, JavaScript ES modules, Firebase Authentication, and Cloud Firestore.
 
-Repository: https://github.com/joemwangi56789-web/Kiri-Carss
+**Repository:** https://github.com/joemwangi56789-web/Kiri-Carss
 
-## Current project files
+## Features currently in the code
 
-| File | Responsibility |
+- Public homepage with vehicle listings read from Firestore.
+- Search and filters for manufacturer, car type, year, status, and minimum/maximum price.
+- Vehicle cards showing available details and an optional image loaded from an image URL.
+- WhatsApp enquiry messages prepared for the selected vehicle.
+- Email/password login for owner and showroom administrators.
+- Owner dashboard for creating administrator accounts, viewing administrator profiles, and counting listings.
+- Admin dashboard for adding vehicles and viewing/deleting listings created by that admin.
+- Account checks in the owner and admin dashboards wait for Firebase Authentication to restore the signed-in session.
+
+## Project files
+
+| File | Purpose |
 | --- | --- |
-| `index.html` | Public landing page, vehicle search/filter form, About section |
-| `app.js` | Reads public listings from Firestore, builds vehicle cards, applies filters, opens a WhatsApp enquiry |
-| `style.css` | Shared visual design and responsive layout |
-| `firebase-config.js` | Initializes Firebase app, Authentication, and Firestore |
-| `login.html` | Email/password sign-in, reads account profile and redirects based on role |
-| `owner.html` | Owner dashboard markup |
-| `owner.js` | Owner checks, admin creation, account list, total vehicle count, sign-out |
-| `admin.html` | Admin dashboard and add-vehicle form |
-| `admin.js` | Admin authorization, creates listings, loads the admin's own listings, deletes own listings |
+| `index.html` | Public homepage, marketplace filters, About section, and footer |
+| `app.js` | Loads public vehicle listings, renders cards, filters results, and prepares WhatsApp enquiries |
+| `style.css` | Shared responsive styling |
+| `firebase-config.js` | Firebase app, Authentication, and Firestore initialization |
+| `login.html` | Email/password sign-in, account-profile checks, role-based dashboard redirects, and on-page diagnostics |
+| `owner.html` | Owner dashboard layout |
+| `owner.js` | Verifies the owner, creates admins using a secondary Firebase app, lists admin profiles, and counts cars |
+| `admin.html` | Admin dashboard and vehicle-entry form |
+| `admin.js` | Verifies admin access, adds vehicles, lists the current admin's vehicles, and deletes their own listings |
 
-## How the website works
+## Firebase setup
 
-### Public marketplace
+The current `firebase-config.js` points to the Firebase project with project ID `kiri-cars`. Keep the configuration consistent across the project and any deployed copy of the website.
 
-The homepage reads documents from the Firestore `cars` collection. It uses fields such as manufacturer, model, car type, year, status, price, fuel, transmission, mileage, description, and optional image URL. Visitors can filter the results. The enquiry button opens WhatsApp with a prefilled message; the current URL uses `https://wa.me/?text=...` without a fixed business phone number, so the visitor may need to choose a WhatsApp contact.
+1. In Firebase Authentication, enable the **Email/Password** sign-in provider.
+2. Create the owner account in Authentication.
+3. In Cloud Firestore, create an `admins` collection.
+4. Create a document whose ID is exactly the owner's Firebase Authentication UID.
+5. Give that document these fields:
 
-### Login and account roles
+   | Field | Type | Owner value |
+   | --- | --- | --- |
+   | `name` | string | Owner's display name |
+   | `email` | string | Owner's sign-in email |
+   | `role` | string | `owner` |
+   | `active` | Boolean | `true` |
 
-The login page signs in using Firebase Authentication, then reads the Firestore document `admins/{uid}`, where `uid` is the signed-in Firebase user's UID.
-
-The account profile must include:
-- `name`: string
-- `email`: string
-- `role`: exactly `owner` or `admin`
-- `active`: Boolean `true`
-
-The `active` field must be a Boolean, not the text value `"true"`. The Firestore document ID must exactly match the Authentication UID. If a profile document is missing or the role/active values do not match, login will not proceed to the dashboard.
-
-### Owner dashboard
-
-The owner dashboard checks that the signed-in profile is active and has role `owner`. It can create admin accounts, list profile documents, count vehicle listings, and sign out. Admin creation uses a secondary Firebase app so creating an admin does not replace the owner's main sign-in session.
-
-### Admin dashboard
-
-The admin dashboard checks that the signed-in profile is active and has role `admin`. It saves new vehicle documents with `addedBy` set to the admin's Authentication UID. The dashboard queries and displays only listings with that UID and checks ownership before deleting a listing.
-
-## Firestore data model
-
-### `admins/{uid}`
-
-Example profile for an owner:
+The `active` field must be a real Boolean value, not the text string `"true"`. The document ID must match the UID exactly. The example below is illustrative; do not use it as a real credential.
 
 ```json
 {
@@ -59,83 +57,79 @@ Example profile for an owner:
 }
 ```
 
-This is an illustrative example, not an actual account credential. Create the document ID using the real owner UID from Firebase Authentication.
+Administrators created from the Owner Dashboard receive an `admins/{uid}` profile with `role: "admin"`, `active: true`, and metadata fields `createdAt` and `createdBy`. Their account is also created in Firebase Authentication.
 
-Admin profiles created by the owner also include `createdAt` as a Firestore timestamp and `createdBy` as the owner's UID.
+## Firestore data model
+
+### `admins/{uid}`
+
+Each account document uses the Firebase Authentication UID as its document ID. Required access-control fields are `role` and Boolean `active`; `name` and `email` are used for display and account records.
+
+Supported roles:
+- `owner` — owner dashboard access and account administration.
+- `admin` — showroom dashboard access and management of listings that admin added.
 
 ### `cars/{carId}`
 
 The admin form writes these fields:
-- `manufacturer` (string)
-- `carType` (string)
-- `model` (string)
-- `year` (number)
-- `price` (number)
-- `status` (string)
-- `mileage` (number or null)
-- `fuel` (string)
-- `transmission` (string)
-- `description` (string)
-- `imageUrl` (string; optional)
-- `addedBy` (string UID)
-- `createdAt` (Firestore timestamp)
 
-## Login problem: what the source code tells us
+| Field | Type / notes |
+| --- | --- |
+| `manufacturer` | string |
+| `carType` | string |
+| `model` | string |
+| `year` | number |
+| `price` | number in KSh |
+| `status` | string: `Locally Used`, `Fresh Import`, or `Brand New` |
+| `mileage` | number or null |
+| `fuel` | string |
+| `transmission` | string |
+| `description` | string |
+| `imageUrl` | optional HTTPS image URL |
+| `addedBy` | string containing the creator's Firebase UID |
+| `createdAt` | Firestore server timestamp |
 
-The current `login.html` explicitly checks:
+The current form accepts an image URL; it does **not** upload image files to Firebase Storage.
 
-```js
-if (profile.active !== true) {
-  // sign out and display the active-field error
-}
-```
+## How login works and how to troubleshoot it
 
-Therefore, if the page reports that the profile was found but `active` is `undefined`, the code successfully found a document at `admins/{currentUserUid}`, but that document did not contain a readable field named exactly `active`. This message points first to Firestore profile data, not a wrong password.
+1. The login page signs in with Firebase Authentication.
+2. It reads `admins/{signedInUser.uid}` from Firestore.
+3. It checks that `active` is Boolean `true`.
+4. It redirects accounts with role `owner` to `owner.html`, and accounts with role `admin` to `admin.html`.
 
-### Steps to check in Firebase Console
+The login page currently includes an on-screen **KIRI CARS DIAGNOSTICS** area. If login fails after the email and password are accepted, read that area for the project ID, signed-in UID, document path, whether the document exists, the field names returned, the value/type of `active`, the role, or a Firebase error. Use those details to locate the actual cause rather than changing fields or rules blindly.
 
-1. Open the Firebase project configured in `firebase-config.js` (project ID `kiri-cars`).
-2. Go to Authentication and find the account you are trying to sign in with.
-3. Copy that account's UID.
-4. Open Firestore Database and the `admins` collection.
-5. Open the document whose document ID exactly equals that UID.
-6. Add or correct `active`: field type **Boolean**, value **true**.
-7. Set `role` to exactly `owner` for the owner account or `admin` for an admin account.
-8. Save and try signing in again.
+If the account is not authorized, check the exact document path shown in diagnostics. A profile document for a different UID will not authorize the signed-in user.
 
-If the document ID is correct but the error remains, verify that the browser is loading this same Firebase project and not an older WebCode deployment/configuration.
+## Firestore security rules
 
-## Code issue to address
+Firestore Security Rules must enforce access at the database, not just through the page redirects. The intended access model is:
 
-In `owner.js`, `requireOwner()` immediately reads `auth.currentUser` during module startup. Firebase may still be restoring the persisted session at that moment, so `currentUser` can temporarily be `null` even when the owner previously signed in. That can cause an unnecessary redirect to the login page when opening or refreshing the owner dashboard. A robust fix is to wait for Firebase's `onAuthStateChanged(auth, callback)` before checking the profile and loading owner data.
+- Public visitors can read vehicle listings.
+- Only the owner can create, update, or delete administrator profile documents.
+- The owner can manage all vehicle listings.
+- An active admin can create a vehicle only when its `addedBy` field matches that admin's UID.
+- An admin can update or delete only their own listings while their account is active and has role `admin`.
 
-This is separate from the reported `active: undefined` login message and should be tested independently.
+Review and test rules against these requirements before using the site with real customers. Do not use unrestricted public write access. The browser-side role checks are not a substitute for Firestore Security Rules.
 
-## Security rules requirements
+## Deploy and test
 
-Firestore rules must enforce permissions on the database itself:
-- Public visitors can read car listings.
-- Only the owner can create/update/delete admin profile documents.
-- The owner can manage all car listings.
-- An active admin can add listings only when `addedBy` equals their UID.
-- An admin can update/delete only their own listings and only while their profile remains active with role `admin`.
+Keep these nine files in the website root. For a static hosting deployment:
 
-Do not use public read/write rules as a shortcut. Front-end redirects alone do not secure Firestore.
+1. Confirm `firebase-config.js` points to the intended Firebase project.
+2. Deploy the current repository files to your hosting provider.
+3. Add the deployed website's domain under Firebase Authentication's authorized domains, if required by the host.
+4. Test owner sign-in and owner dashboard access.
+5. Create a test admin and verify that the owner remains signed in.
+6. Test admin sign-in, adding a vehicle, and deleting a listing created by that admin.
+7. Open the public homepage and test listing display and all filters.
+8. Test the WhatsApp enquiry flow.
 
-## Setup and deployment checklist
+## Current limitations
 
-1. Keep all nine source files in the website root with the filenames listed above.
-2. Verify the Firebase project values in `firebase-config.js`.
-3. Enable Email/Password in Firebase Authentication if that is the chosen sign-in method.
-4. Create the owner Authentication user and matching `admins/{uid}` Firestore profile.
-5. Publish Firestore rules matching the role and ownership model.
-6. Test owner login, admin creation, admin login, adding a vehicle, public search, and admin deletion restrictions.
-7. Deploy the static files to a hosting provider and configure authorized domains in Firebase Authentication.
-8. For WhatsApp enquiries to go to the Kiri Cars business directly, update the WhatsApp URL to include the intended business phone number in international format.
-
-## Known limitations / checks
-
-- The current homepage does not show a dedicated detail page for each car; listings are displayed as cards.
-- The WhatsApp link does not currently specify a Kiri Cars business number.
-- Owner dashboard session restoration should be updated to wait for Firebase auth state.
-- The reported login issue should be resolved by verifying the exact owner/admin profile document and the Boolean `active` field before changing code or database rules.
+- Vehicle cards are shown on the homepage; there is no separate vehicle detail page in the current code.
+- The WhatsApp URL uses `https://wa.me/?text=...` without a preconfigured Kiri Cars business phone number. Visitors may need to select a contact. Set the intended business number in international format before launch if enquiries should go directly to Kiri Cars.
+- Vehicle photos must be provided as image URLs; file upload/storage is not implemented.
+- Verify all Firestore rules and account permissions before making the marketplace public.
