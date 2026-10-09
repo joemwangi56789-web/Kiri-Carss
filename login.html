@@ -77,36 +77,40 @@
       let signedInUser = null;
 
       try {
-        const result = await signInWithEmailAndPassword(
-          auth,
-          email,
-          password
-        );
-
+        const result = await signInWithEmailAndPassword(auth, email, password);
         signedInUser = result.user;
 
         const userRef = doc(db, "admins", signedInUser.uid);
         const userSnap = await getDoc(userRef);
 
+        // Temporary diagnostics: these reveal the project, path and fields read by this page.
+        console.info("Kiri Cars diagnostic - Firebase project:", db.app.options.projectId);
+        console.info("Kiri Cars diagnostic - owner document path:", userRef.path);
+        console.info("Kiri Cars diagnostic - document exists:", userSnap.exists());
+
         if (!userSnap.exists()) {
           await signOut(auth);
           showMessage(
-            "Your Firebase login worked, but your account profile was not found at admins/" +
-            signedInUser.uid +
-            "."
+            "Your Firebase login worked, but your account profile was not found at " +
+            userRef.path + ". Check the browser Console for diagnostics."
           );
           return;
         }
 
         const profile = userSnap.data();
+        console.info("Kiri Cars diagnostic - profile field names:", Object.keys(profile));
+        console.info("Kiri Cars diagnostic - active field value:", profile.active);
+        console.info("Kiri Cars diagnostic - active field type:", typeof profile.active);
+        console.info("Kiri Cars diagnostic - role field value:", profile.role);
+
         const role = String(profile.role || "").trim().toLowerCase();
 
         if (profile.active !== true) {
           await signOut(auth);
           showMessage(
-            "Your account profile was found, but its active field is not Boolean true. " +
-            "Received: " + String(profile.active) +
-            ". Check the active field in Firestore."
+            "Profile read from " + userRef.path +
+            ", but active is not Boolean true (received: " +
+            String(profile.active) + "). Open the browser Console and send me the Kiri Cars diagnostic lines."
           );
           return;
         }
@@ -127,8 +131,7 @@
         showMessage(
           "Your account is active, but its role is not recognized. " +
           "The role must be owner or admin. Received: " +
-          (profile.role === undefined ? "missing" : String(profile.role)) +
-          "."
+          (profile.role === undefined ? "missing" : String(profile.role)) + "."
         );
 
       } catch (error) {
@@ -140,6 +143,8 @@
           }
         }
 
+        console.error("Kiri Cars login error:", error);
+
         let errorText = "Login failed: " + error.message;
 
         if (error.code === "auth/invalid-credential" ||
@@ -149,15 +154,12 @@
         } else if (error.code === "permission-denied" ||
                    error.code === "firestore/permission-denied") {
           errorText =
-            "Firestore denied access to your account profile. " +
-            "Your database rules may need checking.";
+            "Firestore denied access to your account profile. Your database rules may need checking.";
         } else if (error.code === "auth/too-many-requests") {
-          errorText =
-            "Too many login attempts. Please wait before trying again.";
+          errorText = "Too many login attempts. Please wait before trying again.";
         }
 
         showMessage(errorText);
-        console.error("Kiri Cars login error:", error);
       } finally {
         loginButton.disabled = false;
         loginButton.textContent = "Sign In";
