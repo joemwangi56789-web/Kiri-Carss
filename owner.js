@@ -1,8 +1,8 @@
-
 import { app, auth, db } from "./firebase-config.js";
 
 import {
   createUserWithEmailAndPassword,
+  onAuthStateChanged,
   signOut
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
 
@@ -36,9 +36,9 @@ function showMessage(element, text, isError = false) {
   element.style.color = isError ? "#c62828" : "#167a35";
 }
 
-async function requireOwner() {
-  const user = auth.currentUser;
-
+// Now receives the user from onAuthStateChanged instead of reading
+// auth.currentUser, which can still be null while the session is restoring.
+async function requireOwner(user) {
   if (!user) {
     window.location.replace("login.html");
     return false;
@@ -239,20 +239,22 @@ document.getElementById("refreshButton").addEventListener("click", async () => {
 
 document.getElementById("loadAdminsButton").addEventListener("click", loadAdmins);
 
-try {
-  const authorized = await requireOwner();
+// Wait for Firebase to tell us whether a user is signed in, then check the profile.
+onAuthStateChanged(auth, async (user) => {
+  try {
+    const authorized = await requireOwner(user);
 
-  if (authorized) {
-    await loadCarCount();
-    await loadAdmins();
+    if (authorized) {
+      await loadCarCount();
+      await loadAdmins();
+    }
+  } catch (error) {
+    console.error("Owner dashboard error:", error);
+    showMessage(
+      ownerMessage,
+      "Could not verify your owner account: " + (error.code || error.message) +
+        ". Check your connection and Firestore rules.",
+      true
+    );
   }
-} catch (error) {
-  console.error("Owner dashboard error:", error);
-  showMessage(
-    ownerMessage,
-    "Could not verify your owner account. Check your connection and Firestore rules.",
-    true
-  );
-}
-
-
+});
