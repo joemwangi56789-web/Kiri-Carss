@@ -1,308 +1,209 @@
-
 import { auth, db } from "./firebase-config.js";
-
 import {
   onAuthStateChanged,
   signOut
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-
 import {
-  collection,
   doc,
   getDoc,
-  getDocs,
   addDoc,
   deleteDoc,
+  collection,
   query,
   where,
+  getDocs,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
-
+ 
 const adminMessage = document.getElementById("adminMessage");
 const formMessage = document.getElementById("formMessage");
 const carForm = document.getElementById("carForm");
 const addCarButton = document.getElementById("addCarButton");
+const reloadCarsButton = document.getElementById("reloadCarsButton");
+const logoutButton = document.getElementById("logoutButton");
 const myCars = document.getElementById("myCars");
-
-let currentUser = null;
-let authorized = false;
-let loadingCars = false;
-
-function showMessage(element, text, isError = false) {
-  element.textContent = text;
-  element.style.color = isError ? "#c62828" : "#167a35";
+ 
+let currentUid = null;
+ 
+function setText(el, text, isError = false) {
+  el.textContent = text;
+  el.style.color = isError ? "#c62828" : "#167a35";
 }
-
-function safeImageUrl(value) {
+ 
+function normalizeRole(value) {
+  return String(value || "").trim().toLowerCase();
+}
+ 
+function goToLogin() {
+  window.location.replace("login.html");
+}
+ 
+// Wait for Firebase to restore the saved session before checking anything.
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    goToLogin();
+    return;
+  }
+ 
+  try {
+    const snap = await getDoc(doc(db, "admins", user.uid));
+    const profile = snap.exists() ? snap.data() : null;
+ 
+    if (!profile || profile.active !== true) {
+      await signOut(auth);
+      goToLogin();
+      return;
+    }
+ 
+    const role = normalizeRole(profile.role);
+ 
+    if (role === "owner") {
+      window.location.replace("owner.html");
+      return;
+    }
+ 
+    if (role !== "admin") {
+      await signOut(auth);
+      goToLogin();
+      return;
+    }
+ 
+    currentUid = user.uid;
+    setText(adminMessage, "Signed in as " + (profile.name || user.email));
+    await loadMyCars();
+  } catch (error) {
+    console.error("Admin check failed:", error);
+    setText(adminMessage, "Could not verify your account: " + (error.code || error.message), true);
+  }
+});
+ 
+function readNumber(id) {
+  const raw = document.getElementById(id).value.trim();
+  return raw === "" ? null : Number(raw);
+}
+ 
+function safeHttpsUrl(value) {
   if (!value) return "";
-
   try {
-    const parsed = new URL(value);
-    return parsed.protocol === "https:" || parsed.protocol === "http:"
-      ? parsed.href
-      : "";
-  } catch {
-    return "";
+    const url = new URL(value);
+    return url.protocol === "https:" ? url.href : null;
+  } catch (e) {
+    return null;
   }
 }
-
-async function verifyAdmin(user) {
-  const profileSnap = await getDoc(doc(db, "admins", user.uid));
-
-  if (!profileSnap.exists()) {
-    throw new Error("Your account profile was not found in Firestore.");
+ 
+carForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!currentUid) return;
+ 
+  const imageUrl = safeHttpsUrl(document.getElementById("imageUrl").value.trim());
+  if (imageUrl === null) {
+    setText(formMessage, "Image URL must start with https://", true);
+    return;
   }
-
-  const profile = profileSnap.data();
-  const role = String(profile.role || "").trim().toLowerCase();
-
-  if (profile.active !== true || role !== "admin") {
-    throw new Error("This dashboard is only available to active administrators.");
+ 
+  const car = {
+    manufacturer: document.getElementById("manufacturer").value.trim(),
+    carType: document.getElementById("carType").value,
+    model: document.getElementById("model").value.trim(),
+    year: readNumber("year"),
+    price: readNumber("price"),
+    status: document.getElementById("status").value,
+    mileage: readNumber("mileage"),
+    fuel: document.getElementById("fuel").value,
+    transmission: document.getElementById("transmission").value,
+    description: document.getElementById("description").value.trim(),
+    imageUrl: imageUrl,
+    addedBy: currentUid,
+    createdAt: serverTimestamp()
+  };
+ 
+  addCarButton.disabled = true;
+  setText(formMessage, "Saving vehicle...");
+ 
+  try {
+    await addDoc(collection(db, "cars"), car);
+    carForm.reset();
+    setText(formMessage, "Vehicle added.");
+    await loadMyCars();
+  } catch (error) {
+    console.error("Add vehicle failed:", error);
+    setText(formMessage, "Could not add vehicle: " + (error.code || error.message), true);
+  } finally {
+    addCarButton.disabled = false;
   }
-
-  return profile;
-}
-
+});
+ 
 async function loadMyCars() {
-  if (!currentUser || !authorized || loadingCars) return;
-
-  loadingCars = true;
+  if (!currentUid) return;
   myCars.textContent = "Loading your vehicles...";
-
+ 
   try {
-    const carsQuery = query(
-      collection(db, "cars"),
-      where("addedBy", "==", currentUser.uid)
-    );
-
-    const snapshot = await getDocs(carsQuery);
-    myCars.replaceChildren();
-
-    if (snapshot.empty) {
+    const q = query(collection(db, "cars"), where("addedBy", "==", currentUid));
+    const result = await getDocs(q);
+ 
+    const cars = result.docs.map((d) => ({ id: d.id, ...d.data() }));
+    // Sort in the browser so no Firestore composite index is needed.
+    cars.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+ 
+    myCars.textContent = "";
+ 
+    if (cars.length === 0) {
       myCars.textContent = "You have not added any vehicles yet.";
       return;
     }
-
-    snapshot.forEach((carDoc) => {
-      const car = carDoc.data();
-
-      const card = document.createElement("article");
-      card.className = "vehicle-card";
-
-      const title = document.createElement("h4");
-      title.textContent =
-        (car.manufacturer || "") + " " + (car.model || "Vehicle");
-
-      const details = document.createElement("p");
-      details.textContent =
-        "Year: " + (car.year ?? "N/A") +
-        " | Price: KSh " + Number(car.price || 0).toLocaleString("en-KE");
-
-      const status = document.createElement("p");
-      status.textContent =
-        "Status: " + (car.status || "N/A") +
-        " | Fuel: " + (car.fuel || "N/A");
-
-      card.append(title, details, status);
-
-      const imageUrl = safeImageUrl(car.imageUrl);
-
-      if (imageUrl) {
-        const image = document.createElement("img");
-        image.src = imageUrl;
-        image.alt = title.textContent;
-        image.loading = "lazy";
-        image.style.maxWidth = "100%";
-        image.onerror = () => image.remove();
-        card.prepend(image);
-      }
-
-      const deleteButton = document.createElement("button");
-      deleteButton.type = "button";
-      deleteButton.textContent = "Remove Listing";
-
-      deleteButton.addEventListener("click", async () => {
-        const confirmed = window.confirm(
-          "Are you sure you want to remove " + title.textContent + "?"
-        );
-
-        if (!confirmed) return;
-
-        deleteButton.disabled = true;
-
-        try {
-          const freshUser = auth.currentUser;
-
-          if (!freshUser || freshUser.uid !== currentUser.uid) {
-            throw new Error("Your session has expired. Please sign in again.");
-          }
-
-          const latestDoc = await getDoc(doc(db, "cars", carDoc.id));
-
-          if (!latestDoc.exists()) {
-            showMessage(formMessage, "This vehicle has already been removed.");
-            await loadMyCars();
-            return;
-          }
-
-          if (latestDoc.data().addedBy !== freshUser.uid) {
-            throw new Error("You can only remove vehicles you added.");
-          }
-
-          await deleteDoc(doc(db, "cars", carDoc.id));
-
-          showMessage(formMessage, "Vehicle listing removed successfully.");
-          await loadMyCars();
-
-        } catch (error) {
-          showMessage(formMessage, error.message, true);
-        } finally {
-          deleteButton.disabled = false;
-        }
-      });
-
-      card.appendChild(deleteButton);
-      myCars.appendChild(card);
-    });
-
+ 
+    cars.forEach((car) => myCars.appendChild(renderCar(car)));
   } catch (error) {
-    console.error("Load vehicles error:", error);
-    myCars.textContent =
-      "Could not load your vehicles. Check your internet connection and Firestore rules.";
-  } finally {
-    loadingCars = false;
+    console.error("Load vehicles failed:", error);
+    myCars.textContent = "Could not load vehicles: " + (error.code || error.message);
   }
 }
-
-carForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-
-  if (!currentUser || !authorized) {
-    showMessage(formMessage, "Your administrator session is not authorized.", true);
+ 
+function renderCar(car) {
+  const card = document.createElement("div");
+  card.className = "dashboard-card";
+ 
+  const title = document.createElement("h4");
+  title.textContent = [car.year, car.manufacturer, car.model].filter(Boolean).join(" ");
+ 
+  const details = document.createElement("p");
+  const price = typeof car.price === "number" ? "KSh " + car.price.toLocaleString() : "Price not set";
+  details.textContent = [car.carType, car.status, car.fuel, car.transmission, price]
+    .filter(Boolean)
+    .join(" · ");
+ 
+  const removeButton = document.createElement("button");
+  removeButton.type = "button";
+  removeButton.textContent = "Delete";
+  removeButton.addEventListener("click", () => deleteCar(car, removeButton));
+ 
+  card.append(title, details, removeButton);
+  return card;
+}
+ 
+async function deleteCar(car, button) {
+  if (car.addedBy !== currentUid) {
+    alert("You can only delete vehicles you added.");
     return;
   }
-
-  const manufacturer = document.getElementById("manufacturer").value.trim();
-  const carType = document.getElementById("carType").value;
-  const model = document.getElementById("model").value.trim();
-  const year = Number(document.getElementById("year").value);
-  const price = Number(document.getElementById("price").value);
-  const status = document.getElementById("status").value;
-  const mileageInput = document.getElementById("mileage").value;
-  const mileage = mileageInput === "" ? null : Number(mileageInput);
-  const fuel = document.getElementById("fuel").value;
-  const transmission = document.getElementById("transmission").value;
-  const description = document.getElementById("description").value.trim();
-  const imageUrlInput = document.getElementById("imageUrl").value.trim();
-
-  if (
-    !manufacturer || !carType || !model || !year ||
-    !price || !status || !fuel || !transmission
-  ) {
-    showMessage(formMessage, "Please complete all required fields.", true);
-    return;
-  }
-
-  if (year < 1950 || year > 2035 || price <= 0) {
-    showMessage(formMessage, "Check the vehicle year and price.", true);
-    return;
-  }
-
-  if (mileage !== null && (!Number.isFinite(mileage) || mileage < 0)) {
-    showMessage(formMessage, "Enter a valid mileage.", true);
-    return;
-  }
-
-  const imageUrl = safeImageUrl(imageUrlInput);
-
-  if (imageUrlInput && !imageUrl) {
-    showMessage(formMessage, "Use a valid HTTP or HTTPS image URL.", true);
-    return;
-  }
-
-  addCarButton.disabled = true;
-  addCarButton.textContent = "Saving vehicle...";
-
+  if (!confirm("Delete " + car.manufacturer + " " + car.model + "?")) return;
+ 
+  button.disabled = true;
   try {
-    const freshUser = auth.currentUser;
-
-    if (!freshUser || freshUser.uid !== currentUser.uid) {
-      throw new Error("Your session has expired. Please sign in again.");
-    }
-
-    await addDoc(collection(db, "cars"), {
-      manufacturer,
-      carType,
-      model,
-      year,
-      price,
-      status,
-      mileage,
-      fuel,
-      transmission,
-      description,
-      imageUrl,
-      addedBy: freshUser.uid,
-      createdAt: serverTimestamp()
-    });
-
-    showMessage(formMessage, "Vehicle added successfully.");
-    carForm.reset();
+    await deleteDoc(doc(db, "cars", car.id));
     await loadMyCars();
-
   } catch (error) {
-    console.error("Add vehicle error:", error);
-
-    showMessage(
-      formMessage,
-      error.code === "permission-denied"
-        ? "Firestore denied this listing. Check that your admin profile is active and that your database rules allow admins to add their own vehicles."
-        : "Could not save vehicle: " + error.message,
-      true
-    );
-  } finally {
-    addCarButton.disabled = false;
-    addCarButton.textContent = "Add Vehicle";
+    console.error("Delete failed:", error);
+    alert("Could not delete: " + (error.code || error.message));
+    button.disabled = false;
   }
+}
+ 
+reloadCarsButton.addEventListener("click", loadMyCars);
+ 
+logoutButton.addEventListener("click", async () => {
+  await signOut(auth);
+  goToLogin();
 });
-
-document.getElementById("reloadCarsButton").addEventListener("click", loadMyCars);
-
-document.getElementById("logoutButton").addEventListener("click", async () => {
-  try {
-    await signOut(auth);
-    window.location.replace("login.html");
-  } catch (error) {
-    showMessage(adminMessage, "Could not sign out: " + error.message, true);
-  }
-});
-
-onAuthStateChanged(auth, async (user) => {
-  currentUser = user;
-  authorized = false;
-
-  if (!user) {
-    window.location.replace("login.html");
-    return;
-  }
-
-  try {
-    const profile = await verifyAdmin(user);
-
-    authorized = true;
-    showMessage(
-      adminMessage,
-      "Welcome, " + (profile.name || user.email) + ".",
-      false
-    );
-
-    await loadMyCars();
-
-  } catch (error) {
-    console.error("Admin authorization error:", error);
-    showMessage(adminMessage, error.message, true);
-
-    await signOut(auth);
-    window.location.replace("login.html");
-  }
-});
+ 
