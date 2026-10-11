@@ -26,6 +26,17 @@
     </section>
 
     <section class="dashboard-card">
+      <h3>Your Buyer Contact Number</h3>
+      <p>Buyers will use this number to contact you about your vehicles on WhatsApp. Use your Kenyan mobile number.</p>
+      <form id="whatsappForm">
+        <label for="adminWhatsApp">WhatsApp number</label>
+        <input id="adminWhatsApp" type="tel" inputmode="tel" placeholder="0712345678 or 254712345678" required>
+        <button id="saveWhatsAppButton" type="submit">Save WhatsApp Number</button>
+      </form>
+      <p id="whatsappMessage" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="dashboard-card">
       <h3>Add a Vehicle</h3>
 
       <form id="carForm">
