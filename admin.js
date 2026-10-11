@@ -8,6 +8,7 @@ import {
   getDoc,
   addDoc,
   deleteDoc,
+  updateDoc,
   collection,
   query,
   where,
@@ -251,15 +252,58 @@ function renderCar(car) {
     card.appendChild(photoNote);
   }
 
+  const lifecycle = document.createElement("p");
+  lifecycle.className = "listing-lifecycle";
+  if (car.listingStatus === "sold") {
+    lifecycle.textContent = "SOLD — marked for removal after 72 hours";
+    lifecycle.classList.add("sold-label");
+  } else if (car.listingExpiresAt?.toMillis && car.listingExpiresAt.toMillis() <= Date.now()) {
+    lifecycle.textContent = "EXPIRED — hidden from public listings until renewed";
+    lifecycle.classList.add("expired-label");
+  } else {
+    lifecycle.textContent = "Listing status: Active";
+  }
+
+  card.append(title, details, lifecycle);
+
+  if (car.listingStatus !== "sold") {
+    const soldButton = document.createElement("button");
+    soldButton.type = "button";
+    soldButton.textContent = "Mark as Sold";
+    soldButton.addEventListener("click", () => markCarSold(car, soldButton));
+    card.appendChild(soldButton);
+  }
+
   const removeButton = document.createElement("button");
   removeButton.type = "button";
   removeButton.textContent = "Delete";
   removeButton.addEventListener("click", () => deleteCar(car, removeButton));
- 
-  card.append(title, details, removeButton);
+  card.appendChild(removeButton);
   return card;
 }
  
+async function markCarSold(car, button) {
+  if (car.addedBy !== currentUid) {
+    alert("You can only mark vehicles you added as sold.");
+    return;
+  }
+  if (car.listingStatus === "sold") return;
+  if (!confirm("Mark " + car.manufacturer + " " + car.model + " as sold? It will remain publicly visible with a SOLD label for 72 hours.")) return;
+
+  button.disabled = true;
+  try {
+    await updateDoc(doc(db, "cars", car.id), {
+      listingStatus: "sold",
+      soldAt: serverTimestamp()
+    });
+    await loadMyCars();
+  } catch (error) {
+    console.error("Mark as sold failed:", error);
+    alert("Could not mark this vehicle as sold: " + (error.code || error.message));
+    button.disabled = false;
+  }
+}
+
 async function deleteCar(car, button) {
   if (car.addedBy !== currentUid) {
     alert("You can only delete vehicles you added.");
