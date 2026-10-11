@@ -42,6 +42,26 @@ function safeImageUrl(value) {
   }
 }
 
+function timestampMillis(value) {
+  if (!value) return null;
+  if (typeof value.toMillis === "function") return value.toMillis();
+  if (typeof value.seconds === "number") return value.seconds * 1000;
+  return null;
+}
+
+function publicListingIsVisible(car) {
+  const now = Date.now();
+  const expiry = timestampMillis(car.listingExpiresAt);
+  if (expiry !== null && expiry <= now) return false;
+
+  if (car.listingStatus === "sold") {
+    const soldAt = timestampMillis(car.soldAt);
+    if (soldAt !== null && now - soldAt >= 72 * 60 * 60 * 1000) return false;
+  }
+
+  return true;
+}
+
 function formatPrice(price) {
   const amount = Number(price);
 
@@ -157,7 +177,8 @@ function createVehicleCard(car) {
 
   const status = document.createElement("span");
   status.className = "status-tag";
-  status.textContent = car.status || "Status not specified";
+  status.textContent = car.listingStatus === "sold" ? "SOLD" : (car.status || "Status not specified");
+  if (car.listingStatus === "sold") status.classList.add("sold-label");
   card.appendChild(status);
 
   const title = document.createElement("h4");
@@ -194,6 +215,14 @@ function createVehicleCard(car) {
     const description = document.createElement("p");
     description.textContent = String(car.description);
     card.appendChild(description);
+  }
+
+  if (car.listingStatus === "sold") {
+    const soldNotice = document.createElement("p");
+    soldNotice.className = "sold-notice";
+    soldNotice.textContent = "This vehicle has been marked as sold.";
+    card.appendChild(soldNotice);
+    return card;
   }
 
   const contactButton = document.createElement("button");
@@ -241,6 +270,8 @@ function applyFilters() {
       : Number(maxPriceInput.value);
 
   const filteredCars = allCars.filter((car) => {
+    if (!publicListingIsVisible(car)) return false;
+
     const searchableText = [
       car.manufacturer,
       car.model,
@@ -301,8 +332,8 @@ function renderCars(cars) {
   if (cars.length === 0) {
     const emptyMessage = document.createElement("p");
     emptyMessage.textContent =
-      allCars.length === 0
-        ? "No vehicles are listed yet. Please check again later."
+      allCars.filter(publicListingIsVisible).length === 0
+        ? "No vehicles are currently available. Please check again later."
         : "No vehicles match those filters. Try changing your search.";
 
     carsGrid.appendChild(emptyMessage);
