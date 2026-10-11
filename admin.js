@@ -82,58 +82,120 @@ function readNumber(id) {
   return raw === "" ? null : Number(raw);
 }
  
-function safeHttpsUrl(value) {
-  if (!value) return "";
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" ? url.href : null;
-  } catch (e) {
-    return null;
+const carPhotosInput = document.getElementById("carPhotos");
+const photoPreview = document.getElementById("photoPreview");
+const uploadProgress = document.getElementById("uploadProgress");
+const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
+const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const CLOUDINARY_CLOUD_NAME = "rfefjzxw";
+const CLOUDINARY_UPLOAD_PRESET = "kiri_cars_photos";
+
+function validatePhotos(files) {
+  if (!files.length) return "Please select at least one vehicle photo.";
+  for (const file of files) {
+    if (!ALLOWED_PHOTO_TYPES.includes(file.type)) return "Use only JPG, PNG or WebP image files.";
+    if (file.size > MAX_PHOTO_BYTES) return file.name + " is larger than 8 MB. Choose a smaller photo.";
   }
+  return "";
 }
- 
+
+carPhotosInput.addEventListener("change", () => {
+  photoPreview.replaceChildren();
+  const files = Array.from(carPhotosInput.files || []);
+  const validationError = validatePhotos(files);
+  if (validationError) {
+    setText(uploadProgress, validationError, true);
+    return;
+  }
+  setText(uploadProgress, files.length + (files.length === 1 ? " photo selected." : " photos selected."));
+  files.forEach((file) => {
+    const figure = document.createElement("figure");
+    figure.className = "photo-preview-item";
+    const image = document.createElement("img");
+    image.alt = file.name;
+    const objectUrl = URL.createObjectURL(file);
+    image.src = objectUrl;
+    image.onload = () => URL.revokeObjectURL(objectUrl);
+    const caption = document.createElement("figcaption");
+    caption.textContent = file.name;
+    figure.append(image, caption);
+    photoPreview.appendChild(figure);
+  });
+});
+
+async function uploadPhoto(file, index, total) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+  formData.append("folder", "kiri-cars");
+  setText(uploadProgress, "Uploading photo " + index + " of " + total + ": " + file.name);
+
+  const response = await fetch(
+    "https://api.cloudinary.com/v1_1/" + CLOUDINARY_CLOUD_NAME + "/image/upload",
+    { method: "POST", body: formData }
+  );
+  const result = await response.json();
+  if (!response.ok || !result.secure_url) {
+    console.error("Cloudinary upload failed:", result);
+    throw new Error(result.error?.message || "Cloudinary could not upload " + file.name);
+  }
+  return { url: result.secure_url, publicId: result.public_id || "" };
+}
+
 carForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!currentUid) return;
- 
-  const imageUrl = safeHttpsUrl(document.getElementById("imageUrl").value.trim());
-  if (imageUrl === null) {
-    setText(formMessage, "Image URL must start with https://", true);
+
+  const selectedPhotos = Array.from(carPhotosInput.files || []);
+  const photoError = validatePhotos(selectedPhotos);
+  if (photoError) {
+    setText(formMessage, photoError, true);
     return;
   }
- 
-  const car = {
-    manufacturer: document.getElementById("manufacturer").value.trim(),
-    carType: document.getElementById("carType").value,
-    model: document.getElementById("model").value.trim(),
-    year: readNumber("year"),
-    price: readNumber("price"),
-    status: document.getElementById("status").value,
-    mileage: readNumber("mileage"),
-    fuel: document.getElementById("fuel").value,
-    transmission: document.getElementById("transmission").value,
-    description: document.getElementById("description").value.trim(),
-    imageUrl: imageUrl,
-    addedBy: currentUid,
-    createdAt: serverTimestamp()
-  };
- 
+
   addCarButton.disabled = true;
-  setText(formMessage, "Saving vehicle...");
- 
+  carPhotosInput.disabled = true;
+  setText(formMessage, "Preparing vehicle photos...");
   try {
+    const images = [];
+    for (let i = 0; i < selectedPhotos.length; i += 1) {
+      images.push(await uploadPhoto(selectedPhotos[i], i + 1, selectedPhotos.length));
+    }
+
+    const car = {
+      manufacturer: document.getElementById("manufacturer").value.trim(),
+      carType: document.getElementById("carType").value,
+      model: document.getElementById("model").value.trim(),
+      year: readNumber("year"),
+      price: readNumber("price"),
+      status: document.getElementById("status").value,
+      mileage: readNumber("mileage"),
+      fuel: document.getElementById("fuel").value,
+      transmission: document.getElementById("transmission").value,
+      description: document.getElementById("description").value.trim(),
+      images,
+      imageUrl: images[0].url,
+      addedBy: currentUid,
+      createdAt: serverTimestamp()
+    };
+
+    setText(uploadProgress, "Photos uploaded. Saving vehicle details...");
     await addDoc(collection(db, "cars"), car);
     carForm.reset();
-    setText(formMessage, "Vehicle added.");
+    photoPreview.replaceChildren();
+    setText(uploadProgress, "");
+    setText(formMessage, "Vehicle added successfully with " + images.length + (images.length === 1 ? " photo." : " photos."));
     await loadMyCars();
   } catch (error) {
     console.error("Add vehicle failed:", error);
     setText(formMessage, "Could not add vehicle: " + (error.code || error.message), true);
+    setText(uploadProgress, "If photos uploaded before the error, they may remain in Cloudinary and need cleanup.", true);
   } finally {
     addCarButton.disabled = false;
+    carPhotosInput.disabled = false;
   }
 });
- 
+
 async function loadMyCars() {
   if (!currentUid) return;
   myCars.textContent = "Loading your vehicles...";
@@ -173,6 +235,22 @@ function renderCar(car) {
     .filter(Boolean)
     .join(" · ");
  
+  const photoUrls = Array.isArray(car.images) ? car.images.map((item) => item?.url).filter(Boolean) : [];
+  const firstPhoto = photoUrls[0] || car.imageUrl;
+  if (firstPhoto) {
+    const image = document.createElement("img");
+    image.src = firstPhoto;
+    image.alt = title.textContent;
+    image.loading = "lazy";
+    image.className = "admin-car-photo";
+    card.appendChild(image);
+  }
+  if (photoUrls.length > 1) {
+    const photoNote = document.createElement("p");
+    photoNote.textContent = photoUrls.length + " photos uploaded";
+    card.appendChild(photoNote);
+  }
+
   const removeButton = document.createElement("button");
   removeButton.type = "button";
   removeButton.textContent = "Delete";
