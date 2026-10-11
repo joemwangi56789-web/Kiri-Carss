@@ -235,14 +235,20 @@ function createVehicleCard(car) {
       (car.model || "") + " (" + (car.year || "Year not listed") + ")";
 
     const enquiry =
-      "Hello Kiri Cars, I am interested in " +
+      "Hello, I am interested in " +
       vehicleName +
       ". Listed price: " +
       formatPrice(car.price) +
       ". Please share more details.";
 
+    const sellerPhone = String(car.sellerWhatsApp || "").replace(/\D/g, "");
+    if (!/^254[17]\d{8}$/.test(sellerPhone)) {
+      alert("This seller has not added a valid WhatsApp number yet. Please try another vehicle or contact Kiri Cars support.");
+      return;
+    }
+
     const whatsappUrl =
-      "https://wa.me/?text=" + encodeURIComponent(enquiry);
+      "https://wa.me/" + sellerPhone + "?text=" + encodeURIComponent(enquiry);
 
     window.open(whatsappUrl, "_blank", "noopener,noreferrer");
   });
