@@ -294,8 +294,8 @@ function createVehicleCard(car) {
       "Hello, I am interested in " + vehicleName +
       ". Listed price: " + formatPrice(car.price) +
       ". Please share more details.";
-    const sellerPhone = String(car.sellerWhatsApp || "").replace(/\\D/g, "");
-    if (!/^254[17]\\d{8}$/.test(sellerPhone)) {
+    const sellerPhone = String(car.sellerWhatsApp || "").replace(/\D/g, "");
+    if (!/^254[17]\d{8}$/.test(sellerPhone)) {
       alert("This seller has not added a valid WhatsApp number yet. Please try another vehicle.");
       return;
     }
