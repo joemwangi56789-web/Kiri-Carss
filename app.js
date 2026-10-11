@@ -1,9 +1,13 @@
 
-import { db } from "./firebase-config.js";
+import { auth, db } from "./firebase-config.js";
 
 import {
   collection,
-  getDocs
+  getDocs,
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
 const carsGrid = document.getElementById("carsGrid");
@@ -227,30 +231,52 @@ function createVehicleCard(car) {
 
   const contactButton = document.createElement("button");
   contactButton.type = "button";
-  contactButton.textContent = "Enquire About This Car";
+  contactButton.textContent = "Message Dealer Privately";
 
-  contactButton.addEventListener("click", () => {
-    const vehicleName =
-      (car.manufacturer || "") + " " +
-      (car.model || "") + " (" + (car.year || "Year not listed") + ")";
-
-    const enquiry =
-      "Hello, I am interested in " +
-      vehicleName +
-      ". Listed price: " +
-      formatPrice(car.price) +
-      ". Please share more details.";
-
-    const sellerPhone = String(car.sellerWhatsApp || "").replace(/\D/g, "");
-    if (!/^254[17]\d{8}$/.test(sellerPhone)) {
-      alert("This seller has not added a valid WhatsApp number yet. Please try another vehicle or contact Kiri Cars support.");
+  contactButton.addEventListener("click", async () => {
+    if (!car.id || !car.addedBy) {
+      alert("This listing is missing seller details. Please try another vehicle.");
+      return;
+    }
+    if (car.listingStatus === "sold") {
+      alert("This vehicle has been marked as sold and cannot receive enquiries.");
       return;
     }
 
-    const whatsappUrl =
-      "https://wa.me/" + sellerPhone + "?text=" + encodeURIComponent(enquiry);
+    const signedInUser = auth.currentUser;
+    if (!signedInUser) {
+      window.location.href = "buyer.html?car=" + encodeURIComponent(car.id);
+      return;
+    }
 
-    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+    try {
+      const buyerSnap = await getDoc(doc(db, "buyers", signedInUser.uid));
+      if (!buyerSnap.exists() || buyerSnap.data().role !== "buyer") {
+        alert("Please use a buyer account to send private enquiries. Your dealer account remains available for managing listings.");
+        return;
+      }
+
+      const conversationId = signedInUser.uid + "_" + car.id;
+      const conversationRef = doc(db, "conversations", conversationId);
+      const existingConversation = await getDoc(conversationRef);
+      if (!existingConversation.exists()) {
+        await setDoc(conversationRef, {
+          buyerId: signedInUser.uid,
+          buyerName: buyerSnap.data().name || signedInUser.email || "Buyer",
+          sellerId: car.addedBy,
+          sellerName: car.sellerName || "Kiri Cars dealer",
+          carId: car.id,
+          carTitle: [(car.year || ""), (car.manufacturer || ""), (car.model || "")].filter(Boolean).join(" "),
+          createdAt: serverTimestamp(),
+          lastMessageAt: serverTimestamp(),
+          lastMessage: "Enquiry started"
+        });
+      }
+      window.location.href = "buyer.html?conversation=" + encodeURIComponent(conversationId);
+    } catch (error) {
+      console.error("Could not start private enquiry:", error);
+      alert("We could not start your private enquiry (" + (error.code || "please try again") + "). If this continues, check the Kiri Cars Firestore rules.");
+    }
   });
 
   card.appendChild(contactButton);
