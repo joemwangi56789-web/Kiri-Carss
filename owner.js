@@ -36,6 +36,13 @@ function showMessage(element, text, isError = false) {
   element.style.color = isError ? "#c62828" : "#167a35";
 }
 
+function normalizeKenyanPhone(value) {
+  let digits = String(value || "").replace(/\D/g, "");
+  if (digits.startsWith("0") && digits.length === 10) digits = "254" + digits.slice(1);
+  else if ((digits.startsWith("7") || digits.startsWith("1")) && digits.length === 9) digits = "254" + digits;
+  return /^254[17]\d{8}$/.test(digits) ? digits : "";
+}
+
 // Now receives the user from onAuthStateChanged instead of reading
 // auth.currentUser, which can still be null while the session is restoring.
 async function requireOwner(user) {
@@ -113,7 +120,10 @@ async function loadAdmins() {
         "Role: " + (data.role || "unknown") +
         " | Status: " + (data.active === true ? "Active" : "Inactive");
 
-      row.append(name, email, role);
+      const whatsapp = document.createElement("p");
+      whatsapp.textContent = "WhatsApp: " + (data.whatsapp || "Not provided");
+
+      row.append(name, email, role, whatsapp);
       adminsList.appendChild(row);
     });
   } catch (error) {
@@ -128,7 +138,13 @@ adminForm.addEventListener("submit", async (event) => {
 
   const name = document.getElementById("adminName").value.trim();
   const email = document.getElementById("adminEmail").value.trim();
+  const whatsapp = normalizeKenyanPhone(document.getElementById("adminWhatsApp").value);
   const password = document.getElementById("adminPassword").value;
+
+  if (!whatsapp) {
+    showMessage(adminMessage, "Enter a valid Kenyan mobile number, e.g. 0712345678 or 254712345678.", true);
+    return;
+  }
 
   createAdminButton.disabled = true;
   createAdminButton.textContent = "Creating account...";
@@ -173,6 +189,7 @@ adminForm.addEventListener("submit", async (event) => {
       email: email,
       role: "admin",
       active: true,
+      whatsapp: whatsapp,
       createdAt: serverTimestamp(),
       createdBy: owner.uid
     });
