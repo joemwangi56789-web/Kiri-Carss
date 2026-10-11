@@ -65,7 +65,215 @@ service cloud.firestore {
           && request.resource.data.verificationStatus == "pending"
           && request.resource.data.sellerType in ["dealership", "broker"]
           && request.resource.data.businessName is string
+          && (request.resource.data.sellerType != "dealership" || request.resource.data.businessName.size() >= 2)
           && request.resource.data.whatsapp is string
+          && request.resource.data.whatsapp.matches('^254[17][0-9]{8}
+          && request.resource.data.createdAt == request.time
+        );
+
+      // Only the owner can change approval, activity, or verification status.
+      // A signed-in seller can update only their own WhatsApp number.
+      allow update: if isOwner()
+        || (
+          signedIn()
+          && request.auth.uid == userId
+          && request.resource.data.diff(resource.data)
+            .affectedKeys().hasOnly(['whatsapp'])
+          && request.resource.data.whatsapp is string
+        );
+
+      allow delete: if isOwner();
+    }
+
+    match /buyers/{userId} {
+      allow read: if signedIn()
+        && (isOwner() || request.auth.uid == userId);
+
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['name', 'email', 'role', 'createdAt'])
+        && request.resource.data.keys().hasAll(['name', 'email', 'role', 'createdAt'])
+        && request.resource.data.role == "buyer"
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 80
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.createdAt == request.time;
+
+      allow update: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 80;
+
+      allow delete: if isOwner();
+    }
+
+    match /cars/{carId} {
+      // Drafts are stored separately, so public vehicle listings remain readable.
+      allow read: if true;
+
+      allow create: if isOwner()
+        || (
+          signedIn()
+          && request.resource.data.addedBy == request.auth.uid
+          && isActiveSeller(request.auth.uid)
+          && request.resource.data.authorizationConfirmed == true
+          && request.resource.data.vehicleRelationship in ["owner", "broker", "authorized_representative"]
+          && (
+            get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == "admin"
+            || get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == "owner"
+            || request.resource.data.listingStatus == "active"
+          )
+        );
+
+      allow update: if isOwner()
+        || (
+          signedIn()
+          && resource.data.addedBy == request.auth.uid
+          && isActiveSeller(request.auth.uid)
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['listingStatus', 'soldAt', 'sellerWhatsApp', 'sellerName'])
+        );
+
+      allow delete: if isOwner()
+        || (
+          signedIn()
+          && resource.data.addedBy == request.auth.uid
+          && isActiveSeller(request.auth.uid)
+        );
+    }
+
+    // Pending sellers can save private draft listings without making them public.
+    match /dealerDrafts/{draftId} {
+      allow read: if signedIn()
+        && (isOwner() || resource.data.addedBy == request.auth.uid);
+
+      allow create: if signedIn()
+        && isPendingDealer(request.auth.uid)
+        && request.resource.data.addedBy == request.auth.uid
+        && request.resource.data.listingStatus == "draft"
+        && request.resource.data.authorizationConfirmed == true
+        && request.resource.data.vehicleRelationship in ["owner", "broker", "authorized_representative"];
+
+      allow update: if signedIn()
+        && (
+          isOwner()
+          || (
+            isPendingDealer(request.auth.uid)
+            && resource.data.addedBy == request.auth.uid
+            && request.resource.data.addedBy == request.auth.uid
+            && request.resource.data.listingStatus == "draft"
+            && request.resource.data.authorizationConfirmed == true
+            && request.resource.data.vehicleRelationship in ["owner", "broker", "authorized_representative"]
+          )
+        );
+
+      allow delete: if isOwner()
+        || (
+          signedIn()
+          && resource.data.addedBy == request.auth.uid
+          && (isPendingDealer(request.auth.uid) || isActiveSeller(request.auth.uid))
+        );
+    }
+
+    match /conversations/{conversationId} {
+      // Allow a signed-in user to check whether a deterministic conversation ID exists.
+      allow read: if signedIn()
+        && (
+          !exists(/databases/$(database)/documents/conversations/$(conversationId))
+          || resource.data.buyerId == request.auth.uid
+          || resource.data.sellerId == request.auth.uid
+        );
+
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly([
+          'buyerId', 'buyerName', 'sellerId', 'sellerName',
+          'carId', 'carTitle', 'createdAt', 'lastMessageAt', 'lastMessage'
+        ])
+        && request.resource.data.keys().hasAll([
+          'buyerId', 'buyerName', 'sellerId', 'sellerName',
+          'carId', 'carTitle', 'createdAt', 'lastMessageAt', 'lastMessage'
+        ])
+        && request.resource.data.buyerId == request.auth.uid
+        && exists(/databases/$(database)/documents/buyers/$(request.auth.uid))
+        && request.resource.data.sellerId is string
+        && request.resource.data.carId is string
+        && exists(/databases/$(database)/documents/cars/$(request.resource.data.carId))
+        && get(
+          /databases/$(database)/documents/cars/$(request.resource.data.carId)
+        ).data.addedBy == request.resource.data.sellerId
+        && (
+          !('listingStatus' in get(
+            /databases/$(database)/documents/cars/$(request.resource.data.carId)
+          ).data)
+          || get(
+            /databases/$(database)/documents/cars/$(request.resource.data.carId)
+          ).data.listingStatus == "active"
+          || get(
+            /databases/$(database)/documents/cars/$(request.resource.data.carId)
+          ).data.listingStatus == "sold"
+        )
+        && (
+          !('listingStatus' in get(
+            /databases/$(database)/documents/cars/$(request.resource.data.carId)
+          ).data)
+          || get(
+            /databases/$(database)/documents/cars/$(request.resource.data.carId)
+          ).data.listingStatus != "sold"
+        )
+        && isActiveSeller(request.resource.data.sellerId)
+        && request.resource.data.buyerName is string
+        && request.resource.data.sellerName is string
+        && request.resource.data.carTitle is string
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.lastMessageAt == request.time
+        && request.resource.data.lastMessage is string;
+
+      allow update: if signedIn()
+        && (
+          resource.data.buyerId == request.auth.uid
+          || resource.data.sellerId == request.auth.uid
+        )
+        && request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly(['lastMessage', 'lastMessageAt'])
+        && request.resource.data.lastMessage is string
+        && request.resource.data.lastMessage.size() <= 160
+        && request.resource.data.lastMessageAt == request.time;
+
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if signedIn()
+          && (
+            get(/databases/$(database)/documents/conversations/$(conversationId)).data.buyerId == request.auth.uid
+            || get(/databases/$(database)/documents/conversations/$(conversationId)).data.sellerId == request.auth.uid
+          );
+
+        allow create: if signedIn()
+          && (
+            get(/databases/$(database)/documents/conversations/$(conversationId)).data.buyerId == request.auth.uid
+            || get(/databases/$(database)/documents/conversations/$(conversationId)).data.sellerId == request.auth.uid
+          )
+          && request.resource.data.keys().hasOnly([
+            'senderId', 'senderName', 'text', 'createdAt'
+          ])
+          && request.resource.data.keys().hasAll([
+            'senderId', 'senderName', 'text', 'createdAt'
+          ])
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.senderName is string
+          && request.resource.data.text is string
+          && request.resource.data.text.size() >= 1
+          && request.resource.data.text.size() <= 2000
+          && request.resource.data.createdAt == request.time;
+
+        allow update, delete: if false;
+      }
+    }
+  }
+})
           && request.resource.data.createdBy == request.auth.uid
           && request.resource.data.createdAt == request.time
         );
