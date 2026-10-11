@@ -157,8 +157,8 @@ service cloud.firestore {
       allow delete: if isOwner()
         || (
           signedIn()
-          && isPendingDealer(request.auth.uid)
           && resource.data.addedBy == request.auth.uid
+          && (isPendingDealer(request.auth.uid) || isActiveSeller(request.auth.uid))
         );
     }
 
