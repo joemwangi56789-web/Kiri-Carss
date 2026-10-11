@@ -384,11 +384,13 @@ function renderCar(car) {
       publishButton.addEventListener("click", () => publishDraft(car, publishButton));
       card.appendChild(publishButton);
     }
-    const deleteDraftButton = document.createElement("button");
-    deleteDraftButton.type = "button";
-    deleteDraftButton.textContent = "Delete Draft";
-    deleteDraftButton.addEventListener("click", () => deleteCar(car, deleteDraftButton));
-    card.appendChild(deleteDraftButton);
+    if (currentCanPublish || (currentRole === "dealer" && currentApprovalStatus === "pending")) {
+      const deleteDraftButton = document.createElement("button");
+      deleteDraftButton.type = "button";
+      deleteDraftButton.textContent = "Delete Draft";
+      deleteDraftButton.addEventListener("click", () => deleteCar(car, deleteDraftButton));
+      card.appendChild(deleteDraftButton);
+    }
     return card;
   }
 
