@@ -261,6 +261,29 @@ async function loadSellerApplications() {
 
       row.append(title, details, contact, status);
 
+      const checklist = document.createElement("div");
+      checklist.className = "seller-verification-checklist";
+      const verificationChecks = {};
+      const addVerificationCheck = (key, label) => {
+        const labelElement = document.createElement("label");
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.checked = seller.verificationChecks?.[key] === true;
+        verificationChecks[key] = input;
+        labelElement.append(input, document.createTextNode(label));
+        checklist.appendChild(labelElement);
+      };
+      addVerificationCheck("identityChecked", "Identity checked");
+      addVerificationCheck("phoneConfirmed", "Phone/contact independently confirmed");
+      addVerificationCheck("sellerAuthorityChecked", "Permission to market vehicles checked");
+      if (seller.sellerType === "dealership") {
+        addVerificationCheck("businessDetailsChecked", "Dealership/business details checked");
+      }
+      const checklistNote = document.createElement("p");
+      checklistNote.textContent = "Complete these checks before approval. Do not upload identity documents into this checklist.";
+      checklist.appendChild(checklistNote);
+      row.appendChild(checklist);
+
       const actions = document.createElement("div");
       actions.className = "seller-review-actions";
 
@@ -269,8 +292,17 @@ async function loadSellerApplications() {
         button.type = "button";
         button.textContent = label;
         button.addEventListener("click", async () => {
-          if (nextStatus === "approved" &&
-              !confirm("Approve " + (seller.name || "this seller") + "? Confirm you have completed the required identity, contact and seller-authority checks.")) return;
+          if (nextStatus === "approved") {
+            const checksPassed = verificationChecks.identityChecked.checked
+              && verificationChecks.phoneConfirmed.checked
+              && verificationChecks.sellerAuthorityChecked.checked
+              && (seller.sellerType !== "dealership" || verificationChecks.businessDetailsChecked.checked);
+            if (!checksPassed) {
+              sellerApplicationsMessage.textContent = "Complete the required verification checklist before approving this seller.";
+              return;
+            }
+            if (!confirm("Approve " + (seller.name || "this seller") + "? You confirm that you completed the checklist above.")) return;
+          }
           if (nextStatus !== "approved" &&
               !confirm(label + " for " + (seller.name || "this seller") + "?")) return;
 
@@ -279,6 +311,13 @@ async function loadSellerApplications() {
             await updateDoc(doc(db, "admins", seller.id), {
               approvalStatus: nextStatus,
               active,
+              verificationStatus: nextStatus === "approved" ? "reviewed" : (seller.verificationStatus || "pending"),
+              verificationChecks: {
+                identityChecked: verificationChecks.identityChecked.checked,
+                phoneConfirmed: verificationChecks.phoneConfirmed.checked,
+                sellerAuthorityChecked: verificationChecks.sellerAuthorityChecked.checked,
+                businessDetailsChecked: seller.sellerType === "dealership" ? verificationChecks.businessDetailsChecked.checked : false
+              },
               reviewedAt: serverTimestamp(),
               reviewedBy: auth.currentUser.uid
             });
