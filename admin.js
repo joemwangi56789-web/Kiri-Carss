@@ -30,6 +30,10 @@ const whatsappMessage = document.getElementById("whatsappMessage");
 let currentUid = null;
 let currentWhatsApp = "";
 let currentAdminName = "";
+let currentRole = "";
+let currentProfile = null;
+let currentApprovalStatus = "";
+let currentCanPublish = false;
 
 function normalizeKenyanPhone(value) {
   let digits = String(value || "").replace(/\D/g, "");
@@ -51,41 +55,69 @@ function goToLogin() {
   window.location.replace("login.html");
 }
  
-// Wait for Firebase to restore the saved session before checking anything.
+// Restore the Firebase session, then permit legacy admins and self-registered dealers.
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     goToLogin();
     return;
   }
- 
+
   try {
     const snap = await getDoc(doc(db, "admins", user.uid));
     const profile = snap.exists() ? snap.data() : null;
- 
-    if (!profile || profile.active !== true) {
+    if (!profile) {
       await signOut(auth);
       goToLogin();
       return;
     }
- 
+
     const role = normalizeRole(profile.role);
- 
+    const approvalStatus = String(profile.approvalStatus || (role === "admin" ? "approved" : "pending")).toLowerCase();
+
     if (role === "owner") {
       window.location.replace("owner.html");
       return;
     }
- 
-    if (role !== "admin") {
+
+    if (role === "admin" && profile.active !== true) {
       await signOut(auth);
       goToLogin();
       return;
     }
- 
+
+    if (role !== "admin" && role !== "dealer") {
+      await signOut(auth);
+      goToLogin();
+      return;
+    }
+
     currentUid = user.uid;
+    currentRole = role;
+    currentProfile = profile;
+    currentApprovalStatus = approvalStatus;
+    currentCanPublish = role === "admin" ||
+      (role === "dealer" && profile.active === true && approvalStatus === "approved");
     currentAdminName = profile.name || user.email || "Kiri Cars seller";
     currentWhatsApp = normalizeKenyanPhone(profile.whatsapp);
     if (currentWhatsApp) adminWhatsAppInput.value = currentWhatsApp;
-    setText(adminMessage, "Signed in as " + currentAdminName);
+
+    if (role === "dealer" && approvalStatus === "pending") {
+      setText(adminMessage, "Your seller application is pending review. You can prepare private draft listings, but buyers cannot see them yet.");
+      setText(document.getElementById("listingPermissionNotice"), "Draft mode: listings you save now stay private until your account is approved.");
+      addCarButton.textContent = "Save Draft Listing";
+    } else if (role === "dealer" && approvalStatus !== "approved") {
+      setText(adminMessage, "Your seller account is " + approvalStatus + ". You cannot publish listings. Contact Kiri Cars if you believe this is an error.", true);
+      setText(document.getElementById("listingPermissionNotice"), "Listing creation is disabled while your account is " + approvalStatus + ".", true);
+      carForm.querySelectorAll("input, select, textarea, button").forEach((element) => { element.disabled = true; });
+    } else if (role === "dealer") {
+      setText(adminMessage, "Your seller account is approved. You can publish vehicles. Approval does not replace vehicle-by-vehicle checks.");
+      setText(document.getElementById("listingPermissionNotice"), "Approved seller: new listings can be published after you confirm your permission to market each vehicle.");
+      addCarButton.textContent = "Publish Vehicle";
+    } else {
+      setText(adminMessage, "Signed in as " + currentAdminName);
+      setText(document.getElementById("listingPermissionNotice"), "Before adding a vehicle, confirm your relationship to it and that you have permission to advertise it.");
+    }
+
     if (!currentWhatsApp) {
       setText(whatsappMessage, "Save your WhatsApp number before adding vehicles so buyers can contact you directly.", true);
     } else {
@@ -93,11 +125,11 @@ onAuthStateChanged(auth, async (user) => {
     }
     await loadMyCars();
   } catch (error) {
-    console.error("Admin check failed:", error);
+    console.error("Seller account check failed:", error);
     setText(adminMessage, "Could not verify your account: " + (error.code || error.message), true);
   }
 });
- 
+
 function readNumber(id) {
   const raw = document.getElementById(id).value.trim();
   return raw === "" ? null : Number(raw);
@@ -192,9 +224,17 @@ whatsappForm.addEventListener("submit", async (event) => {
 carForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!currentUid) return;
+  if (!currentCanPublish && !(currentRole === "dealer" && currentApprovalStatus === "pending")) {
+    setText(formMessage, "Your account is not permitted to create listings at this time.", true);
+    return;
+  }
   if (!currentWhatsApp) {
     setText(formMessage, "Please save your WhatsApp number above before adding a vehicle.", true);
     whatsappForm.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+  if (!document.getElementById("authorizationConfirmed").checked) {
+    setText(formMessage, "Confirm that you have permission to advertise this specific vehicle.", true);
     return;
   }
 
@@ -214,6 +254,7 @@ carForm.addEventListener("submit", async (event) => {
       images.push(await uploadPhoto(selectedPhotos[i], i + 1, selectedPhotos.length));
     }
 
+    const listingIsDraft = currentRole === "dealer" && currentApprovalStatus === "pending";
     const car = {
       manufacturer: document.getElementById("manufacturer").value.trim(),
       carType: document.getElementById("carType").value,
@@ -225,88 +266,85 @@ carForm.addEventListener("submit", async (event) => {
       fuel: document.getElementById("fuel").value,
       transmission: document.getElementById("transmission").value,
       description: document.getElementById("description").value.trim(),
+      vehicleRelationship: document.getElementById("vehicleRelationship").value,
+      authorizationConfirmed: true,
       images,
       imageUrl: images[0].url,
       addedBy: currentUid,
       sellerWhatsApp: currentWhatsApp,
       sellerName: currentAdminName,
+      sellerType: currentProfile.sellerType || "dealership",
+      sellerBusinessName: currentProfile.businessName || "",
+      listingStatus: listingIsDraft ? "draft" : "active",
       createdAt: serverTimestamp()
     };
 
     setText(uploadProgress, "Photos uploaded. Saving vehicle details...");
-    await addDoc(collection(db, "cars"), car);
+    const targetCollection = listingIsDraft ? "dealerDrafts" : "cars";
+    await addDoc(collection(db, targetCollection), car);
     carForm.reset();
     photoPreview.replaceChildren();
     setText(uploadProgress, "");
-    setText(formMessage, "Vehicle added successfully with " + images.length + (images.length === 1 ? " photo." : " photos."));
+    setText(formMessage, listingIsDraft
+      ? "Draft saved privately. It will not appear to buyers until your seller account is approved and you publish it."
+      : "Vehicle published successfully with " + images.length + (images.length === 1 ? " photo." : " photos."));
     await loadMyCars();
   } catch (error) {
-    console.error("Add vehicle failed:", error);
-    setText(formMessage, "Could not add vehicle: " + (error.code || error.message), true);
+    console.error("Save vehicle failed:", error);
+    setText(formMessage, "Could not save vehicle: " + (error.code || error.message), true);
     setText(uploadProgress, "If photos uploaded before the error, they may remain in Cloudinary and need cleanup.", true);
   } finally {
-    addCarButton.disabled = false;
-    carPhotosInput.disabled = false;
+    addCarButton.disabled = !currentCanPublish && !(currentRole === "dealer" && currentApprovalStatus === "pending");
+    carPhotosInput.disabled = !currentCanPublish && !(currentRole === "dealer" && currentApprovalStatus === "pending");
   }
 });
 
 async function loadMyCars() {
   if (!currentUid) return;
-  myCars.textContent = "Loading your vehicles...";
- 
-  try {
-    const q = query(collection(db, "cars"), where("addedBy", "==", currentUid));
-    const result = await getDocs(q);
- 
-    const cars = result.docs.map((d) => ({ id: d.id, ...d.data() }));
-    // Sort in the browser so no Firestore composite index is needed.
-    cars.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+  myCars.textContent = "Loading your listings...";
 
-    // Backfill seller contact on this admin's older listings once their number is saved.
-    if (currentWhatsApp) {
-      for (const car of cars) {
-        if (!car.sellerWhatsApp) {
-          try {
-            await updateDoc(doc(db, "cars", car.id), {
-              sellerWhatsApp: currentWhatsApp,
-              sellerName: currentAdminName
-            });
-            car.sellerWhatsApp = currentWhatsApp;
-            car.sellerName = currentAdminName;
-          } catch (backfillError) {
-            console.warn("Could not update seller contact on listing " + car.id, backfillError);
-          }
-        }
-      }
+  try {
+    let cars = [];
+    if (currentRole === "dealer") {
+      const [publishedSnapshot, draftsSnapshot] = await Promise.all([
+        getDocs(query(collection(db, "cars"), where("addedBy", "==", currentUid))),
+        getDocs(query(collection(db, "dealerDrafts"), where("addedBy", "==", currentUid)))
+      ]);
+      cars = [
+        ...publishedSnapshot.docs.map((d) => ({ id: d.id, _source: "cars", ...d.data() })),
+        ...draftsSnapshot.docs.map((d) => ({ id: d.id, _source: "dealerDrafts", ...d.data() }))
+      ];
+    } else {
+      const result = await getDocs(query(collection(db, "cars"), where("addedBy", "==", currentUid)));
+      cars = result.docs.map((d) => ({ id: d.id, _source: "cars", ...d.data() }));
     }
- 
-    myCars.textContent = "";
- 
+
+    cars.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+    myCars.replaceChildren();
+
     if (cars.length === 0) {
       myCars.textContent = "You have not added any vehicles yet.";
       return;
     }
- 
+
     cars.forEach((car) => myCars.appendChild(renderCar(car)));
   } catch (error) {
     console.error("Load vehicles failed:", error);
     myCars.textContent = "Could not load vehicles: " + (error.code || error.message);
   }
 }
- 
+
 function renderCar(car) {
   const card = document.createElement("div");
   card.className = "dashboard-card";
- 
+
   const title = document.createElement("h4");
   title.textContent = [car.year, car.manufacturer, car.model].filter(Boolean).join(" ");
- 
+
   const details = document.createElement("p");
   const price = typeof car.price === "number" ? "KSh " + car.price.toLocaleString() : "Price not set";
-  details.textContent = [car.carType, car.status, car.fuel, car.transmission, price]
-    .filter(Boolean)
-    .join(" · ");
- 
+  details.textContent = [car.carType, car.status, car.fuel, car.transmission, price].filter(Boolean).join(" · ");
+
   const photoUrls = Array.isArray(car.images) ? car.images.map((item) => item?.url).filter(Boolean) : [];
   const firstPhoto = photoUrls[0] || car.imageUrl;
   if (firstPhoto) {
@@ -317,15 +355,16 @@ function renderCar(car) {
     image.className = "admin-car-photo";
     card.appendChild(image);
   }
-  if (photoUrls.length > 1) {
-    const photoNote = document.createElement("p");
-    photoNote.textContent = photoUrls.length + " photos uploaded";
-    card.appendChild(photoNote);
-  }
 
   const lifecycle = document.createElement("p");
   lifecycle.className = "listing-lifecycle";
-  if (car.listingStatus === "sold") {
+  if (car._source === "dealerDrafts" || car.listingStatus === "draft") {
+    lifecycle.textContent = "PRIVATE DRAFT — not visible to buyers";
+    lifecycle.classList.add("draft-label");
+  } else if (car.listingStatus === "suspended") {
+    lifecycle.textContent = "SUSPENDED — not visible to buyers";
+    lifecycle.classList.add("expired-label");
+  } else if (car.listingStatus === "sold") {
     lifecycle.textContent = "SOLD — marked for removal after 72 hours";
     lifecycle.classList.add("sold-label");
   } else if (car.listingExpiresAt?.toMillis && car.listingExpiresAt.toMillis() <= Date.now()) {
@@ -337,7 +376,23 @@ function renderCar(car) {
 
   card.append(title, details, lifecycle);
 
-  if (car.listingStatus !== "sold") {
+  if (car._source === "dealerDrafts") {
+    if (currentCanPublish) {
+      const publishButton = document.createElement("button");
+      publishButton.type = "button";
+      publishButton.textContent = "Publish Draft";
+      publishButton.addEventListener("click", () => publishDraft(car, publishButton));
+      card.appendChild(publishButton);
+    }
+    const deleteDraftButton = document.createElement("button");
+    deleteDraftButton.type = "button";
+    deleteDraftButton.textContent = "Delete Draft";
+    deleteDraftButton.addEventListener("click", () => deleteCar(car, deleteDraftButton));
+    card.appendChild(deleteDraftButton);
+    return card;
+  }
+
+  if (car.listingStatus !== "sold" && car.listingStatus !== "suspended" && currentCanPublish) {
     const soldButton = document.createElement("button");
     soldButton.type = "button";
     soldButton.textContent = "Mark as Sold";
@@ -345,14 +400,41 @@ function renderCar(car) {
     card.appendChild(soldButton);
   }
 
-  const removeButton = document.createElement("button");
-  removeButton.type = "button";
-  removeButton.textContent = "Delete";
-  removeButton.addEventListener("click", () => deleteCar(car, removeButton));
-  card.appendChild(removeButton);
+  if (currentCanPublish) {
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.textContent = "Delete";
+    removeButton.addEventListener("click", () => deleteCar(car, removeButton));
+    card.appendChild(removeButton);
+  }
   return card;
 }
- 
+
+async function publishDraft(car, button) {
+  if (!currentCanPublish || car._source !== "dealerDrafts" || car.addedBy !== currentUid) return;
+  if (!car.authorizationConfirmed || !car.vehicleRelationship) {
+    alert("This draft is missing the vehicle permission declaration. Delete it and prepare a complete listing.");
+    return;
+  }
+  if (!confirm("Publish " + car.manufacturer + " " + car.model + " so buyers can see it?")) return;
+
+  button.disabled = true;
+  try {
+    const published = { ...car };
+    delete published.id;
+    delete published._source;
+    published.listingStatus = "active";
+    published.publishedAt = serverTimestamp();
+    await addDoc(collection(db, "cars"), published);
+    await deleteDoc(doc(db, "dealerDrafts", car.id));
+    await loadMyCars();
+  } catch (error) {
+    console.error("Publish draft failed:", error);
+    alert("Could not publish this draft: " + (error.code || error.message));
+    button.disabled = false;
+  }
+}
+
 async function markCarSold(car, button) {
   if (car.addedBy !== currentUid) {
     alert("You can only mark vehicles you added as sold.");
@@ -381,10 +463,11 @@ async function deleteCar(car, button) {
     return;
   }
   if (!confirm("Delete " + car.manufacturer + " " + car.model + "?")) return;
- 
+
   button.disabled = true;
   try {
-    await deleteDoc(doc(db, "cars", car.id));
+    const collectionName = car._source === "dealerDrafts" ? "dealerDrafts" : "cars";
+    await deleteDoc(doc(db, collectionName, car.id));
     await loadMyCars();
   } catch (error) {
     console.error("Delete failed:", error);
@@ -392,7 +475,7 @@ async function deleteCar(car, button) {
     button.disabled = false;
   }
 }
- 
+
 reloadCarsButton.addEventListener("click", loadMyCars);
  
 logoutButton.addEventListener("click", async () => {
