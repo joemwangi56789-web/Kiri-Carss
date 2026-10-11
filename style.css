@@ -698,3 +698,13 @@ p {
 .message-compose textarea { min-height: 85px; resize: vertical; }
 .account-muted { color: var(--muted); }
 @media (max-width: 700px) { .message-layout { grid-template-columns: 1fr; } .message-thread { min-height: 260px; } .message-bubble { max-width: 96%; } }
+
+
+/* Owner account statistics */
+.account-statistics h2 { color: var(--blue); }
+.account-stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 18px 0; }
+.account-stat { padding: 18px 14px; border: 1px solid var(--border); border-radius: 12px; background: #f4f8ff; }
+.account-stat span { display: block; color: var(--muted); font-size: 0.9rem; }
+.account-stat strong { display: block; margin-top: 8px; color: var(--blue); font-size: 2rem; overflow-wrap: anywhere; }
+.account-statistics > button { margin: 8px 0 14px; }
+@media (max-width: 700px) { .account-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
