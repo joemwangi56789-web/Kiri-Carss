@@ -23,8 +23,20 @@ const addCarButton = document.getElementById("addCarButton");
 const reloadCarsButton = document.getElementById("reloadCarsButton");
 const logoutButton = document.getElementById("logoutButton");
 const myCars = document.getElementById("myCars");
- 
+const whatsappForm = document.getElementById("whatsappForm");
+const adminWhatsAppInput = document.getElementById("adminWhatsApp");
+const whatsappMessage = document.getElementById("whatsappMessage");
+
 let currentUid = null;
+let currentWhatsApp = "";
+let currentAdminName = "";
+
+function normalizeKenyanPhone(value) {
+  let digits = String(value || "").replace(/\D/g, "");
+  if (digits.startsWith("0") && digits.length === 10) digits = "254" + digits.slice(1);
+  else if ((digits.startsWith("7") || digits.startsWith("1")) && digits.length === 9) digits = "254" + digits;
+  return /^254[17]\d{8}$/.test(digits) ? digits : "";
+}
  
 function setText(el, text, isError = false) {
   el.textContent = text;
@@ -70,7 +82,15 @@ onAuthStateChanged(auth, async (user) => {
     }
  
     currentUid = user.uid;
-    setText(adminMessage, "Signed in as " + (profile.name || user.email));
+    currentAdminName = profile.name || user.email || "Kiri Cars seller";
+    currentWhatsApp = normalizeKenyanPhone(profile.whatsapp);
+    if (currentWhatsApp) adminWhatsAppInput.value = currentWhatsApp;
+    setText(adminMessage, "Signed in as " + currentAdminName);
+    if (!currentWhatsApp) {
+      setText(whatsappMessage, "Save your WhatsApp number before adding vehicles so buyers can contact you directly.", true);
+    } else {
+      setText(whatsappMessage, "Your WhatsApp contact number is saved.");
+    }
     await loadMyCars();
   } catch (error) {
     console.error("Admin check failed:", error);
@@ -143,9 +163,39 @@ async function uploadPhoto(file, index, total) {
   return { url: result.secure_url, publicId: result.public_id || "" };
 }
 
+whatsappForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!currentUid) return;
+
+  const phone = normalizeKenyanPhone(adminWhatsAppInput.value);
+  if (!phone) {
+    setText(whatsappMessage, "Enter a valid Kenyan mobile number, e.g. 0712345678 or 254712345678.", true);
+    return;
+  }
+
+  const saveButton = document.getElementById("saveWhatsAppButton");
+  saveButton.disabled = true;
+  try {
+    await updateDoc(doc(db, "admins", currentUid), { whatsapp: phone });
+    currentWhatsApp = phone;
+    adminWhatsAppInput.value = phone;
+    setText(whatsappMessage, "WhatsApp number saved. Buyers can now contact you directly.");
+  } catch (error) {
+    console.error("Save WhatsApp number failed:", error);
+    setText(whatsappMessage, "Could not save your number: " + (error.code || error.message), true);
+  } finally {
+    saveButton.disabled = false;
+  }
+});
+
 carForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!currentUid) return;
+  if (!currentWhatsApp) {
+    setText(formMessage, "Please save your WhatsApp number above before adding a vehicle.", true);
+    whatsappForm.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
 
   const selectedPhotos = Array.from(carPhotosInput.files || []);
   const photoError = validatePhotos(selectedPhotos);
@@ -177,6 +227,8 @@ carForm.addEventListener("submit", async (event) => {
       images,
       imageUrl: images[0].url,
       addedBy: currentUid,
+      sellerWhatsApp: currentWhatsApp,
+      sellerName: currentAdminName,
       createdAt: serverTimestamp()
     };
 
