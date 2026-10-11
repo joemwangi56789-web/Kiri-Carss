@@ -252,7 +252,9 @@ function createVehicleCard(car) {
     try {
       const buyerSnap = await getDoc(doc(db, "buyers", signedInUser.uid));
       if (!buyerSnap.exists() || buyerSnap.data().role !== "buyer") {
-        alert("Please use a buyer account to send private enquiries. Your dealer account remains available for managing listings.");
+        // A dealer/owner session cannot be used as a buyer account.
+        // Send the visitor to the buyer registration/sign-in page instead of a popup.
+        window.location.href = "buyer.html?car=" + encodeURIComponent(car.id) + "&mode=buyer";
         return;
       }
 
