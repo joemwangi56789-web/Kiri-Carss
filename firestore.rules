@@ -29,6 +29,18 @@ service cloud.firestore {
         );
     }
 
+    function isActiveBuyer(userId) {
+      return exists(/databases/$(database)/documents/buyers/$(userId))
+        && (
+          !('active' in get(/databases/$(database)/documents/buyers/$(userId)).data)
+          || get(/databases/$(database)/documents/buyers/$(userId)).data.active == true
+        );
+    }
+
+    function isActiveParticipant(userId) {
+      return isActiveBuyer(userId) || isActiveSeller(userId);
+    }
+
     function isPendingDealer(userId) {
       return hasSellerProfile(userId)
         && get(/databases/$(database)/documents/admins/$(userId)).data.role == "dealer"
@@ -102,12 +114,15 @@ service cloud.firestore {
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.createdAt == request.time;
 
-      allow update: if signedIn()
-        && request.auth.uid == userId
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
-        && request.resource.data.name is string
-        && request.resource.data.name.size() >= 2
-        && request.resource.data.name.size() <= 80;
+      allow update: if isOwner()
+        || (
+          signedIn()
+          && request.auth.uid == userId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() >= 2
+          && request.resource.data.name.size() <= 80
+        );
 
       allow delete: if isOwner();
     }
@@ -185,8 +200,13 @@ service cloud.firestore {
       allow read: if signedIn()
         && (
           !exists(/databases/$(database)/documents/conversations/$(conversationId))
-          || resource.data.buyerId == request.auth.uid
-          || resource.data.sellerId == request.auth.uid
+          || (
+            isActiveParticipant(request.auth.uid)
+            && (
+              resource.data.buyerId == request.auth.uid
+              || resource.data.sellerId == request.auth.uid
+            )
+          )
         );
 
       allow create: if signedIn()
@@ -199,7 +219,7 @@ service cloud.firestore {
           'carId', 'carTitle', 'createdAt', 'lastMessageAt', 'lastMessage'
         ])
         && request.resource.data.buyerId == request.auth.uid
-        && exists(/databases/$(database)/documents/buyers/$(request.auth.uid))
+        && isActiveBuyer(request.auth.uid)
         && request.resource.data.sellerId is string
         && request.resource.data.carId is string
         && exists(/databases/$(database)/documents/cars/$(request.resource.data.carId))
@@ -234,6 +254,7 @@ service cloud.firestore {
         && request.resource.data.lastMessage is string;
 
       allow update: if signedIn()
+        && isActiveParticipant(request.auth.uid)
         && (
           resource.data.buyerId == request.auth.uid
           || resource.data.sellerId == request.auth.uid
@@ -248,12 +269,14 @@ service cloud.firestore {
 
       match /messages/{messageId} {
         allow read: if signedIn()
+          && isActiveParticipant(request.auth.uid)
           && (
             get(/databases/$(database)/documents/conversations/$(conversationId)).data.buyerId == request.auth.uid
             || get(/databases/$(database)/documents/conversations/$(conversationId)).data.sellerId == request.auth.uid
           );
 
         allow create: if signedIn()
+          && isActiveParticipant(request.auth.uid)
           && (
             get(/databases/$(database)/documents/conversations/$(conversationId)).data.buyerId == request.auth.uid
             || get(/databases/$(database)/documents/conversations/$(conversationId)).data.sellerId == request.auth.uid
