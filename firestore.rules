@@ -12,29 +12,76 @@ service cloud.firestore {
         && request.auth.uid == "kQJxJP5ArhXkL4uB22gh3CKrjEH3";
     }
 
+    function hasSellerProfile(userId) {
+      return exists(/databases/$(database)/documents/admins/$(userId));
+    }
+
     function isActiveSeller(userId) {
-      return exists(/databases/$(database)/documents/admins/$(userId))
+      return hasSellerProfile(userId)
         && get(/databases/$(database)/documents/admins/$(userId)).data.active == true
         && (
           get(/databases/$(database)/documents/admins/$(userId)).data.role == "admin"
           || get(/databases/$(database)/documents/admins/$(userId)).data.role == "owner"
+          || (
+            get(/databases/$(database)/documents/admins/$(userId)).data.role == "dealer"
+            && get(/databases/$(database)/documents/admins/$(userId)).data.approvalStatus == "approved"
+          )
         );
+    }
+
+    function isPendingDealer(userId) {
+      return hasSellerProfile(userId)
+        && get(/databases/$(database)/documents/admins/$(userId)).data.role == "dealer"
+        && get(/databases/$(database)/documents/admins/$(userId)).data.active == false
+        && get(/databases/$(database)/documents/admins/$(userId)).data.approvalStatus == "pending";
     }
 
     match /admins/{userId} {
       allow read: if signedIn()
         && (isOwner() || request.auth.uid == userId);
 
-      allow create, delete: if isOwner();
+      // Sellers can create only their own restricted, pending dealer profile.
+      allow create: if isOwner()
+        || (
+          signedIn()
+          && request.auth.uid == userId
+          && request.resource.data.keys().hasOnly([
+            'name', 'email', 'role', 'active', 'approvalStatus',
+            'verificationStatus', 'sellerType', 'businessName',
+            'whatsapp', 'createdAt', 'createdBy'
+          ])
+          && request.resource.data.keys().hasAll([
+            'name', 'email', 'role', 'active', 'approvalStatus',
+            'verificationStatus', 'sellerType', 'businessName',
+            'whatsapp', 'createdAt', 'createdBy'
+          ])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() >= 2
+          && request.resource.data.name.size() <= 80
+          && request.resource.data.email == request.auth.token.email
+          && request.resource.data.role == "dealer"
+          && request.resource.data.active == false
+          && request.resource.data.approvalStatus == "pending"
+          && request.resource.data.verificationStatus == "pending"
+          && request.resource.data.sellerType in ["dealership", "broker"]
+          && request.resource.data.businessName is string
+          && request.resource.data.whatsapp is string
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.createdAt == request.time
+        );
 
-      // Admins can edit only their own WhatsApp field.
+      // Only the owner can change approval, activity, or verification status.
+      // A signed-in seller can update only their own WhatsApp number.
       allow update: if isOwner()
         || (
           signedIn()
           && request.auth.uid == userId
           && request.resource.data.diff(resource.data)
             .affectedKeys().hasOnly(['whatsapp'])
+          && request.resource.data.whatsapp is string
         );
+
+      allow delete: if isOwner();
     }
 
     match /buyers/{userId} {
@@ -63,36 +110,60 @@ service cloud.firestore {
     }
 
     match /cars/{carId} {
+      // Drafts are stored separately, so public vehicle listings remain readable.
       allow read: if true;
 
       allow create: if isOwner()
         || (
           signedIn()
-          && get(
-            /databases/$(database)/documents/admins/$(request.auth.uid)
-          ).data.active == true
-          && get(
-            /databases/$(database)/documents/admins/$(request.auth.uid)
-          ).data.role == "admin"
           && request.resource.data.addedBy == request.auth.uid
+          && isActiveSeller(request.auth.uid)
+          && (
+            get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == "admin"
+            || get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == "owner"
+            || request.resource.data.listingStatus == "active"
+          )
         );
 
       allow update, delete: if isOwner()
         || (
           signedIn()
           && resource.data.addedBy == request.auth.uid
-          && get(
-            /databases/$(database)/documents/admins/$(request.auth.uid)
-          ).data.active == true
-          && get(
-            /databases/$(database)/documents/admins/$(request.auth.uid)
-          ).data.role == "admin"
+          && isActiveSeller(request.auth.uid)
+        );
+    }
+
+    // Pending sellers can save private draft listings without making them public.
+    match /dealerDrafts/{draftId} {
+      allow read: if signedIn()
+        && (isOwner() || resource.data.addedBy == request.auth.uid);
+
+      allow create: if signedIn()
+        && isPendingDealer(request.auth.uid)
+        && request.resource.data.addedBy == request.auth.uid
+        && request.resource.data.listingStatus == "draft";
+
+      allow update: if signedIn()
+        && (
+          isOwner()
+          || (
+            isPendingDealer(request.auth.uid)
+            && resource.data.addedBy == request.auth.uid
+            && request.resource.data.addedBy == request.auth.uid
+            && request.resource.data.listingStatus == "draft"
+          )
+        );
+
+      allow delete: if isOwner()
+        || (
+          signedIn()
+          && isPendingDealer(request.auth.uid)
+          && resource.data.addedBy == request.auth.uid
         );
     }
 
     match /conversations/{conversationId} {
-      // Allow signed-in users to check whether a deterministic conversation ID exists.
-      // A missing document contains no private data.
+      // Allow a signed-in user to check whether a deterministic conversation ID exists.
       allow read: if signedIn()
         && (
           !exists(/databases/$(database)/documents/conversations/$(conversationId))
@@ -117,7 +188,17 @@ service cloud.firestore {
         && get(
           /databases/$(database)/documents/cars/$(request.resource.data.carId)
         ).data.addedBy == request.resource.data.sellerId
-        // Older listings may not have listingStatus; only block listings explicitly marked sold.
+        && (
+          !('listingStatus' in get(
+            /databases/$(database)/documents/cars/$(request.resource.data.carId)
+          ).data)
+          || get(
+            /databases/$(database)/documents/cars/$(request.resource.data.carId)
+          ).data.listingStatus == "active"
+          || get(
+            /databases/$(database)/documents/cars/$(request.resource.data.carId)
+          ).data.listingStatus == "sold"
+        )
         && (
           !('listingStatus' in get(
             /databases/$(database)/documents/cars/$(request.resource.data.carId)
@@ -134,7 +215,6 @@ service cloud.firestore {
         && request.resource.data.lastMessageAt == request.time
         && request.resource.data.lastMessage is string;
 
-      // Participants can update only the preview text and timestamp.
       allow update: if signedIn()
         && (
           resource.data.buyerId == request.auth.uid
