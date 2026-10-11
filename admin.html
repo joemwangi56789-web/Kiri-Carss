@@ -38,6 +38,7 @@
 
     <section class="dashboard-card">
       <h3>Add a Vehicle</h3>
+      <p id="listingPermissionNotice" role="status" aria-live="polite"></p>
 
       <form id="carForm">
         <label for="manufacturer">Manufacturer</label>
@@ -123,6 +124,15 @@
           <option value="CVT">CVT</option>
           <option value="Other">Other</option>
         </select>
+
+        <label for="vehicleRelationship">Your relationship to this vehicle</label>
+        <select id="vehicleRelationship" required>
+          <option value="">Choose your relationship</option>
+          <option value="owner">I am the vehicle owner</option>
+          <option value="broker">I am a broker acting for the owner</option>
+          <option value="authorized_representative">I am authorized to market it for the owner/dealership</option>
+        </select>
+        <label class="consent-label"><input id="authorizationConfirmed" type="checkbox" required> I confirm I have permission to advertise this specific vehicle and will provide supporting evidence if requested.</label>
 
         <label for="description">Vehicle description</label>
         <textarea
