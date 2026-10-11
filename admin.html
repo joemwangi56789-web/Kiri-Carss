@@ -120,12 +120,17 @@
           placeholder="Describe the vehicle, features and condition"
         ></textarea>
 
-        <label for="imageUrl">Vehicle image URL (optional)</label>
+        <label for="carPhotos">Vehicle photos (required)</label>
         <input
-          id="imageUrl"
-          type="url"
-          placeholder="https://example.com/car.jpg"
+          id="carPhotos"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          required
         >
+        <p class="upload-help">Choose one or more JPG, PNG or WebP photos. Maximum 8 MB per photo.</p>
+        <div id="photoPreview" class="photo-preview" aria-live="polite"></div>
+        <p id="uploadProgress" role="status" aria-live="polite"></p>
 
         <button id="addCarButton" type="submit">Add Vehicle</button>
       </form>
