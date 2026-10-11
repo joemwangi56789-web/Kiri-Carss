@@ -180,6 +180,7 @@ whatsappForm.addEventListener("submit", async (event) => {
     currentWhatsApp = phone;
     adminWhatsAppInput.value = phone;
     setText(whatsappMessage, "WhatsApp number saved. Buyers can now contact you directly.");
+    await loadMyCars();
   } catch (error) {
     console.error("Save WhatsApp number failed:", error);
     setText(whatsappMessage, "Could not save your number: " + (error.code || error.message), true);
