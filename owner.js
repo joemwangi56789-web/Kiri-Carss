@@ -30,6 +30,12 @@ const adminMessage = document.getElementById("adminMessage");
 const createAdminButton = document.getElementById("createAdminButton");
 const carCount = document.getElementById("carCount");
 const adminsList = document.getElementById("adminsList");
+const totalBuyerAccounts = document.getElementById("totalBuyerAccounts");
+const totalDealerAccounts = document.getElementById("totalDealerAccounts");
+const activeDealerAccounts = document.getElementById("activeDealerAccounts");
+const inactiveDealerAccounts = document.getElementById("inactiveDealerAccounts");
+const accountStatsMessage = document.getElementById("accountStatsMessage");
+const recentAccountsList = document.getElementById("recentAccountsList");
 
 function showMessage(element, text, isError = false) {
   element.textContent = text;
@@ -87,6 +93,94 @@ async function loadCarCount() {
   } catch (error) {
     carCount.textContent = "Could not load vehicle count.";
     console.error("Car count error:", error);
+  }
+}
+
+function formatRegistrationDate(timestamp) {
+  if (!timestamp || typeof timestamp.toDate !== "function") return "Date not recorded";
+  return timestamp.toDate().toLocaleString();
+}
+
+async function loadAccountStats() {
+  accountStatsMessage.textContent = "Loading account statistics...";
+  recentAccountsList.textContent = "Loading recent registrations...";
+
+  try {
+    const [buyersSnapshot, adminsSnapshot] = await Promise.all([
+      getDocs(collection(db, "buyers")),
+      getDocs(collection(db, "admins"))
+    ]);
+
+    const buyers = [];
+    buyersSnapshot.forEach((item) => {
+      const data = item.data();
+      buyers.push({
+        name: data.name || "Unnamed buyer",
+        email: data.email || "No email recorded",
+        type: "Buyer",
+        createdAt: data.createdAt || null
+      });
+    });
+
+    const dealers = [];
+    adminsSnapshot.forEach((item) => {
+      const data = item.data();
+      const role = String(data.role || "").trim().toLowerCase();
+      if (role !== "admin") return;
+      dealers.push({
+        name: data.name || "Unnamed dealer",
+        email: data.email || "No email recorded",
+        type: "Dealer",
+        active: data.active === true,
+        createdAt: data.createdAt || null
+      });
+    });
+
+    const activeCount = dealers.filter((dealer) => dealer.active).length;
+    totalBuyerAccounts.textContent = String(buyers.length);
+    totalDealerAccounts.textContent = String(dealers.length);
+    activeDealerAccounts.textContent = String(activeCount);
+    inactiveDealerAccounts.textContent = String(dealers.length - activeCount);
+
+    const recent = [...buyers, ...dealers].sort((a, b) => {
+      const aTime = a.createdAt && typeof a.createdAt.toMillis === "function" ? a.createdAt.toMillis() : 0;
+      const bTime = b.createdAt && typeof b.createdAt.toMillis === "function" ? b.createdAt.toMillis() : 0;
+      return bTime - aTime;
+    }).slice(0, 10);
+
+    recentAccountsList.replaceChildren();
+
+    if (recent.length === 0) {
+      recentAccountsList.textContent = "No buyer or dealer accounts found.";
+    } else {
+      recent.forEach((account) => {
+        const row = document.createElement("div");
+        row.className = "admin-list-item";
+
+        const name = document.createElement("strong");
+        name.textContent = account.name;
+
+        const details = document.createElement("p");
+        details.textContent = account.email;
+
+        const metadata = document.createElement("p");
+        metadata.textContent = account.type +
+          (account.type === "Dealer" ? " | " + (account.active ? "Active" : "Inactive") : "") +
+          " | " + formatRegistrationDate(account.createdAt);
+
+        row.append(name, details, metadata);
+        recentAccountsList.appendChild(row);
+      });
+    }
+
+    accountStatsMessage.textContent = "Account statistics updated successfully.";
+    accountStatsMessage.style.color = "#167a35";
+  } catch (error) {
+    console.error("Account statistics error:", error);
+    accountStatsMessage.textContent =
+      "Could not load account statistics. Check that the published Firestore rules allow the owner to read buyer and administrator records.";
+    accountStatsMessage.style.color = "#c62828";
+    recentAccountsList.textContent = "Recent registrations could not be loaded.";
   }
 }
 
@@ -250,11 +344,11 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
 });
 
 document.getElementById("refreshButton").addEventListener("click", async () => {
-  await loadCarCount();
-  await loadAdmins();
+  await Promise.all([loadCarCount(), loadAdmins(), loadAccountStats()]);
 });
 
 document.getElementById("loadAdminsButton").addEventListener("click", loadAdmins);
+document.getElementById("refreshAccountsButton").addEventListener("click", loadAccountStats);
 
 // Wait for Firebase to tell us whether a user is signed in, then check the profile.
 onAuthStateChanged(auth, async (user) => {
@@ -262,8 +356,7 @@ onAuthStateChanged(auth, async (user) => {
     const authorized = await requireOwner(user);
 
     if (authorized) {
-      await loadCarCount();
-      await loadAdmins();
+      await Promise.all([loadCarCount(), loadAdmins(), loadAccountStats()]);
     }
   } catch (error) {
     console.error("Owner dashboard error:", error);
