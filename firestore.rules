@@ -91,9 +91,12 @@ service cloud.firestore {
     }
 
     match /conversations/{conversationId} {
+      // Allow signed-in users to check whether a deterministic conversation ID exists.
+      // A missing document contains no private data.
       allow read: if signedIn()
         && (
-          resource.data.buyerId == request.auth.uid
+          !exists(/databases/$(database)/documents/conversations/$(conversationId))
+          || resource.data.buyerId == request.auth.uid
           || resource.data.sellerId == request.auth.uid
           || isOwner()
         );
