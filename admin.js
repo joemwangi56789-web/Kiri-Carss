@@ -273,7 +273,7 @@ carForm.addEventListener("submit", async (event) => {
       addedBy: currentUid,
       sellerWhatsApp: currentWhatsApp,
       sellerName: currentAdminName,
-      sellerType: currentProfile.sellerType || "dealership",
+      sellerType: currentProfile.sellerType || "",
       sellerBusinessName: currentProfile.businessName || "",
       listingStatus: listingIsDraft ? "draft" : "active",
       createdAt: serverTimestamp()
