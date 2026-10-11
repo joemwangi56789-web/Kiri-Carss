@@ -150,6 +150,23 @@ async function loadSession(user) {
       currentProfile = buyerSnap.data();
       currentRole = "buyer";
     } else {
+      const params = new URLSearchParams(window.location.search);
+      const buyerModeRequested = params.get("mode") === "buyer" || Boolean(params.get("car"));
+      if (buyerModeRequested) {
+        // The same Firebase session cannot act as both dealer and buyer.
+        // Sign out the dealer session so the buyer registration form remains visible.
+        await signOut(auth);
+        currentUser = null;
+        currentProfile = null;
+        currentRole = "";
+        authPanel.hidden = false;
+        inboxPanel.hidden = true;
+        buyerSignOut.hidden = true;
+        setAuthMode("signup");
+        setMessage(buyerAuthMessage, "To contact a dealer, create or sign in to a buyer account. Your dealer session has been signed out on this device.", false);
+        return;
+      }
+
       const adminSnap = await getDoc(doc(db, "admins", user.uid));
       const admin = adminSnap.exists() ? adminSnap.data() : null;
       if (admin && admin.active === true && (admin.role === "admin" || admin.role === "owner")) {
@@ -160,7 +177,9 @@ async function loadSession(user) {
         currentUser = null;
         currentProfile = null;
         currentRole = "";
-        setMessage(buyerAuthMessage, "This page needs a buyer account. If you are a dealer, make sure your admin account is active.", true);
+        authPanel.hidden = false;
+        inboxPanel.hidden = true;
+        setMessage(buyerAuthMessage, "This page needs a buyer account. Please create one or sign in.", true);
         return;
       }
     }
