@@ -309,7 +309,9 @@ async function loadSellerApplications() {
       };
 
       const approvalStatus = seller.approvalStatus || "pending";
-      if (approvalStatus !== "approved") {
+      if (approvalStatus === "suspended" || approvalStatus === "rejected") {
+        actions.appendChild(makeAction("Approve / Reactivate", "approved", true));
+      } else if (approvalStatus !== "approved") {
         actions.appendChild(makeAction("Approve seller", "approved", true));
       }
       if (approvalStatus !== "rejected") {
@@ -317,9 +319,6 @@ async function loadSellerApplications() {
       }
       if (approvalStatus !== "suspended") {
         actions.appendChild(makeAction("Suspend seller", "suspended", false));
-      }
-      if (approvalStatus === "suspended" || approvalStatus === "rejected") {
-        actions.appendChild(makeAction("Approve / Reactivate", "approved", true));
       }
 
       row.appendChild(actions);
@@ -356,7 +355,7 @@ onAuthStateChanged(auth, async (user) => {
     const authorized = await requireOwner(user);
 
     if (authorized) {
-      await Promise.all([loadCarCount(), loadAdmins(), loadAccountStats()]);
+      await Promise.all([loadCarCount(), loadAdmins(), loadAccountStats(), loadSellerApplications()]);
     }
   } catch (error) {
     console.error("Owner dashboard error:", error);
