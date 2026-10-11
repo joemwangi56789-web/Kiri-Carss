@@ -260,6 +260,24 @@ async function loadMyCars() {
     const cars = result.docs.map((d) => ({ id: d.id, ...d.data() }));
     // Sort in the browser so no Firestore composite index is needed.
     cars.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+    // Backfill seller contact on this admin's older listings once their number is saved.
+    if (currentWhatsApp) {
+      for (const car of cars) {
+        if (!car.sellerWhatsApp) {
+          try {
+            await updateDoc(doc(db, "cars", car.id), {
+              sellerWhatsApp: currentWhatsApp,
+              sellerName: currentAdminName
+            });
+            car.sellerWhatsApp = currentWhatsApp;
+            car.sellerName = currentAdminName;
+          } catch (backfillError) {
+            console.warn("Could not update seller contact on listing " + car.id, backfillError);
+          }
+        }
+      }
+    }
  
     myCars.textContent = "";
  
