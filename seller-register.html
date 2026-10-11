@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seller Registration | Kiri Cars</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="login-container">
+    <section class="login-card">
+      <h1>Join Kiri Cars</h1>
+      <p>Register as a dealership or independent car broker.</p>
+      <p>Your account will be reviewed before you can publish vehicle listings.</p>
+      <form id="sellerRegisterForm">
+        <label for="sellerName">Full name</label>
+        <input id="sellerName" type="text" minlength="2" maxlength="80" autocomplete="name" required>
+
+        <label for="sellerType">Seller type</label>
+        <select id="sellerType" required>
+          <option value="">Choose seller type</option>
+          <option value="dealership">Dealership</option>
+          <option value="broker">Independent broker</option>
+        </select>
+
+        <div id="businessNameGroup" hidden>
+          <label for="businessName">Dealership/business name</label>
+          <input id="businessName" type="text" maxlength="120" autocomplete="organization">
+        </div>
+
+        <label for="sellerEmail">Email address</label>
+        <input id="sellerEmail" type="email" autocomplete="email" required>
+
+        <label for="sellerWhatsApp">WhatsApp number</label>
+        <input id="sellerWhatsApp" type="tel" inputmode="tel" placeholder="0712345678 or 254712345678" required>
+
+        <label for="sellerPassword">Password</label>
+        <input id="sellerPassword" type="password" minlength="6" autocomplete="new-password" required>
+
+        <label for="sellerPasswordConfirm">Confirm password</label>
+        <input id="sellerPasswordConfirm" type="password" minlength="6" autocomplete="new-password" required>
+
+        <label class="consent-label">
+          <input id="sellerDeclaration" type="checkbox" required>
+          I will provide truthful information and only advertise vehicles I own or have permission to market.
+        </label>
+
+        <button id="sellerRegisterButton" type="submit">Create Seller Account</button>
+      </form>
+      <p id="sellerRegisterMessage" role="status" aria-live="polite"></p>
+      <p>Already registered? <a href="login.html">Sign in</a></p>
+      <p><a href="index.html">Back to Kiri Cars</a></p>
+    </section>
+  </main>
+  <script type="module" src="seller-register.js"></script>
+</body>
+</html>
