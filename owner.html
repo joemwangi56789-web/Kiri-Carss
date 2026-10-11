@@ -25,6 +25,34 @@
       </p>
     </section>
 
+    <section class="dashboard-card account-statistics">
+      <h2>Account Statistics</h2>
+      <p>Live totals from the buyer and administrator account records in Kiri Cars.</p>
+      <div class="account-stat-grid">
+        <article class="account-stat">
+          <span>Total buyers</span>
+          <strong id="totalBuyerAccounts">—</strong>
+        </article>
+        <article class="account-stat">
+          <span>Total dealer accounts</span>
+          <strong id="totalDealerAccounts">—</strong>
+        </article>
+        <article class="account-stat">
+          <span>Active dealers</span>
+          <strong id="activeDealerAccounts">—</strong>
+        </article>
+        <article class="account-stat">
+          <span>Inactive dealers</span>
+          <strong id="inactiveDealerAccounts">—</strong>
+        </article>
+      </div>
+      <button id="refreshAccountsButton" type="button">Refresh Account Statistics</button>
+      <p id="accountStatsMessage" role="status" aria-live="polite"></p>
+      <h3>Recent Registrations</h3>
+      <p class="account-muted">The 10 most recent buyer and dealer accounts, where registration dates are available.</p>
+      <div id="recentAccountsList"></div>
+    </section>
+
     <section class="dashboard-grid">
       <article class="dashboard-card">
         <h3>Manage Administrators</h3>
