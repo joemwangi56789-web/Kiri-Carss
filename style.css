@@ -745,3 +745,30 @@ p {
   color: #8a5a00;
   font-weight: 700;
 }
+
+
+.seller-verification-checklist {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid #d8e0e8;
+  border-radius: 10px;
+  background: #f7f9fc;
+}
+.seller-verification-checklist label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.4;
+}
+.seller-verification-checklist input[type="checkbox"] {
+  width: auto;
+  min-width: 18px;
+  margin-top: 3px;
+}
+.seller-verification-checklist p {
+  margin: 4px 0 0;
+  font-size: 0.88rem;
+  color: #5b6570;
+}
