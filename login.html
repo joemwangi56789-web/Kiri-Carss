@@ -37,6 +37,7 @@
 
       <p id="message" role="status" aria-live="polite"></p>
       <pre id="diagnostics" style="white-space:pre-wrap;overflow-wrap:anywhere;text-align:left;font-size:12px;background:#f2f5f8;color:#18212b;padding:12px;border-radius:8px;display:none;"></pre>
+      <p>New to Kiri Cars? <a href="seller-register.html">Register as a dealership or broker</a></p>
       <a href="index.html">Back to Kiri Cars</a>
     </section>
   </main>
@@ -122,9 +123,15 @@
 
         const role = String(profile.role || "").trim().toLowerCase();
 
+        if (role === "dealer") {
+          showMessage("Sign-in successful. Opening your seller dashboard...", false);
+          window.location.href = "admin.html";
+          return;
+        }
+
         if (profile.active !== true) {
           await signOut(auth);
-          showMessage("Profile was found, but active is not Boolean true. See the diagnostics below.");
+          showMessage("Profile was found, but this account is inactive. See the diagnostics below.");
           return;
         }
 
@@ -142,8 +149,7 @@
 
         await signOut(auth);
         showMessage(
-          "Your account is active, but its role is not recognized. " +
-          "The role must be owner or admin. Received: " +
+          "Your account role is not recognized. The role must be owner, admin or dealer. Received: " +
           (profile.role === undefined ? "missing" : String(profile.role)) + "."
         );
 
