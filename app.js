@@ -54,6 +54,7 @@ function timestampMillis(value) {
 }
 
 function publicListingIsVisible(car) {
+  if (car.listingStatus === "draft" || car.listingStatus === "suspended") return false;
   const now = Date.now();
   const expiry = timestampMillis(car.listingExpiresAt);
   if (expiry !== null && expiry <= now) return false;
@@ -189,6 +190,15 @@ function createVehicleCard(car) {
   title.textContent =
     (car.manufacturer || "") + " " + (car.model || "Vehicle");
   card.appendChild(title);
+
+  if (car.sellerType === "dealership" || car.sellerType === "broker") {
+    const sellerBadge = document.createElement("p");
+    sellerBadge.className = "seller-type-label";
+    sellerBadge.textContent = car.sellerType === "broker"
+      ? "Kiri Cars-reviewed independent broker"
+      : "Kiri Cars-reviewed dealership";
+    card.appendChild(sellerBadge);
+  }
 
   const price = document.createElement("p");
   price.className = "vehicle-price";
