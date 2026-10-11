@@ -3,7 +3,7 @@ import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/
 import { collection, doc, getDoc, getDocs, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
 const buyersBox = document.getElementById("buyerAccountsList");
-const adminsBox = document.getElementById("adminsList");
+const adminsBox = document.getElementById("managedAdminsList");
 const message = document.getElementById("accountManagementMessage");
 
 function say(text, error = false) {
