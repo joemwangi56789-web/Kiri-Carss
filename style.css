@@ -646,3 +646,30 @@ p {
 .vehicle-thumbnail { flex: 0 0 64px; padding: 0; overflow: hidden; border: 2px solid transparent; border-radius: 7px; background: var(--white); }
 .vehicle-thumbnail img { display: block; width: 64px; height: 48px; object-fit: cover; }
 .vehicle-thumbnail:focus, .vehicle-thumbnail:hover { border-color: var(--blue); }
+
+
+/* Listing lifecycle labels */
+.sold-label {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 7px;
+  color: #ffffff !important;
+  background: #b42318 !important;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+.sold-notice {
+  margin: 0 18px 18px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff1f0;
+  color: #912018 !important;
+  font-weight: 700;
+}
+.listing-lifecycle {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.expired-label {
+  color: #9a6700;
+}
