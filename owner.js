@@ -1,18 +1,8 @@
 import { app, auth, db } from "./firebase-config.js";
 
 import {
-  createUserWithEmailAndPassword,
   onAuthStateChanged,
   signOut
-} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-
-import {
-  initializeApp,
-  deleteApp
-} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-
-import {
-  getAuth
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
 
 import {
@@ -20,15 +10,13 @@ import {
   doc,
   getDoc,
   getDocs,
-  setDoc,
   updateDoc,
+  query,
+  where,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
 const ownerMessage = document.getElementById("ownerMessage");
-const adminForm = document.getElementById("adminForm");
-const adminMessage = document.getElementById("adminMessage");
-const createAdminButton = document.getElementById("createAdminButton");
 const carCount = document.getElementById("carCount");
 const adminsList = document.getElementById("adminsList");
 const totalBuyerAccounts = document.getElementById("totalBuyerAccounts");
@@ -294,7 +282,21 @@ async function loadSellerApplications() {
               reviewedAt: serverTimestamp(),
               reviewedBy: auth.currentUser.uid
             });
+
+            const sellerCars = await getDocs(query(collection(db, "cars"), where("addedBy", "==", seller.id)));
+            const listingUpdates = [];
+            sellerCars.forEach((carDoc) => {
+              const car = carDoc.data();
+              if (nextStatus === "approved" && car.listingStatus === "suspended") {
+                listingUpdates.push(updateDoc(doc(db, "cars", carDoc.id), { listingStatus: "active" }));
+              } else if (nextStatus !== "approved" && car.listingStatus !== "sold") {
+                listingUpdates.push(updateDoc(doc(db, "cars", carDoc.id), { listingStatus: "suspended" }));
+              }
+            });
+            await Promise.all(listingUpdates);
+
             sellerApplicationsMessage.textContent = "Seller status updated to " + nextStatus + ".";
+
             await Promise.all([loadSellerApplications(), loadAdmins(), loadAccountStats()]);
           } catch (error) {
             console.error("Seller approval update failed:", error);
@@ -330,113 +332,6 @@ async function loadSellerApplications() {
     sellerApplicationsMessage.textContent = "Could not load applications. Check that the latest Firestore rules have been published.";
   }
 }
-
-adminForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-
-  const name = document.getElementById("adminName").value.trim();
-  const email = document.getElementById("adminEmail").value.trim();
-  const whatsapp = normalizeKenyanPhone(document.getElementById("adminWhatsApp").value);
-  const password = document.getElementById("adminPassword").value;
-
-  if (!whatsapp) {
-    showMessage(adminMessage, "Enter a valid Kenyan mobile number, e.g. 0712345678 or 254712345678.", true);
-    return;
-  }
-
-  createAdminButton.disabled = true;
-  createAdminButton.textContent = "Creating account...";
-  showMessage(adminMessage, "Creating administrator...", false);
-
-  let secondaryApp;
-
-  try {
-    const owner = auth.currentUser;
-
-    if (!owner) {
-      throw new Error("Your owner session has expired. Sign in again.");
-    }
-
-    const ownerSnap = await getDoc(doc(db, "admins", owner.uid));
-
-    if (
-      !ownerSnap.exists() ||
-      ownerSnap.data().active !== true ||
-      String(ownerSnap.data().role || "").trim().toLowerCase() !== "owner"
-    ) {
-      throw new Error("Owner permission could not be verified.");
-    }
-
-    secondaryApp = initializeApp(
-      app.options,
-      "KiriCarsAdminCreator"
-    );
-
-    const secondaryAuth = getAuth(secondaryApp);
-
-    const credential = await createUserWithEmailAndPassword(
-      secondaryAuth,
-      email,
-      password
-    );
-
-    const newAdmin = credential.user;
-
-    await setDoc(doc(db, "admins", newAdmin.uid), {
-      name: name,
-      email: email,
-      role: "admin",
-      active: true,
-      whatsapp: whatsapp,
-      createdAt: serverTimestamp(),
-      createdBy: owner.uid
-    });
-
-    await signOut(secondaryAuth);
-
-    showMessage(
-      adminMessage,
-      "Administrator created successfully. They can now sign in.",
-      false
-    );
-
-    adminForm.reset();
-    await loadAdmins();
-
-  } catch (error) {
-    console.error("Create administrator error:", error);
-
-    let text = error.message || "Could not create administrator.";
-
-    if (error.code === "auth/email-already-in-use") {
-      text = "That email already has a Firebase Authentication account.";
-    } else if (error.code === "auth/weak-password") {
-      text = "Choose a stronger password with at least 6 characters.";
-    } else if (
-      error.code === "permission-denied" ||
-      error.code === "firestore/permission-denied"
-    ) {
-      text =
-        "Firestore denied this operation. The account may have been created " +
-        "in Authentication, but its administrator profile may not have been saved. " +
-        "Check Firebase Authentication and Firestore before retrying.";
-    }
-
-    showMessage(adminMessage, text, true);
-
-  } finally {
-    if (secondaryApp) {
-      try {
-        await deleteApp(secondaryApp);
-      } catch (error) {
-        console.warn("Secondary app cleanup failed:", error);
-      }
-    }
-
-    createAdminButton.disabled = false;
-    createAdminButton.textContent = "Create Administrator";
-  }
-});
 
 document.getElementById("logoutButton").addEventListener("click", async () => {
   try {
