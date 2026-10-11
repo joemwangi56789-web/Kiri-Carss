@@ -708,3 +708,40 @@ p {
 .account-stat strong { display: block; margin-top: 8px; color: var(--blue); font-size: 2rem; overflow-wrap: anywhere; }
 .account-statistics > button { margin: 8px 0 14px; }
 @media (max-width: 700px) { .account-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+
+/* Seller onboarding and vehicle-authority review */
+.consent-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.5;
+  margin: 12px 0;
+}
+.consent-label input[type="checkbox"] {
+  width: auto;
+  min-width: 18px;
+  margin-top: 4px;
+}
+.seller-review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.seller-review-actions button {
+  flex: 1 1 150px;
+}
+.seller-type-label {
+  display: inline-block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #eaf3ff;
+  color: #174b88;
+}
+.draft-label {
+  color: #8a5a00;
+  font-weight: 700;
+}
