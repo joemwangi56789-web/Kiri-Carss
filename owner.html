@@ -54,6 +54,18 @@
     </section>
 
     <section class="dashboard-card">
+      <h2>Account Access Management</h2>
+      <p>Temporarily suspend or reactivate buyer, administrator, and dealer access. The owner account is protected and cannot be suspended here. These controls block access to Kiri Cars data and messaging through Firestore rules; they do not delete the person's Firebase Authentication account.</p>
+      <div class="account-management-actions">
+        <button id="loadBuyerAccountsButton" type="button">Load Buyer Accounts</button>
+        <button id="loadAdminsButtonTop" type="button">Load Admin &amp; Dealer Accounts</button>
+      </div>
+      <p id="accountManagementMessage" role="status" aria-live="polite"></p>
+      <h3>Buyer Accounts</h3>
+      <div id="buyerAccountsList"></div>
+    </section>
+
+    <section class="dashboard-card">
       <h2>Seller Applications &amp; Approvals</h2>
       <p>Review dealerships and independent brokers before allowing them to publish vehicles. Approval means the account passed your review; it is not a guarantee of every vehicle or transaction.</p>
       <button id="loadSellerApplicationsButton" type="button">Refresh Seller Applications</button>
@@ -81,10 +93,8 @@
 
       <article class="dashboard-card">
         <h3>Seller &amp; Administrator Accounts</h3>
-        <p>Review accounts registered in your dealership system.</p>
-        <button id="loadAdminsButton" type="button">
-          Load Administrators
-        </button>
+        <p>Review and manage dealer and administrator access.</p>
+        <button id="loadAdminsButton" type="button">Load Admin &amp; Dealer Accounts</button>
         <div id="adminsList"></div>
       </article>
     </section>
