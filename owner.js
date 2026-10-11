@@ -21,6 +21,7 @@ import {
   getDoc,
   getDocs,
   setDoc,
+  updateDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
@@ -36,6 +37,8 @@ const activeDealerAccounts = document.getElementById("activeDealerAccounts");
 const inactiveDealerAccounts = document.getElementById("inactiveDealerAccounts");
 const accountStatsMessage = document.getElementById("accountStatsMessage");
 const recentAccountsList = document.getElementById("recentAccountsList");
+const sellerApplicationsList = document.getElementById("sellerApplicationsList");
+const sellerApplicationsMessage = document.getElementById("sellerApplicationsMessage");
 
 function showMessage(element, text, isError = false) {
   element.textContent = text;
@@ -126,11 +129,12 @@ async function loadAccountStats() {
     adminsSnapshot.forEach((item) => {
       const data = item.data();
       const role = String(data.role || "").trim().toLowerCase();
-      if (role !== "admin") return;
+      if (role !== "admin" && role !== "dealer") return;
       dealers.push({
         name: data.name || "Unnamed dealer",
         email: data.email || "No email recorded",
-        type: "Dealer",
+        type: data.sellerType === "broker" ? "Independent broker" :
+          (data.sellerType === "dealership" ? "Dealership" : "Dealer"),
         active: data.active === true,
         createdAt: data.createdAt || null
       });
@@ -224,6 +228,106 @@ async function loadAdmins() {
     adminsList.textContent =
       "Could not load accounts. Check Firestore rules.";
     console.error("Load administrators error:", error);
+  }
+}
+
+async function loadSellerApplications() {
+  sellerApplicationsMessage.textContent = "Loading seller applications...";
+  sellerApplicationsList.replaceChildren();
+
+  try {
+    const snapshot = await getDocs(collection(db, "admins"));
+    const sellers = snapshot.docs
+      .map((item) => ({ id: item.id, ...item.data() }))
+      .filter((seller) => String(seller.role || "").toLowerCase() === "dealer")
+      .sort((a, b) => {
+        const rank = { pending: 0, rejected: 1, suspended: 2, approved: 3 };
+        return (rank[a.approvalStatus || "pending"] ?? 4) - (rank[b.approvalStatus || "pending"] ?? 4);
+      });
+
+    if (!sellers.length) {
+      sellerApplicationsList.textContent = "No self-registered seller applications yet.";
+      sellerApplicationsMessage.textContent = "Seller applications updated.";
+      return;
+    }
+
+    sellers.forEach((seller) => {
+      const row = document.createElement("article");
+      row.className = "admin-list-item";
+
+      const title = document.createElement("strong");
+      title.textContent = seller.name || "Unnamed seller";
+
+      const details = document.createElement("p");
+      details.textContent =
+        (seller.sellerType === "broker" ? "Independent broker" : "Dealership") +
+        (seller.businessName ? " · " + seller.businessName : "") +
+        " · " + (seller.email || "No email");
+
+      const contact = document.createElement("p");
+      contact.textContent = "WhatsApp: " + (seller.whatsapp || "Not provided");
+
+      const status = document.createElement("p");
+      status.textContent = "Approval: " + (seller.approvalStatus || "pending") +
+        " · Account active: " + (seller.active === true ? "Yes" : "No");
+
+      row.append(title, details, contact, status);
+
+      const actions = document.createElement("div");
+      actions.className = "seller-review-actions";
+
+      const makeAction = (label, nextStatus, active) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = label;
+        button.addEventListener("click", async () => {
+          if (nextStatus === "approved" &&
+              !confirm("Approve " + (seller.name || "this seller") + "? Confirm you have completed the required identity, contact and seller-authority checks.")) return;
+          if (nextStatus !== "approved" &&
+              !confirm(label + " for " + (seller.name || "this seller") + "?")) return;
+
+          button.disabled = true;
+          try {
+            await updateDoc(doc(db, "admins", seller.id), {
+              approvalStatus: nextStatus,
+              active,
+              reviewedAt: serverTimestamp(),
+              reviewedBy: auth.currentUser.uid
+            });
+            sellerApplicationsMessage.textContent = "Seller status updated to " + nextStatus + ".";
+            await Promise.all([loadSellerApplications(), loadAdmins(), loadAccountStats()]);
+          } catch (error) {
+            console.error("Seller approval update failed:", error);
+            sellerApplicationsMessage.textContent = "Could not update seller: " + (error.code || error.message);
+          } finally {
+            button.disabled = false;
+          }
+        });
+        return button;
+      };
+
+      const approvalStatus = seller.approvalStatus || "pending";
+      if (approvalStatus !== "approved") {
+        actions.appendChild(makeAction("Approve seller", "approved", true));
+      }
+      if (approvalStatus !== "rejected") {
+        actions.appendChild(makeAction("Reject application", "rejected", false));
+      }
+      if (approvalStatus !== "suspended") {
+        actions.appendChild(makeAction("Suspend seller", "suspended", false));
+      }
+      if (approvalStatus === "suspended" || approvalStatus === "rejected") {
+        actions.appendChild(makeAction("Approve / Reactivate", "approved", true));
+      }
+
+      row.appendChild(actions);
+      sellerApplicationsList.appendChild(row);
+    });
+
+    sellerApplicationsMessage.textContent = "Loaded " + sellers.length + " seller account(s).";
+  } catch (error) {
+    console.error("Load seller applications failed:", error);
+    sellerApplicationsMessage.textContent = "Could not load applications. Check that the latest Firestore rules have been published.";
   }
 }
 
@@ -344,10 +448,11 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
 });
 
 document.getElementById("refreshButton").addEventListener("click", async () => {
-  await Promise.all([loadCarCount(), loadAdmins(), loadAccountStats()]);
+  await Promise.all([loadCarCount(), loadAdmins(), loadAccountStats(), loadSellerApplications()]);
 });
 
 document.getElementById("loadAdminsButton").addEventListener("click", loadAdmins);
+document.getElementById("loadSellerApplicationsButton").addEventListener("click", loadSellerApplications);
 document.getElementById("refreshAccountsButton").addEventListener("click", loadAccountStats);
 
 // Wait for Firebase to tell us whether a user is signed in, then check the profile.
