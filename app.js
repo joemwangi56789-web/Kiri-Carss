@@ -113,19 +113,46 @@ function createVehicleCard(car) {
   const card = document.createElement("article");
   card.className = "vehicle-card";
 
-  const imageUrl = safeImageUrl(car.imageUrl);
+  const photoUrls = Array.isArray(car.images)
+    ? car.images.map((item) => safeImageUrl(item?.url)).filter(Boolean)
+    : [];
+  if (!photoUrls.length) {
+    const legacyUrl = safeImageUrl(car.imageUrl);
+    if (legacyUrl) photoUrls.push(legacyUrl);
+  }
 
-  if (imageUrl) {
+  if (photoUrls.length) {
+    const gallery = document.createElement("div");
+    gallery.className = "vehicle-gallery";
     const image = document.createElement("img");
-    image.src = imageUrl;
+    image.src = photoUrls[0];
     image.alt = (car.manufacturer || "") + " " + (car.model || "vehicle");
     image.loading = "lazy";
+    image.onerror = () => image.remove();
+    gallery.appendChild(image);
 
-    image.onerror = () => {
-      image.remove();
-    };
-
-    card.appendChild(image);
+    if (photoUrls.length > 1) {
+      const thumbnails = document.createElement("div");
+      thumbnails.className = "vehicle-thumbnails";
+      photoUrls.forEach((url, index) => {
+        const thumbnail = document.createElement("button");
+        thumbnail.type = "button";
+        thumbnail.className = "vehicle-thumbnail";
+        thumbnail.setAttribute("aria-label", "Show vehicle photo " + (index + 1));
+        const thumbImage = document.createElement("img");
+        thumbImage.src = url;
+        thumbImage.alt = "Photo " + (index + 1);
+        thumbImage.loading = "lazy";
+        thumbnail.appendChild(thumbImage);
+        thumbnail.addEventListener("click", () => {
+          image.src = url;
+          image.alt = (car.manufacturer || "") + " " + (car.model || "vehicle") + " photo " + (index + 1);
+        });
+        thumbnails.appendChild(thumbnail);
+      });
+      gallery.appendChild(thumbnails);
+    }
+    card.appendChild(gallery);
   }
 
   const status = document.createElement("span");
