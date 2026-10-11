@@ -98,7 +98,6 @@ service cloud.firestore {
           !exists(/databases/$(database)/documents/conversations/$(conversationId))
           || resource.data.buyerId == request.auth.uid
           || resource.data.sellerId == request.auth.uid
-          || isOwner()
         );
 
       allow create: if signedIn()
@@ -133,7 +132,6 @@ service cloud.firestore {
         && (
           resource.data.buyerId == request.auth.uid
           || resource.data.sellerId == request.auth.uid
-          || isOwner()
         )
         && request.resource.data.diff(resource.data)
           .affectedKeys().hasOnly(['lastMessage', 'lastMessageAt'])
@@ -141,21 +139,19 @@ service cloud.firestore {
         && request.resource.data.lastMessage.size() <= 160
         && request.resource.data.lastMessageAt == request.time;
 
-      allow delete: if isOwner();
+      allow delete: if false;
 
       match /messages/{messageId} {
         allow read: if signedIn()
           && (
             get(/databases/$(database)/documents/conversations/$(conversationId)).data.buyerId == request.auth.uid
             || get(/databases/$(database)/documents/conversations/$(conversationId)).data.sellerId == request.auth.uid
-            || isOwner()
           );
 
         allow create: if signedIn()
           && (
             get(/databases/$(database)/documents/conversations/$(conversationId)).data.buyerId == request.auth.uid
             || get(/databases/$(database)/documents/conversations/$(conversationId)).data.sellerId == request.auth.uid
-            || isOwner()
           )
           && request.resource.data.keys().hasOnly([
             'senderId', 'senderName', 'text', 'createdAt'
