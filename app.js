@@ -281,6 +281,30 @@ function createVehicleCard(car) {
 
   card.appendChild(contactButton);
 
+  // Keep the original WhatsApp option alongside private on-site messaging.
+  const whatsappButton = document.createElement("button");
+  whatsappButton.type = "button";
+  whatsappButton.className = "secondary-mode";
+  whatsappButton.textContent = "Contact via WhatsApp";
+  whatsappButton.addEventListener("click", () => {
+    const vehicleName =
+      (car.manufacturer || "") + " " +
+      (car.model || "") + " (" + (car.year || "Year not listed") + ")";
+    const enquiry =
+      "Hello, I am interested in " + vehicleName +
+      ". Listed price: " + formatPrice(car.price) +
+      ". Please share more details.";
+    const sellerPhone = String(car.sellerWhatsApp || "").replace(/\\D/g, "");
+    if (!/^254[17]\\d{8}$/.test(sellerPhone)) {
+      alert("This seller has not added a valid WhatsApp number yet. Please try another vehicle.");
+      return;
+    }
+    const whatsappUrl =
+      "https://wa.me/" + sellerPhone + "?text=" + encodeURIComponent(enquiry);
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+  });
+  card.appendChild(whatsappButton);
+
   return card;
 }
 
