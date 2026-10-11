@@ -21,14 +21,6 @@ service cloud.firestore {
         );
     }
 
-    function isConversationParticipant() {
-      return signedIn()
-        && (
-          get(/databases/$(database)/documents/conversations/$(conversationId)).data.buyerId == request.auth.uid
-          || get(/databases/$(database)/documents/conversations/$(conversationId)).data.sellerId == request.auth.uid
-        );
-    }
-
     match /admins/{userId} {
       allow read: if signedIn()
         && (isOwner() || request.auth.uid == userId);
@@ -149,9 +141,19 @@ service cloud.firestore {
       allow delete: if isOwner();
 
       match /messages/{messageId} {
-        allow read: if isConversationParticipant() || isOwner();
+        allow read: if signedIn()
+          && (
+            get(/databases/$(database)/documents/conversations/$(conversationId)).data.buyerId == request.auth.uid
+            || get(/databases/$(database)/documents/conversations/$(conversationId)).data.sellerId == request.auth.uid
+            || isOwner()
+          );
 
-        allow create: if (isConversationParticipant() || isOwner())
+        allow create: if signedIn()
+          && (
+            get(/databases/$(database)/documents/conversations/$(conversationId)).data.buyerId == request.auth.uid
+            || get(/databases/$(database)/documents/conversations/$(conversationId)).data.sellerId == request.auth.uid
+            || isOwner()
+          )
           && request.resource.data.keys().hasOnly([
             'senderId', 'senderName', 'text', 'createdAt'
           ])
