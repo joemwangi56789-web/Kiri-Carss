@@ -113,12 +113,19 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/buyers/$(request.auth.uid))
         && request.resource.data.sellerId is string
         && request.resource.data.carId is string
+        && exists(/databases/$(database)/documents/cars/$(request.resource.data.carId))
         && get(
           /databases/$(database)/documents/cars/$(request.resource.data.carId)
         ).data.addedBy == request.resource.data.sellerId
-        && get(
-          /databases/$(database)/documents/cars/$(request.resource.data.carId)
-        ).data.listingStatus != "sold"
+        // Older listings may not have listingStatus; only block listings explicitly marked sold.
+        && (
+          !('listingStatus' in get(
+            /databases/$(database)/documents/cars/$(request.resource.data.carId)
+          ).data)
+          || get(
+            /databases/$(database)/documents/cars/$(request.resource.data.carId)
+          ).data.listingStatus != "sold"
+        )
         && isActiveSeller(request.resource.data.sellerId)
         && request.resource.data.buyerName is string
         && request.resource.data.sellerName is string
