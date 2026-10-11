@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Create a Kiri Cars buyer account and message vehicle dealers privately.">
+  <title>Buyer Account & Messages | Kiri Cars</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="dashboard-header">
+    <div>
+      <h1>Kiri Cars</h1>
+      <p>Buyer account and private messages</p>
+    </div>
+    <button id="buyerSignOut" type="button" hidden>Sign Out</button>
+  </header>
+
+  <main class="account-layout">
+    <section id="authPanel" class="account-panel">
+      <h2 id="authTitle">Create your buyer account</h2>
+      <p class="account-muted">Use a buyer account to send private enquiries to dealers and keep your conversations in one place.</p>
+      <div class="account-switch">
+        <button id="showSignup" type="button">Create Account</button>
+        <button id="showLogin" class="secondary-mode" type="button">Sign In</button>
+      </div>
+      <form id="buyerAuthForm" class="account-form">
+        <div id="nameField">
+          <label for="buyerName">Your name</label>
+          <input id="buyerName" type="text" autocomplete="name" maxlength="80" placeholder="Enter your name" required>
+        </div>
+        <label for="buyerEmail">Email address</label>
+        <input id="buyerEmail" type="email" autocomplete="email" placeholder="you@example.com" required>
+        <label for="buyerPassword">Password</label>
+        <input id="buyerPassword" type="password" autocomplete="new-password" minlength="6" placeholder="At least 6 characters" required>
+        <button id="buyerAuthButton" type="submit">Create Buyer Account</button>
+      </form>
+      <p id="buyerAuthMessage" role="status" aria-live="polite"></p>
+    </section>
+
+    <section id="inboxPanel" hidden>
+      <div class="account-panel">
+        <h2 id="accountWelcome">Your messages</h2>
+        <p id="accountRoleNote" class="account-muted">Your private vehicle enquiries.</p>
+        <p id="buyerPageMessage" role="status" aria-live="polite"></p>
+        <button id="refreshInbox" type="button">Refresh Messages</button>
+      </div>
+      <div class="message-layout">
+        <section class="account-panel">
+          <h3>Conversations</h3>
+          <div id="conversationList" class="conversation-list">Loading conversations...</div>
+        </section>
+        <section class="account-panel">
+          <h3 id="threadTitle">Select a conversation</h3>
+          <div class="message-thread">
+            <div id="messageStream" class="message-stream" aria-live="polite">
+              <p class="account-muted">Choose a conversation to view messages.</p>
+            </div>
+            <form id="messageForm" class="message-compose" hidden>
+              <label for="messageText">Your message</label>
+              <textarea id="messageText" maxlength="2000" placeholder="Write your message..." required></textarea>
+              <button id="sendMessageButton" type="submit">Send Message</button>
+            </form>
+          </div>
+        </section>
+      </div>
+    </section>
+    <p><a href="index.html">← Back to browse cars</a></p>
+  </main>
+
+  <script type="module" src="buyer.js"></script>
+</body>
+</html>
