@@ -109,7 +109,16 @@ async function loadAdmins() {
       email.textContent = a.email || "No email recorded";
       const status = document.createElement("p");
       status.textContent = String(a.role).toUpperCase() + " · " + (active ? "Active" : "Suspended / inactive");
-      row.append(title, email, status);
+      const category = document.createElement("p");
+      if (String(a.role).toLowerCase() === "dealer") {
+        category.textContent = "Category: " +
+          (a.sellerType === "broker" ? "Independent Sales Representative" :
+            a.sellerType === "dealership" ? "Showroom Representative" : "Not recorded") +
+          (a.businessName ? " · " + a.businessName : "");
+      } else {
+        category.textContent = "Category: " + (String(a.role).toLowerCase() === "owner" ? "Kiri Cars Owner" : "Administrator");
+      }
+      row.append(title, email, status, category);
       if (String(a.role).toLowerCase() === "owner") {
         const protectedNote = document.createElement("p");
         protectedNote.textContent = "Owner account — protected";

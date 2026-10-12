@@ -11,6 +11,8 @@ import {
   getDoc,
   getDocs,
   updateDoc,
+  deleteField,
+  writeBatch,
   query,
   where,
   serverTimestamp
@@ -121,8 +123,8 @@ async function loadAccountStats() {
       dealers.push({
         name: data.name || "Unnamed dealer",
         email: data.email || "No email recorded",
-        type: data.sellerType === "broker" ? "Independent broker" :
-          (data.sellerType === "dealership" ? "Dealership" : "Dealer"),
+        type: data.sellerType === "broker" ? "Independent Sales Representative" :
+          (data.sellerType === "dealership" ? "Showroom Representative" : "Seller category not recorded"),
         active: data.active === true,
         createdAt: data.createdAt || null
       });
@@ -248,7 +250,7 @@ async function loadSellerApplications() {
 
       const details = document.createElement("p");
       details.textContent =
-        (seller.sellerType === "broker" ? "Independent broker" : "Dealership") +
+        (seller.sellerType === "broker" ? "Independent Sales Representative" : "Showroom Representative") +
         (seller.businessName ? " · " + seller.businessName : "") +
         " · " + (seller.email || "No email");
 
@@ -277,7 +279,7 @@ async function loadSellerApplications() {
       addVerificationCheck("phoneConfirmed", "Phone/contact independently confirmed");
       addVerificationCheck("sellerAuthorityChecked", "Permission to market vehicles checked");
       if (seller.sellerType === "dealership") {
-        addVerificationCheck("businessDetailsChecked", "Dealership/business details checked");
+        addVerificationCheck("businessDetailsChecked", "Showroom/business details checked");
       }
       const checklistNote = document.createElement("p");
       checklistNote.textContent = "Complete these checks before approval. Do not upload identity documents into this checklist.";
@@ -386,7 +388,42 @@ document.getElementById("refreshButton").addEventListener("click", async () => {
 
 document.getElementById("loadAdminsButton").addEventListener("click", loadAdmins);
 document.getElementById("loadSellerApplicationsButton").addEventListener("click", loadSellerApplications);
+
+async function removePublicSellerCategories() {
+  const message = document.getElementById("publicSellerCategoriesMessage");
+  if (!message) return;
+  if (!confirm("Remove sellerType and sellerBusinessName from existing public vehicle records? Seller categories will remain on internal account profiles. This cannot be undone automatically.")) return;
+  message.textContent = "Checking public vehicle records...";
+  try {
+    const snapshot = await getDocs(collection(db, "cars"));
+    const needingCleanup = snapshot.docs.filter((item) => {
+      const data = item.data();
+      return Object.prototype.hasOwnProperty.call(data, "sellerType")
+        || Object.prototype.hasOwnProperty.call(data, "sellerBusinessName");
+    });
+    if (!needingCleanup.length) {
+      message.textContent = "Done. No public vehicle records contain seller category fields.";
+      return;
+    }
+    for (let start = 0; start < needingCleanup.length; start += 400) {
+      const batch = writeBatch(db);
+      needingCleanup.slice(start, start + 400).forEach((item) => {
+        batch.update(item.ref, {
+          sellerType: deleteField(),
+          sellerBusinessName: deleteField()
+        });
+      });
+      await batch.commit();
+    }
+    message.textContent = "Removed seller category fields from " + needingCleanup.length + " public listing(s). Internal seller profiles are unchanged.";
+  } catch (error) {
+    console.error("Remove public seller categories failed:", error);
+    message.textContent = "Could not clean up public listings: " + (error.code || error.message) + ". Confirm the latest Firestore rules are published.";
+  }
+}
+
 document.getElementById("refreshAccountsButton").addEventListener("click", loadAccountStats);
+document.getElementById("removePublicSellerCategoriesButton")?.addEventListener("click", removePublicSellerCategories);
 
 // Wait for Firebase to tell us whether a user is signed in, then check the profile.
 onAuthStateChanged(auth, async (user) => {

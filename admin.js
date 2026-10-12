@@ -280,8 +280,6 @@ carForm.addEventListener("submit", async (event) => {
       addedBy: currentUid,
       sellerWhatsApp: currentWhatsApp,
       sellerName: currentAdminName,
-      sellerType: currentProfile.sellerType || "",
-      sellerBusinessName: currentProfile.businessName || "",
       listingStatus: listingIsDraft ? "draft" : "active",
       createdAt: serverTimestamp()
     };
@@ -484,6 +482,62 @@ async function deleteCar(car, button) {
     button.disabled = false;
   }
 }
+
+
+async function loadSellerDirectory() {
+  const list = document.getElementById("sellerDirectoryList");
+  const message = document.getElementById("sellerDirectoryMessage");
+  if (!list || !message) return;
+  list.textContent = "Loading seller directory...";
+  message.textContent = "";
+  try {
+    const snapshot = await getDocs(collection(db, "admins"));
+    const accounts = snapshot.docs
+      .map((item) => ({ id: item.id, ...item.data() }))
+      .filter((account) => ["owner", "admin", "dealer"].includes(normalizeRole(account.role)))
+      .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+    list.replaceChildren();
+    if (!accounts.length) {
+      list.textContent = "No team accounts found.";
+      return;
+    }
+    accounts.forEach((account) => {
+      const row = document.createElement("article");
+      row.className = "admin-list-item";
+      const name = document.createElement("strong");
+      name.textContent = account.name || "Unnamed account";
+      const email = document.createElement("p");
+      email.textContent = account.email || "No email recorded";
+      const role = normalizeRole(account.role);
+      let category = "Administrator";
+      if (role === "dealer") {
+        category = account.sellerType === "broker"
+          ? "Independent Sales Representative"
+          : account.sellerType === "dealership"
+            ? "Showroom Representative"
+            : "Seller category not recorded";
+      } else if (role === "owner") {
+        category = "Kiri Cars Owner";
+      }
+      const type = document.createElement("p");
+      type.textContent = "Category: " + category +
+        (account.businessName ? " · " + account.businessName : "");
+      const status = document.createElement("p");
+      status.textContent = "Account: " +
+        (account.active === true ? "Active" : "Inactive / pending") +
+        (account.approvalStatus ? " · Approval: " + account.approvalStatus : "");
+      row.append(name, email, type, status);
+      list.appendChild(row);
+    });
+    message.textContent = "Loaded " + accounts.length + " team account(s).";
+  } catch (error) {
+    console.error("Seller directory load failed:", error);
+    list.textContent = "Could not load the seller directory.";
+    message.textContent = "Access denied or account records could not be loaded. The latest Firestore rules must be published by the owner.";
+  }
+}
+
+document.getElementById("loadSellerDirectoryButton")?.addEventListener("click", loadSellerDirectory);
 
 reloadCarsButton.addEventListener("click", loadMyCars);
  
