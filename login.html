@@ -65,7 +65,7 @@
       message.style.color = isError ? "#c62828" : "#167a35";
     }
 
-login.html    loginForm.addEventListener("submit", async function (event) {
+    loginForm.addEventListener("submit", async function (event) {
       event.preventDefault();
 
       const email = emailInput.value.trim();
@@ -94,15 +94,15 @@ login.html    loginForm.addEventListener("submit", async function (event) {
 
         const role = String(profile.role || "").trim().toLowerCase();
 
-        if (role === "dealer") {
-          showMessage("Sign-in successful. Opening your seller dashboard...", false);
-          window.location.href = "admin.html";
+        if (profile.active !== true || profile.accountStatus === "suspended") {
+          await signOut(auth);
+          showMessage("This account is inactive or suspended. Please contact Kiri Cars support.");
           return;
         }
 
-        if (profile.active !== true) {
-          await signOut(auth);
-          showMessage("This account is inactive or suspended. Please contact Kiri Cars support.");
+        if (role === "dealer") {
+          showMessage("Sign-in successful. Opening your seller dashboard...", false);
+          window.location.href = "admin.html";
           return;
         }
 
