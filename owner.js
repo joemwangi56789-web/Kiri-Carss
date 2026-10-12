@@ -30,6 +30,30 @@ const recentAccountsList = document.getElementById("recentAccountsList");
 const sellerApplicationsList = document.getElementById("sellerApplicationsList");
 const sellerApplicationsMessage = document.getElementById("sellerApplicationsMessage");
 
+
+function setupOwnerNavigation() {
+  const buttons = [...document.querySelectorAll("[data-owner-panel]")];
+  const panels = [...document.querySelectorAll(".owner-panel")];
+  function openPanel(name) {
+    panels.forEach((panel) => { panel.hidden = panel.id !== "owner-panel-" + name; });
+    buttons.forEach((button) => {
+      const active = button.dataset.ownerPanel === name;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-selected", String(active));
+    });
+  }
+  buttons.forEach((button) => button.addEventListener("click", () => openPanel(button.dataset.ownerPanel)));
+  document.querySelectorAll("[data-open-owner-panel]").forEach((button) => {
+    button.addEventListener("click", () => {
+      openPanel(button.dataset.openOwnerPanel);
+      document.getElementById("owner-panel-" + button.dataset.openOwnerPanel)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+  openPanel("overview");
+}
+
+setupOwnerNavigation();
+
 function showMessage(element, text, isError = false) {
   element.textContent = text;
   element.style.color = isError ? "#c62828" : "#167a35";
