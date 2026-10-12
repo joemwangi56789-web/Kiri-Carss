@@ -50,7 +50,7 @@ service cloud.firestore {
 
     match /admins/{userId} {
       allow read: if signedIn()
-        && (isOwner() || request.auth.uid == userId);
+        && (isOwner() || request.auth.uid == userId || isActiveSeller(request.auth.uid));
 
       // Sellers can create only their own restricted, pending dealer profile.
       allow create: if isOwner()
