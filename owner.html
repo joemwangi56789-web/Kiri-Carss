@@ -69,7 +69,7 @@
 
     <section class="dashboard-card">
       <h2>Seller Applications &amp; Approvals</h2>
-      <p>Review dealerships and independent brokers before allowing them to publish vehicles. Approval means the account passed your review; it is not a guarantee of every vehicle or transaction.</p>
+      <p>Review showroom representatives and independent sales representatives before allowing them to publish vehicles. Approval means the account passed your review; it is not a guarantee of every vehicle or transaction.</p>
       <button id="loadSellerApplicationsButton" type="button">Refresh Seller Applications</button>
       <p id="sellerApplicationsMessage" role="status" aria-live="polite"></p>
       <div id="sellerApplicationsList"></div>
@@ -78,7 +78,7 @@
     <section class="dashboard-grid">
       <article class="dashboard-card">
         <h3>Seller Registration</h3>
-        <p>Dealerships and independent brokers now register their own accounts. Review and approve them in the Seller Applications section above.</p>
+        <p>Showroom representatives and independent sales representatives register their own accounts. Review and approve them in the Seller Applications section above.</p>
         <a class="dashboard-link" href="seller-register.html">Open Seller Registration Page</a>
       </article>
 
@@ -86,6 +86,9 @@
       <article class="dashboard-card">
         <h3>Vehicle Listings</h3>
         <p>View vehicles listed on the Kiri Cars marketplace.</p>
+        <p>Seller categories are kept on internal account profiles, not on public vehicle records.</p>
+        <button id="removePublicSellerCategoriesButton" type="button">Remove Seller Categories from Existing Public Listings</button>
+        <p id="publicSellerCategoriesMessage" role="status" aria-live="polite"></p>
         <a class="dashboard-link" href="index.html">View Public Website</a>
         <button id="refreshButton" type="button">
           Refresh Dashboard
