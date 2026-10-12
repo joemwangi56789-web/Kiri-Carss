@@ -772,3 +772,26 @@ p {
   font-size: 0.88rem;
   color: #5b6570;
 }
+
+
+/* Owner dashboard navigation and compact management workspace */
+.owner-dashboard { max-width: 1280px; }
+.owner-welcome { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.owner-welcome > div { max-width: 780px; }
+.owner-welcome .eyebrow { margin-bottom: 6px; }
+.owner-welcome h2 { margin-bottom: 8px; }
+.owner-navigation { position: sticky; top: 0; z-index: 8; display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 24px; padding: 10px; border: 1px solid var(--border); border-radius: 14px; background: rgba(255,255,255,.96); box-shadow: var(--shadow); }
+.owner-nav-button { flex: 1 1 150px; color: var(--blue-dark); background: var(--blue-light); }
+.owner-nav-button.active { color: var(--white); background: var(--blue); }
+.owner-panel[hidden] { display: none !important; }
+.owner-section-heading { margin: 8px 0 18px; }
+.owner-section-heading h2 { margin-bottom: 4px; color: var(--blue-dark); }
+.owner-section-heading p { margin-bottom: 0; color: var(--muted); }
+.overview-quick-links { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.overview-quick-links h3 { flex-basis: 100%; margin-bottom: 4px; }
+.overview-quick-links button { flex: 1 1 190px; }
+@media (max-width: 600px) {
+  .owner-welcome { align-items: flex-start; flex-direction: column; }
+  .owner-navigation { position: static; }
+  .owner-nav-button { flex: 1 1 calc(50% - 8px); padding: 10px 8px; }
+}
