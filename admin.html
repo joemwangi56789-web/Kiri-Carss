@@ -37,6 +37,14 @@
     </section>
 
     <section class="dashboard-card">
+      <h3>Kiri Cars Seller Directory</h3>
+      <p>For approved team members only. See the seller category and showroom affiliation of other Kiri Cars accounts. This information is not shown on public vehicle cards.</p>
+      <button id="loadSellerDirectoryButton" type="button">Load Seller Directory</button>
+      <p id="sellerDirectoryMessage" role="status" aria-live="polite"></p>
+      <div id="sellerDirectoryList"></div>
+    </section>
+
+    <section class="dashboard-card">
       <h3>Add a Vehicle</h3>
       <p id="listingPermissionNotice" role="status" aria-live="polite"></p>
 
@@ -129,7 +137,7 @@
         <select id="vehicleRelationship" required>
           <option value="">Choose your relationship</option>
           <option value="owner">I am the vehicle owner</option>
-          <option value="broker">I am a broker acting for the owner</option>
+          <option value="broker">I am an independent sales representative acting for the owner</option>
           <option value="authorized_representative">I am authorized to market it for the owner/dealership</option>
         </select>
         <label class="consent-label"><input id="authorizationConfirmed" type="checkbox" required> I confirm I have permission to advertise this specific vehicle and will provide supporting evidence if requested.</label>
