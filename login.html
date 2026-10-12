@@ -36,7 +36,6 @@
       </form>
 
       <p id="message" role="status" aria-live="polite"></p>
-      <pre id="diagnostics" style="white-space:pre-wrap;overflow-wrap:anywhere;text-align:left;font-size:12px;background:#f2f5f8;color:#18212b;padding:12px;border-radius:8px;display:none;"></pre>
       <p>New to Kiri Cars? <a href="seller-register.html">Register as a dealership or broker</a></p>
       <a href="index.html">Back to Kiri Cars</a>
     </section>
@@ -60,16 +59,10 @@
     const passwordInput = document.getElementById("password");
     const loginButton = document.getElementById("loginButton");
     const message = document.getElementById("message");
-    const diagnostics = document.getElementById("diagnostics");
 
     function showMessage(text, isError = true) {
       message.textContent = text;
       message.style.color = isError ? "#c62828" : "#167a35";
-    }
-
-    function showDiagnostics(details) {
-      diagnostics.style.display = "block";
-      diagnostics.textContent = "KIRI CARS DIAGNOSTICS\n" + details;
     }
 
     loginForm.addEventListener("submit", async function (event) {
@@ -91,47 +84,25 @@
         const userRef = doc(db, "admins", signedInUser.uid);
         const userSnap = await getDoc(userRef);
 
-        // Show diagnostics on the page so they are available even without a browser console.
-        const diagnosticLines = [
-          "Firebase project ID: " + db.app.options.projectId,
-          "Signed-in UID: " + signedInUser.uid,
-          "Document path checked: " + userRef.path,
-          "Document exists: " + userSnap.exists()
-        ];
-
         if (!userSnap.exists()) {
           await signOut(auth);
-          showDiagnostics(diagnosticLines.join("\n"));
-          showMessage("Firebase login worked, but the account profile document was not found. See diagnostics below.");
+          showMessage("We couldn't find an account profile for this login. Please contact Kiri Cars support.");
           return;
         }
 
         const profile = userSnap.data();
-        const profileKeys = Object.keys(profile);
-        const activeLikeKeys = profileKeys.filter((key) => key.trim() === "active");
-        diagnosticLines.push(
-          "Field names returned (JSON): " + JSON.stringify(profileKeys),
-          "active value: " + JSON.stringify(profile.active),
-          "active type: " + typeof profile.active,
-          "role value: " + JSON.stringify(profile.role),
-          "Keys that look like active after trimming spaces: " + JSON.stringify(activeLikeKeys),
-          ...activeLikeKeys
-            .filter((key) => key !== "active")
-            .map((key) => "Value under suspicious field " + JSON.stringify(key) + ": " + JSON.stringify(profile[key]) + " (type: " + typeof profile[key] + ")")
-        );
-        showDiagnostics(diagnosticLines.join("\n"));
 
         const role = String(profile.role || "").trim().toLowerCase();
+
+        if (profile.active !== true || profile.accountStatus === "suspended") {
+          await signOut(auth);
+          showMessage("This account is inactive or suspended. Please contact Kiri Cars support.");
+          return;
+        }
 
         if (role === "dealer") {
           showMessage("Sign-in successful. Opening your seller dashboard...", false);
           window.location.href = "admin.html";
-          return;
-        }
-
-        if (profile.active !== true) {
-          await signOut(auth);
-          showMessage("Profile was found, but this account is inactive. See the diagnostics below.");
           return;
         }
 
@@ -148,10 +119,7 @@
         }
 
         await signOut(auth);
-        showMessage(
-          "Your account role is not recognized. The role must be owner, admin or dealer. Received: " +
-          (profile.role === undefined ? "missing" : String(profile.role)) + "."
-        );
+        showMessage("This account has an unrecognized role. Please contact Kiri Cars support.");
 
       } catch (error) {
         if (signedInUser) {
@@ -162,9 +130,7 @@
           }
         }
 
-        showDiagnostics("Error code: " + (error.code || "not provided") + "\nError message: " + (error.message || String(error)));
-
-        let errorText = "Login failed: " + error.message;
+        let errorText = "We couldn't sign you in. Please check your details and try again.";
 
         if (error.code === "auth/invalid-credential" ||
             error.code === "auth/wrong-password" ||
@@ -173,7 +139,7 @@
         } else if (error.code === "permission-denied" ||
                    error.code === "firestore/permission-denied") {
           errorText =
-            "Firestore denied access to your account profile. Your database rules may need checking.";
+            "We couldn't verify your account right now. Please try again later or contact Kiri Cars support.";
         } else if (error.code === "auth/too-many-requests") {
           errorText = "Too many login attempts. Please wait before trying again.";
         }

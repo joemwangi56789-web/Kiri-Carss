@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,100 +7,101 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="dashboard-header">
-    <div>
-      <h1>Kiri Cars</h1>
-      <p>Owner Dashboard</p>
-    </div>
+  <header class="dashboard-header owner-header">
+    <div><h1>Kiri Cars</h1><p>Owner Control Centre</p></div>
     <button id="logoutButton" type="button">Sign Out</button>
   </header>
 
-  <main class="dashboard-container">
-    <section class="welcome-card">
-      <h2>Welcome, Owner</h2>
-      <p>Manage your dealership, administrators, and vehicle listings.</p>
-      <p id="ownerMessage" role="status" aria-live="polite">
-        Loading your account...
-      </p>
-    </section>
-
-    <section class="dashboard-card account-statistics">
-      <h2>Account Statistics</h2>
-      <p>Live totals from the buyer and administrator account records in Kiri Cars.</p>
-      <div class="account-stat-grid">
-        <article class="account-stat">
-          <span>Total buyers</span>
-          <strong id="totalBuyerAccounts">—</strong>
-        </article>
-        <article class="account-stat">
-          <span>Total dealer accounts</span>
-          <strong id="totalDealerAccounts">—</strong>
-        </article>
-        <article class="account-stat">
-          <span>Active dealers</span>
-          <strong id="activeDealerAccounts">—</strong>
-        </article>
-        <article class="account-stat">
-          <span>Inactive dealers</span>
-          <strong id="inactiveDealerAccounts">—</strong>
-        </article>
+  <main class="dashboard-container owner-dashboard">
+    <section class="welcome-card owner-welcome">
+      <div>
+        <p class="eyebrow">OWNER WORKSPACE</p>
+        <h2>Welcome, Owner</h2>
+        <p>Manage marketplace activity, seller approvals, accounts and vehicle listings from one organized workspace.</p>
+        <p id="ownerMessage" role="status" aria-live="polite">Loading your account...</p>
       </div>
-      <button id="refreshAccountsButton" type="button">Refresh Account Statistics</button>
-      <p id="accountStatsMessage" role="status" aria-live="polite"></p>
-      <h3>Recent Registrations</h3>
-      <p class="account-muted">The 10 most recent buyer and dealer accounts, where registration dates are available.</p>
-      <div id="recentAccountsList"></div>
+      <a class="dashboard-link" href="index.html">View Public Website</a>
     </section>
 
-    <section class="dashboard-card">
-      <h2>Account Access Management</h2>
-      <p>Temporarily suspend or reactivate buyer, administrator, and dealer access. The owner account is protected and cannot be suspended here. These controls block access to Kiri Cars data and messaging through Firestore rules; they do not delete the person's Firebase Authentication account.</p>
-      <div class="account-management-actions">
-        <button id="loadBuyerAccountsButton" type="button">Load Buyer Accounts</button>
-        <button id="loadAdminsButtonTop" type="button">Load Admin &amp; Dealer Accounts</button>
-      </div>
-      <p id="accountManagementMessage" role="status" aria-live="polite"></p>
-      <h3>Buyer Accounts</h3>
-      <div id="buyerAccountsList"></div>
-      <h3>Administrator &amp; Dealer Accounts</h3>
-      <div id="managedAdminsList"></div>
+    <nav class="owner-navigation" aria-label="Owner dashboard sections">
+      <button type="button" class="owner-nav-button active" data-owner-panel="overview" aria-selected="true">Overview</button>
+      <button type="button" class="owner-nav-button" data-owner-panel="accounts" aria-selected="false">Account Management</button>
+      <button type="button" class="owner-nav-button" data-owner-panel="sellers" aria-selected="false">Seller Approvals</button>
+      <button type="button" class="owner-nav-button" data-owner-panel="vehicles" aria-selected="false">Vehicle Listings</button>
+    </nav>
+
+    <section id="owner-panel-overview" class="owner-panel">
+      <div class="owner-section-heading"><h2>Marketplace Overview</h2><p>Your key account totals and the latest registrations.</p></div>
+      <section class="dashboard-card account-statistics">
+        <h2>Account Statistics</h2>
+        <div class="account-stat-grid">
+          <article class="account-stat"><span>Total buyers</span><strong id="totalBuyerAccounts">—</strong></article>
+          <article class="account-stat"><span>Total dealer accounts</span><strong id="totalDealerAccounts">—</strong></article>
+          <article class="account-stat"><span>Active dealers</span><strong id="activeDealerAccounts">—</strong></article>
+          <article class="account-stat"><span>Inactive dealers</span><strong id="inactiveDealerAccounts">—</strong></article>
+        </div>
+        <button id="refreshAccountsButton" type="button">Refresh Account Statistics</button>
+        <p id="accountStatsMessage" role="status" aria-live="polite"></p>
+        <h3>Recent Registrations</h3>
+        <p class="account-muted">The 10 most recent buyer and dealer accounts, where registration dates are available.</p>
+        <div id="recentAccountsList"></div>
+      </section>
+      <section class="dashboard-card overview-quick-links">
+        <h3>Quick Actions</h3>
+        <button type="button" data-open-owner-panel="accounts">Manage account access</button>
+        <button type="button" data-open-owner-panel="sellers">Review seller applications</button>
+        <button type="button" data-open-owner-panel="vehicles">Manage vehicle listings</button>
+      </section>
     </section>
 
-    <section class="dashboard-card">
-      <h2>Seller Applications &amp; Approvals</h2>
-      <p>Review showroom representatives and independent sales representatives before allowing them to publish vehicles. Approval means the account passed your review; it is not a guarantee of every vehicle or transaction.</p>
-      <button id="loadSellerApplicationsButton" type="button">Refresh Seller Applications</button>
-      <p id="sellerApplicationsMessage" role="status" aria-live="polite"></p>
-      <div id="sellerApplicationsList"></div>
+    <section id="owner-panel-accounts" class="owner-panel" hidden>
+      <div class="owner-section-heading"><h2>Account Management</h2><p>View team accounts and control access. Your owner account is protected.</p></div>
+      <section class="dashboard-card">
+        <h3>Account Access Management</h3>
+        <p>Temporarily suspend or reactivate buyer, administrator, and dealer access. These controls do not delete Firebase Authentication accounts.</p>
+        <div class="account-management-actions">
+          <button id="loadBuyerAccountsButton" type="button">Load Buyer Accounts</button>
+          <button id="loadAdminsButtonTop" type="button">Load Admin &amp; Dealer Accounts</button>
+        </div>
+        <p id="accountManagementMessage" role="status" aria-live="polite"></p>
+        <h3>Buyer Accounts</h3><div id="buyerAccountsList"></div>
+        <h3>Administrator &amp; Dealer Accounts</h3><div id="managedAdminsList"></div>
+      </section>
+      <section class="dashboard-card">
+        <h3>Administrator &amp; Dealer Directory</h3>
+        <p>View account roles and WhatsApp contact details.</p>
+        <button id="loadAdminsButton" type="button">Load Admin &amp; Dealer Accounts</button>
+        <div id="adminsList"></div>
+      </section>
     </section>
 
-    <section class="dashboard-grid">
-      <article class="dashboard-card">
+    <section id="owner-panel-sellers" class="owner-panel" hidden>
+      <div class="owner-section-heading"><h2>Seller Applications &amp; Approvals</h2><p>Review showroom representatives and independent sales representatives before allowing them to publish vehicles.</p></div>
+      <section class="dashboard-card">
+        <h3>Pending and Existing Seller Applications</h3>
+        <p>Approval means an account passed your review; it is not a guarantee of every vehicle or transaction.</p>
+        <button id="loadSellerApplicationsButton" type="button">Refresh Seller Applications</button>
+        <p id="sellerApplicationsMessage" role="status" aria-live="polite"></p>
+        <div id="sellerApplicationsList"></div>
+      </section>
+      <section class="dashboard-card">
         <h3>Seller Registration</h3>
-        <p>Showroom representatives and independent sales representatives register their own accounts. Review and approve them in the Seller Applications section above.</p>
+        <p>Showroom representatives and independent sales representatives register their own accounts. Share this page with sellers who want to apply.</p>
         <a class="dashboard-link" href="seller-register.html">Open Seller Registration Page</a>
-      </article>
+      </section>
+    </section>
 
-
-      <article class="dashboard-card">
-        <h3>Vehicle Listings</h3>
-        <p>View vehicles listed on the Kiri Cars marketplace.</p>
+    <section id="owner-panel-vehicles" class="owner-panel" hidden>
+      <div class="owner-section-heading"><h2>Vehicle Listings</h2><p>Review marketplace inventory and maintain public listing privacy.</p></div>
+      <section class="dashboard-card">
+        <h3>Marketplace Inventory</h3>
+        <p id="carCount">Loading vehicle count...</p>
+        <button id="refreshButton" type="button">Refresh Dashboard Data</button>
         <p>Seller categories are kept on internal account profiles, not on public vehicle records.</p>
         <button id="removePublicSellerCategoriesButton" type="button">Remove Seller Categories from Existing Public Listings</button>
         <p id="publicSellerCategoriesMessage" role="status" aria-live="polite"></p>
-        <a class="dashboard-link" href="index.html">View Public Website</a>
-        <button id="refreshButton" type="button">
-          Refresh Dashboard
-        </button>
-        <p id="carCount">Loading vehicle count...</p>
-      </article>
-
-      <article class="dashboard-card">
-        <h3>Seller &amp; Administrator Accounts</h3>
-        <p>Review and manage dealer and administrator access.</p>
-        <button id="loadAdminsButton" type="button">Load Admin &amp; Dealer Accounts</button>
-        <div id="adminsList"></div>
-      </article>
+        <a class="dashboard-link" href="index.html">View Public Vehicle Listings</a>
+      </section>
     </section>
   </main>
 
