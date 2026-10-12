@@ -79,7 +79,14 @@ onAuthStateChanged(auth, async (user) => {
       return;
     }
 
-    if (role === "admin" && profile.active !== true) {
+    // A suspended account must not regain dashboard access by signing in again.
+    // Pending dealers remain able to prepare private drafts unless explicitly suspended.
+    const isSuspended = profile.accountStatus === "suspended";
+    const inactiveAdmin = role === "admin" && profile.active !== true;
+    const inactiveNonPendingDealer =
+      role === "dealer" && profile.active !== true && approvalStatus !== "pending";
+
+    if (isSuspended || inactiveAdmin || inactiveNonPendingDealer) {
       await signOut(auth);
       goToLogin();
       return;
