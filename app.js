@@ -191,15 +191,6 @@ function createVehicleCard(car) {
     (car.manufacturer || "") + " " + (car.model || "Vehicle");
   card.appendChild(title);
 
-  if (car.sellerType === "dealership" || car.sellerType === "broker") {
-    const sellerBadge = document.createElement("p");
-    sellerBadge.className = "seller-type-label";
-    sellerBadge.textContent = car.sellerType === "broker"
-      ? "Kiri Cars-reviewed independent broker"
-      : "Kiri Cars-reviewed dealership";
-    card.appendChild(sellerBadge);
-  }
-
   const price = document.createElement("p");
   price.className = "vehicle-price";
   price.textContent = formatPrice(car.price);
