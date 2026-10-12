@@ -492,9 +492,10 @@ async function loadSellerDirectory() {
   message.textContent = "";
   try {
     const snapshot = await getDocs(collection(db, "admins"));
+    // The owner manages the platform and should not appear in the seller directory.
     const accounts = snapshot.docs
       .map((item) => ({ id: item.id, ...item.data() }))
-      .filter((account) => ["owner", "admin", "dealer"].includes(normalizeRole(account.role)))
+      .filter((account) => ["admin", "dealer"].includes(normalizeRole(account.role)))
       .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
     list.replaceChildren();
     if (!accounts.length) {
@@ -516,9 +517,6 @@ async function loadSellerDirectory() {
           : account.sellerType === "dealership"
             ? "Showroom Representative"
             : "Seller category not recorded";
-      } else if (role === "owner") {
-        category = "Kiri Cars Owner";
-      }
       const type = document.createElement("p");
       type.textContent = "Category: " + category +
         (account.businessName ? " · " + account.businessName : "");
