@@ -50,11 +50,11 @@ form.addEventListener("submit", async (event) => {
     return;
   }
   if (type !== "dealership" && type !== "broker") {
-    showMessage("Choose whether you are a dealership or an independent broker.", true);
+    showMessage("Choose showroom representative or independent sales representative.", true);
     return;
   }
   if (type === "dealership" && !businessName) {
-    showMessage("Enter your dealership or business name.", true);
+    showMessage("Enter your showroom or business name.", true);
     return;
   }
   if (password !== confirmPassword) {
