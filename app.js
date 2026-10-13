@@ -286,6 +286,37 @@ function createVehicleCard(car) {
 
   card.appendChild(contactButton);
 
+  const favouriteButton = document.createElement("button");
+  favouriteButton.type = "button";
+  favouriteButton.className = "secondary-mode";
+  favouriteButton.textContent = "Save to Favourites";
+  favouriteButton.addEventListener("click", async () => {
+    const user = auth.currentUser;
+    if (!user) {
+      window.location.href = "buyer.html?mode=buyer&favourite=" + encodeURIComponent(car.id);
+      return;
+    }
+    favouriteButton.disabled = true;
+    try {
+      const buyerSnap = await getDoc(doc(db, "buyers", user.uid));
+      if (!buyerSnap.exists() || buyerSnap.data().role !== "buyer") {
+        window.location.href = "buyer.html?mode=buyer&favourite=" + encodeURIComponent(car.id);
+        return;
+      }
+      await setDoc(doc(db, "buyers", user.uid, "favourites", car.id), {
+        carId: car.id,
+        createdAt: serverTimestamp()
+      });
+      favouriteButton.textContent = "Saved to Favourites";
+      favouriteButton.disabled = false;
+    } catch (error) {
+      console.error("Save favourite failed:", error);
+      alert("Could not save this favourite: " + (error.code || error.message));
+      favouriteButton.disabled = false;
+    }
+  });
+  card.appendChild(favouriteButton);
+
   // Keep the original WhatsApp option alongside private on-site messaging.
   const whatsappButton = document.createElement("button");
   whatsappButton.type = "button";
