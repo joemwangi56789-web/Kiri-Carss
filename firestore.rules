@@ -297,5 +297,35 @@ service cloud.firestore {
         allow update, delete: if false;
       }
     }
+
+    // Saved searches are created by trusted Cloud Functions so guests cannot write
+    // unverified contact details or alter verification state from the browser.
+    match /savedSearches/{searchId} {
+      allow read: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      allow create: if false;
+      allow update: if signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'marketingOptIn', 'updatedAt', 'lastInteractionAt'])
+        && request.resource.data.status in ['active', 'paused', 'pending_verification']
+        && (
+          request.resource.data.status == 'paused'
+          || (
+            request.resource.data.status == 'active'
+            && (!resource.data.channels.hasAny(['email']) || resource.data.emailVerified == true)
+            && (!resource.data.channels.hasAny(['whatsapp']) || resource.data.whatsappVerified == true)
+          )
+          || request.resource.data.status == 'pending_verification'
+        )
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.lastInteractionAt == request.time
+        && request.resource.data.marketingOptIn is bool;
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // Notification queues and delivery records are server-only.
+    match /alertDeliveries/{deliveryId} {
+      allow read, write: if false;
+    }
   }
 }
