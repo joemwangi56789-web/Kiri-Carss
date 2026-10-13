@@ -65,10 +65,10 @@ function matchesSearch(car, search) {
   if (f.manufacturer && cleanText(car.manufacturer, 60).toLowerCase() !== f.manufacturer.toLowerCase()) return false;
   if (f.model && cleanText(car.model, 80).toLowerCase() !== f.model.toLowerCase()) return false;
   if (f.carType && cleanText(car.carType, 40).toLowerCase() !== f.carType.toLowerCase()) return false;
-  if (f.minYear !== null && f.minYear !== undefined && Number(car.year) < Number(f.minYear)) return false;
-  if (f.maxYear !== null && f.maxYear !== undefined && Number(car.year) > Number(f.maxYear)) return false;
-  if (f.minPrice !== null && f.minPrice !== undefined && Number(car.price) < Number(f.minPrice)) return false;
-  if (f.maxPrice !== null && f.maxPrice !== undefined && Number(car.price) > Number(f.maxPrice)) return false;
+  if (f.minYear !== null && f.minYear !== undefined && (!Number.isFinite(Number(car.year)) || Number(car.year) < Number(f.minYear))) return false;
+  if (f.maxYear !== null && f.maxYear !== undefined && (!Number.isFinite(Number(car.year)) || Number(car.year) > Number(f.maxYear))) return false;
+  if (f.minPrice !== null && f.minPrice !== undefined && (!Number.isFinite(Number(car.price)) || Number(car.price) < Number(f.minPrice))) return false;
+  if (f.maxPrice !== null && f.maxPrice !== undefined && (!Number.isFinite(Number(car.price)) || Number(car.price) > Number(f.maxPrice))) return false;
   if (f.condition && cleanText(car.status, 40).toLowerCase() !== f.condition.toLowerCase()) return false;
   if (f.location && cleanText(car.location, 80).toLowerCase() !== f.location.toLowerCase()) return false;
   return true;
@@ -260,12 +260,16 @@ exports.manageGuestAlert = onCall(async function (request) {
   const id = cleanText(request.data && request.data.id, 100);
   const token = cleanText(request.data && request.data.token, 200);
   const action = cleanText(request.data && request.data.action, 20);
-  if (!id || !token || !["pause", "resume", "delete"].includes(action)) throw new HttpsError("invalid-argument", "Choose pause, resume or delete.");
+  if (!id || !token || !["pause", "resume", "delete", "marketing-off"].includes(action)) throw new HttpsError("invalid-argument", "Choose pause, resume, delete or stop promotional emails.");
   const ref = db.doc("savedSearches/" + id);
   const snap = await ref.get();
   if (!snap.exists) return { message: "This saved search has already been removed." };
   const s = snap.data();
   if (!s.isGuest || !s.manageTokenHash || s.manageTokenHash !== hash(token)) throw new HttpsError("permission-denied", "This management link is invalid or has been revoked.");
+  if (action === "marketing-off") {
+    await ref.update({ marketingOptIn: false, updatedAt: Timestamp.now(), lastInteractionAt: Timestamp.now() });
+    return { message: "Promotional email consent has been withdrawn for this saved search." };
+  }
   if (action === "delete") {
     const deliveries = await db.collection("alertDeliveries").where("searchId", "==", id).get();
     const batch = db.batch();
@@ -285,12 +289,27 @@ exports.claimGuestSearches = onCall(async function (request) {
   const buyer = await db.doc("buyers/" + request.auth.uid).get();
   if (!buyer.exists || buyer.data().role !== "buyer") throw new HttpsError("permission-denied", "A Kiri Cars buyer account is required.");
   const email = String(request.auth.token.email).toLowerCase();
-  const guests = await db.collection("savedSearches").where("email", "==", email).where("isGuest", "==", true).where("emailVerified", "==", true).get();
+  const guests = await db.collection("savedSearches").where("email", "==", email).get();
+  const existingSnap = await db.collection("savedSearches").where("ownerUid", "==", request.auth.uid).get();
+  const existingKeys = new Set(existingSnap.docs.map(function (docSnap) {
+    const data = docSnap.data();
+    return JSON.stringify({ filters: data.filters || {}, channels: (data.channels || []).slice().sort() });
+  }));
   let claimed = 0;
   for (const item of guests.docs) {
     const s = item.data();
-    if (s.ownerUid || s.status === "deleted") continue;
+    if (!s.isGuest || !s.emailVerified || s.ownerUid || s.status === "deleted") continue;
+    const key = JSON.stringify({ filters: s.filters || {}, channels: (s.channels || []).slice().sort() });
+    if (existingKeys.has(key)) {
+      const deliveries = await db.collection("alertDeliveries").where("searchId", "==", item.id).get();
+      const batch = db.batch();
+      deliveries.docs.forEach(function (delivery) { batch.delete(delivery.ref); });
+      batch.delete(item.ref);
+      await batch.commit();
+      continue;
+    }
     await item.ref.update({ ownerUid: request.auth.uid, isGuest: false, manageTokenHash: null, manageTokenCreatedAt: null, updatedAt: Timestamp.now(), lastInteractionAt: Timestamp.now() });
+    existingKeys.add(key);
     claimed += 1;
   }
   return { claimed: claimed, message: claimed ? "Transferred " + claimed + " verified guest search(es) to your account." : "No verified guest searches were found for your verified account email." };
@@ -327,10 +346,18 @@ exports.processPendingAlerts = onSchedule({
   timeZone: "Africa/Nairobi",
   secrets: [RESEND_API_KEY, WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID]
 }, async function () {
-  const pending = await db.collection("alertDeliveries").where("status", "==", "pending").where("dueAt", "<=", Timestamp.now()).limit(100).get();
+  const pending = await db.collection("alertDeliveries").where("status", "==", "pending").limit(500).get();
+  const staleSending = await db.collection("alertDeliveries").where("status", "==", "sending").limit(500).get();
+  for (const stale of staleSending.docs) {
+    const data = stale.data();
+    if (data.sendingAt && data.sendingAt.toMillis() < Date.now() - 5 * 60 * 1000) {
+      await stale.ref.update({ status: "pending", dueAt: Timestamp.now(), lastError: "Recovered a stale sending lease." });
+    }
+  }
   const groups = new Map();
   for (const item of pending.docs) {
     const delivery = item.data();
+    if (!delivery.dueAt || delivery.dueAt.toMillis() > Date.now()) continue;
     const claimed = await db.runTransaction(async function (tx) {
       const latest = await tx.get(item.ref);
       if (!latest.exists || latest.data().status !== "pending" || latest.data().dueAt.toMillis() > Date.now()) return false;
