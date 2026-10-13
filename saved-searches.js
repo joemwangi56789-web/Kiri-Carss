@@ -81,6 +81,8 @@ async function loadAccountSearches() {
       const marketingToggle = document.createElement("input");
       marketingToggle.type = "checkbox";
       marketingToggle.checked = search.marketingOptIn === true;
+      marketingToggle.disabled = !search.email || search.emailVerified !== true;
+      marketingToggle.title = marketingToggle.disabled ? "Verify an email address before managing promotional email consent." : "";
       marketingToggle.addEventListener("change", async () => {
         marketingToggle.disabled = true;
         try {
