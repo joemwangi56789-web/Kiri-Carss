@@ -49,5 +49,6 @@ document.getElementById("resumeAlertButton").addEventListener("click", () => run
 document.getElementById("deleteAlertButton").addEventListener("click", () => {
   if (confirm("Delete this saved search permanently? No further alerts will be sent.")) runAction("delete");
 });
+document.getElementById("stopMarketingButton").addEventListener("click", () => runAction("marketing-off"));
 if (!id || !token) setMessage("This management link is incomplete. Open the full link from your Kiri Cars email or WhatsApp.", true);
 else refresh().catch((error) => setMessage(error.message || "This management link is invalid or expired.", true));
