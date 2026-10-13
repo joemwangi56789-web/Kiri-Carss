@@ -205,6 +205,7 @@ function createVehicleCard(car) {
   if (car.carType) detailParts.push(car.carType);
   if (car.fuel) detailParts.push(car.fuel);
   if (car.transmission) detailParts.push(car.transmission);
+  if (car.location) detailParts.push(car.location);
 
   details.textContent = detailParts.join(" • ");
   card.appendChild(details);
@@ -438,6 +439,18 @@ async function loadCars() {
     resultsCount.textContent = "Listings unavailable";
   }
 }
+
+document.getElementById("saveCurrentSearchButton")?.addEventListener("click", () => {
+  const params = new URLSearchParams();
+  if (searchInput.value.trim()) params.set("search", searchInput.value.trim());
+  if (manufacturerFilter.value) params.set("manufacturer", manufacturerFilter.value);
+  if (typeFilter.value) params.set("type", typeFilter.value);
+  if (yearFilter.value) params.set("year", yearFilter.value);
+  if (statusFilter.value) params.set("status", statusFilter.value);
+  if (minPriceInput.value.trim()) params.set("minPrice", minPriceInput.value.trim());
+  if (maxPriceInput.value.trim()) params.set("maxPrice", maxPriceInput.value.trim());
+  window.location.href = "saved-searches.html" + (params.toString() ? "?" + params.toString() : "");
+});
 
 filterForm.addEventListener("submit", (event) => {
   event.preventDefault();
