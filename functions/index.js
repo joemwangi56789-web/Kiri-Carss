@@ -73,6 +73,7 @@ function matchesSearch(car, search) {
   if (f.location && cleanText(car.location, 80).toLowerCase() !== f.location.toLowerCase()) return false;
   return true;
 }
+function listingUrl(carId) { return SITE_URL + "/index.html?car=" + encodeURIComponent(carId) + "#cars"; }
 function escapeHtml(value) {
   return String(value || "").replace(/[&<>"']/g, function (char) {
     return { "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[char];
@@ -390,14 +391,14 @@ exports.processPendingAlerts = onSchedule({
     try {
       if (group.channel === "email") {
         const rows = cars.map(function (item) {
-          return "<li><strong>" + escapeHtml(carSummary(item.car)) + "</strong> — <a href=\"" + SITE_URL + "/index.html#cars\">View vehicle listings</a></li>";
+          return "<li><strong>" + escapeHtml(carSummary(item.car)) + "</strong> — <a href=\"" + listingUrl(item.carId) + "\">View this vehicle</a></li>";
         }).join("");
         await sendEmail(group.recipient, cars.length === 1 ? "A car matching your Kiri Cars search is available" : "Cars matching your Kiri Cars searches are available",
           "<p>New vehicles match your saved search:</p><ul>" + rows + "</ul><p>Manage searches at <a href=\"" + SITE_URL + "/saved-searches.html\">Kiri Cars saved searches</a>.</p>", idempotencyKey);
       } else {
         const template = process.env.KIRI_WHATSAPP_ALERT_TEMPLATE || "";
         if (!template) throw new Error("Set KIRI_WHATSAPP_ALERT_TEMPLATE to an approved WhatsApp alert template.");
-        await sendWhatsAppTemplate(group.recipient, template, [summaries.join("; "), SITE_URL + "/index.html#cars"]);
+        await sendWhatsAppTemplate(group.recipient, template, [summaries.join("; "), cars.length === 1 ? listingUrl(cars[0].carId) : SITE_URL + "/index.html#cars"]);
       }
       for (const item of group.items) await item.ref.update({ status: "sent", sentAt: Timestamp.now(), providerAccepted: true, attempts: FieldValue.increment(1) });
     } catch (error) {
