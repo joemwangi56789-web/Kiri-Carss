@@ -16,7 +16,7 @@ const accountList = document.getElementById("accountSearchesList");
 const whatsappForm = document.getElementById("whatsappVerificationForm");
 const claimButton = document.getElementById("claimGuestSearchesButton");
 let currentUser = null;
-let pendingRequestId = "";
+let pendingRequestId = sessionStorage.getItem("kiriPendingAlertId") || "";
 
 function setMessage(text, isError = false) {
   message.textContent = text || "";
@@ -162,6 +162,7 @@ form.addEventListener("submit", async (event) => {
       marketingOptIn: document.getElementById("marketingOptIn").checked
     });
     pendingRequestId = result.data.id;
+    sessionStorage.setItem("kiriPendingAlertId", pendingRequestId);
     setMessage(result.data.message);
     if (result.data.needsWhatsAppVerification) whatsappForm.hidden = false;
     if (currentUser) await loadAccountSearches();
@@ -188,6 +189,8 @@ whatsappForm.addEventListener("submit", async (event) => {
     setMessage(result.data.message);
     whatsappForm.hidden = true;
     document.getElementById("whatsappCode").value = "";
+    sessionStorage.removeItem("kiriPendingAlertId");
+    pendingRequestId = "";
     if (currentUser) await loadAccountSearches();
   } catch (error) {
     setMessage(error.message || "Could not verify that number.", true);
@@ -229,6 +232,8 @@ onAuthStateChanged(auth, async (user) => {
     accountPanel.hidden = true;
   }
 });
+
+if (pendingRequestId) whatsappForm.hidden = false;
 
 const params = new URLSearchParams(window.location.search);
 if (params.has("search")) document.getElementById("keyword").value = params.get("search") || "";
