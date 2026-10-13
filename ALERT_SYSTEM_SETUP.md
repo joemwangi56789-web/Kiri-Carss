@@ -9,7 +9,7 @@ This feature is being introduced behind a separate branch. It is not live until 
 3. Confirm Firebase project `kiri-cars` is selected before deploying.
 4. Firebase Cloud Functions and scheduled tasks require the Firebase Blaze (pay-as-you-go) plan. Set billing budgets and alerts before deployment; budget alerts do not cap spend.
 5. Configure secrets using `firebase functions:secrets:set RESEND_API_KEY`, `firebase functions:secrets:set WHATSAPP_ACCESS_TOKEN`, and `firebase functions:secrets:set WHATSAPP_PHONE_NUMBER_ID`.
-6. Configure `KIRI_EMAIL_FROM` to an address verified with Resend. The default sender must not be used until that domain/sender is verified.
+6. Configure `KIRI_EMAIL_FROM` to an address verified with Resend and `KIRI_SITE_URL` to the real public site URL. The default domain is only a placeholder until kiricars.co.ke is live and verified.
 7. Create and approve WhatsApp Business message templates, then configure `KIRI_WHATSAPP_VERIFY_TEMPLATE`, `KIRI_WHATSAPP_ALERT_TEMPLATE`, and optionally `KIRI_WHATSAPP_TEMPLATE_LANGUAGE` (default `en`). The verification template must accept two body parameters (code and management link). The alert template must accept two body parameters (vehicle summaries and listing link). Template names and placeholder counts must match Meta's approved templates.
 8. Deploy Firestore rules and functions only after reviewing the changes with `firebase deploy --only firestore:rules,functions`.
 
