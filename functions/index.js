@@ -328,10 +328,12 @@ exports.manageGuestAlert = onCall(async function (request) {
   }
   if (action === "delete") {
     const deliveries = await db.collection("alertDeliveries").where("searchId", "==", id).get();
-    const batch = db.batch();
-    deliveries.docs.forEach(function (item) { batch.delete(item.ref); });
-    batch.delete(ref);
-    await batch.commit();
+    for (let offset = 0; offset < deliveries.docs.length; offset += 400) {
+      const batch = db.batch();
+      deliveries.docs.slice(offset, offset + 400).forEach(function (item) { batch.delete(item.ref); });
+      await batch.commit();
+    }
+    await ref.delete();
     return { message: "Saved search deleted. No further alerts will be sent." };
   }
   const status = action === "pause" ? "paused" : activateIfVerified(s);
