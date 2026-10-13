@@ -1,12 +1,13 @@
 import { app, auth, db } from "./firebase-config.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
-import { collection, deleteDoc, doc, getDocs, query, serverTimestamp, updateDoc, where } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+import { collection, doc, getDocs, query, serverTimestamp, updateDoc, where } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-functions.js";
 
 const functions = getFunctions(app);
 const createSavedSearch = httpsCallable(functions, "createSavedSearch");
 const verifyWhatsAppAlert = httpsCallable(functions, "verifyWhatsAppAlert");
 const claimGuestSearches = httpsCallable(functions, "claimGuestSearches");
+const manageOwnedSavedSearch = httpsCallable(functions, "manageOwnedSavedSearch");
 const form = document.getElementById("savedSearchForm");
 const message = document.getElementById("savedSearchMessage");
 const saveButton = document.getElementById("saveSearchButton");
@@ -104,8 +105,9 @@ async function loadAccountSearches() {
       toggle.addEventListener("click", async () => {
         toggle.disabled = true;
         try {
-          const nextStatus = search.status === "paused" ? (search.emailVerified || !search.channels.includes("email")) && (search.whatsappVerified || !search.channels.includes("whatsapp")) ? "active" : "pending_verification" : "paused";
-          await updateDoc(doc(db, "savedSearches", snapshot.id), { status: nextStatus, updatedAt: serverTimestamp(), lastInteractionAt: serverTimestamp() });
+          const action = search.status === "paused" ? "resume" : "pause";
+          const result = await manageOwnedSavedSearch({ id: snapshot.id, action });
+          setMessage(result.data.message);
           await loadAccountSearches();
         } catch (error) {
           setMessage("Could not update this search: " + (error.code || error.message), true);
@@ -120,7 +122,8 @@ async function loadAccountSearches() {
         if (!confirm("Delete this saved search permanently? Pending alerts for it will be cancelled when the worker checks them.")) return;
         remove.disabled = true;
         try {
-          await deleteDoc(doc(db, "savedSearches", snapshot.id));
+          const result = await manageOwnedSavedSearch({ id: snapshot.id, action: "delete" });
+          setMessage(result.data.message);
           await loadAccountSearches();
         } catch (error) {
           setMessage("Could not delete this search: " + (error.code || error.message), true);
