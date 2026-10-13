@@ -807,3 +807,5 @@ p {
 .alert-actions button { flex:1 1 150px; }
 .alert-actions .reset-button { color:var(--blue); background:var(--blue-light); }
 @media (max-width:560px) { .alert-form-grid { grid-template-columns:1fr; } .saved-search-prompt { align-items:stretch; flex-direction:column; } }
+
+.alert-match-highlight { outline: 3px solid var(--blue); outline-offset: 4px; }
