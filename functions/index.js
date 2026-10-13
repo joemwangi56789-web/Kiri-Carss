@@ -83,6 +83,20 @@ function carSummary(car) {
   return [car.year || "", car.manufacturer || "", car.model || ""].filter(Boolean).join(" ") +
     " — KSh " + (Number(car.price) > 0 ? Number(car.price).toLocaleString("en-KE") : "price on request");
 }
+async function enforceCreateRateLimit(request, isGuest) {
+  const rawIp = request.rawRequest && (request.rawRequest.ip || request.rawRequest.headers["x-forwarded-for"]);
+  const ip = cleanText(String(rawIp || "unknown").split(",")[0], 100);
+  const identity = isGuest ? "guest:" + ip : "user:" + request.auth.uid;
+  const hour = Math.floor(Date.now() / (60 * 60 * 1000));
+  const ref = db.doc("alertRequestRateLimits/" + hash(identity + ":" + hour).slice(0, 40));
+  const maximum = isGuest ? 5 : 20;
+  await db.runTransaction(async function (tx) {
+    const snap = await tx.get(ref);
+    const count = snap.exists ? Number(snap.data().count || 0) : 0;
+    if (count >= maximum) throw new HttpsError("resource-exhausted", "Too many saved-search requests. Please wait before trying again.");
+    tx.set(ref, { count: count + 1, expiresAt: Timestamp.fromMillis((hour + 2) * 60 * 60 * 1000), updatedAt: Timestamp.now() }, { merge: true });
+  });
+}
 function activateIfVerified(search) {
   const emailOk = !search.channels.includes("email") || search.emailVerified === true;
   const whatsappOk = !search.channels.includes("whatsapp") || search.whatsappVerified === true;
@@ -136,6 +150,7 @@ exports.createSavedSearch = onCall({ secrets: [RESEND_API_KEY, WHATSAPP_ACCESS_T
   const channels = Array.isArray(input.channels) ? Array.from(new Set(input.channels)) : [];
   if (!channels.length || channels.some(function (channel) { return channel !== "email" && channel !== "whatsapp"; })) throw new HttpsError("invalid-argument", "Choose email, WhatsApp, or both.");
   const isGuest = !request.auth;
+  await enforceCreateRateLimit(request, isGuest);
   let email = cleanText(input.email, 254).toLowerCase();
   let whatsapp = normalizePhone(input.whatsapp);
   let emailVerified = false;
@@ -444,12 +459,14 @@ exports.unsubscribeMarketing = onCall(async function (request) {
     throw new HttpsError("permission-denied", "This unsubscribe link is invalid or expired.");
   }
   const matches = await db.collection("savedSearches").where("email", "==", data.email).get();
-  const batch = db.batch();
-  matches.docs.forEach(function (item) {
-    if (item.data().marketingOptIn === true) batch.update(item.ref, { marketingOptIn: false, updatedAt: Timestamp.now(), lastInteractionAt: Timestamp.now() });
-  });
-  batch.update(ref, { usedAt: Timestamp.now() });
-  await batch.commit();
+  for (let offset = 0; offset < matches.docs.length; offset += 400) {
+    const batch = db.batch();
+    matches.docs.slice(offset, offset + 400).forEach(function (item) {
+      if (item.data().marketingOptIn === true) batch.update(item.ref, { marketingOptIn: false, updatedAt: Timestamp.now(), lastInteractionAt: Timestamp.now() });
+    });
+    await batch.commit();
+  }
+  await ref.update({ usedAt: Timestamp.now() });
   return { message: "You have been unsubscribed from Kiri Cars promotional emails. Vehicle-availability alerts remain separate." };
 });
 
