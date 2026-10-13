@@ -74,8 +74,26 @@ async function loadAccountSearches() {
       const status = document.createElement("p");
       status.textContent = "Status: " + String(search.status || "unknown").replaceAll("_", " ") + " · Created " + dateText(search.createdAt);
       const channels = document.createElement("p");
-      channels.textContent = "Channels: " + (search.channels || []).join(", ") + (search.marketingOptIn ? " · Promotional email opt-in recorded" : "");
+      channels.textContent = "Channels: " + (search.channels || []).join(", ");
       card.append(title, status, channels);
+      const marketingLabel = document.createElement("label");
+      marketingLabel.className = "consent-label";
+      const marketingToggle = document.createElement("input");
+      marketingToggle.type = "checkbox";
+      marketingToggle.checked = search.marketingOptIn === true;
+      marketingToggle.addEventListener("change", async () => {
+        marketingToggle.disabled = true;
+        try {
+          await updateDoc(doc(db, "savedSearches", snapshot.id), { marketingOptIn: marketingToggle.checked, updatedAt: serverTimestamp(), lastInteractionAt: serverTimestamp() });
+        } catch (error) {
+          marketingToggle.checked = !marketingToggle.checked;
+          setMessage("Could not update promotional email preference: " + (error.code || error.message), true);
+        } finally {
+          marketingToggle.disabled = false;
+        }
+      });
+      marketingLabel.append(marketingToggle, document.createTextNode(" Opt in to weekly promotional emails (optional)"));
+      card.appendChild(marketingLabel);
       const actions = document.createElement("div");
       actions.className = "alert-actions";
       const toggle = document.createElement("button");
