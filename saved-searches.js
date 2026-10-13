@@ -163,8 +163,9 @@ form.addEventListener("submit", async (event) => {
       whatsapp: text("contactWhatsApp"),
       marketingOptIn: document.getElementById("marketingOptIn").checked
     });
-    pendingRequestId = result.data.id;
-    sessionStorage.setItem("kiriPendingAlertId", pendingRequestId);
+    pendingRequestId = result.data.needsWhatsAppVerification ? result.data.id : "";
+    if (pendingRequestId) sessionStorage.setItem("kiriPendingAlertId", pendingRequestId);
+    else sessionStorage.removeItem("kiriPendingAlertId");
     setMessage(result.data.message);
     if (result.data.needsWhatsAppVerification) whatsappForm.hidden = false;
     if (currentUser) await loadAccountSearches();
