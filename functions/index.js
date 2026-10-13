@@ -12,7 +12,7 @@ const Timestamp = admin.firestore.Timestamp;
 const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
 const WHATSAPP_ACCESS_TOKEN = defineSecret("WHATSAPP_ACCESS_TOKEN");
 const WHATSAPP_PHONE_NUMBER_ID = defineSecret("WHATSAPP_PHONE_NUMBER_ID");
-const SITE_URL = "https://kiricars.co.ke";
+const SITE_URL = process.env.KIRI_SITE_URL || "https://kiricars.co.ke";
 const GROUP_WINDOW_MS = 60 * 1000;
 const MAX_RETRIES = 5;
 
