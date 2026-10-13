@@ -137,6 +137,7 @@ function prepareFilters() {
 function createVehicleCard(car) {
   const card = document.createElement("article");
   card.className = "vehicle-card";
+  card.id = "vehicle-" + String(car.id || "");
 
   const photoUrls = Array.isArray(car.images)
     ? car.images.map((item) => safeImageUrl(item?.url)).filter(Boolean)
@@ -425,6 +426,14 @@ async function loadCars() {
 
     prepareFilters();
     applyFilters();
+    const requestedCarId = new URLSearchParams(window.location.search).get("car");
+    if (requestedCarId) {
+      const target = document.getElementById("vehicle-" + requestedCarId);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        target.classList.add("alert-match-highlight");
+      }
+    }
 
   } catch (error) {
     console.error("Load public vehicles error:", error);
