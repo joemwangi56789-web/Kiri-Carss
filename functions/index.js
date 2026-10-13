@@ -416,3 +416,145 @@ exports.processPendingAlerts = onSchedule({
     }
   }
 });
+
+
+exports.unsubscribeMarketing = onCall(async function (request) {
+  const key = cleanText(request.data && request.data.key, 100);
+  const token = cleanText(request.data && request.data.token, 200);
+  if (!key || !token) throw new HttpsError("invalid-argument", "The unsubscribe link is incomplete.");
+  const ref = db.doc("marketingUnsubscribeTokens/" + key);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "This unsubscribe link is invalid or expired.");
+  const data = snap.data();
+  const tokenHash = hash(token);
+  const validHashes = Array.isArray(data.tokenHashes) ? data.tokenHashes : [];
+  if (!validHashes.includes(tokenHash) || (data.expiresAt && data.expiresAt.toMillis() < Date.now())) {
+    throw new HttpsError("permission-denied", "This unsubscribe link is invalid or expired.");
+  }
+  const matches = await db.collection("savedSearches").where("email", "==", data.email).get();
+  const batch = db.batch();
+  matches.docs.forEach(function (item) {
+    if (item.data().marketingOptIn === true) batch.update(item.ref, { marketingOptIn: false, updatedAt: Timestamp.now(), lastInteractionAt: Timestamp.now() });
+  });
+  batch.update(ref, { usedAt: Timestamp.now() });
+  await batch.commit();
+  return { message: "You have been unsubscribed from Kiri Cars promotional emails. Vehicle-availability alerts remain separate." };
+});
+
+exports.weeklyPromotionalEmail = onSchedule({
+  schedule: "every monday 09:00",
+  timeZone: "Africa/Nairobi",
+  secrets: [RESEND_API_KEY]
+}, async function () {
+  const allSearches = await db.collection("savedSearches").where("status", "==", "active").get();
+  const byEmail = new Map();
+  for (const item of allSearches.docs) {
+    const s = item.data();
+    if (s.marketingOptIn !== true || !(s.channels || []).includes("email") || s.emailVerified !== true || !s.email) continue;
+    if (!byEmail.has(s.email)) byEmail.set(s.email, []);
+    byEmail.get(s.email).push(s);
+  }
+  if (!byEmail.size) return;
+  const carsSnap = await db.collection("cars").get();
+  const cars = carsSnap.docs.map(function (item) { return { id: item.id, ...item.data() }; }).filter(isAvailable);
+  const weekKey = new Date().toISOString().slice(0, 10);
+  for (const [email, searches] of byEmail.entries()) {
+    const relevant = cars.filter(function (car) {
+      return searches.some(function (search) { return matchesSearch(car, search); });
+    }).slice(0, 8);
+    if (!relevant.length) continue;
+    const key = hash(email + ":" + weekKey).slice(0, 40);
+    const tokenRef = db.doc("marketingUnsubscribeTokens/" + key);
+    const existing = await tokenRef.get();
+    if (existing.exists && existing.data().sentAt) continue;
+    const rawToken = randomToken();
+    const previousHashes = existing.exists && Array.isArray(existing.data().tokenHashes) ? existing.data().tokenHashes : [];
+    await tokenRef.set({
+      email: email,
+      tokenHashes: Array.from(new Set(previousHashes.concat([hash(rawToken)]))),
+      campaignKey: weekKey,
+      expiresAt: Timestamp.fromMillis(Date.now() + 365 * 24 * 60 * 60 * 1000),
+      updatedAt: Timestamp.now()
+    }, { merge: true });
+    const rows = relevant.map(function (car) {
+      return "<li><strong>" + escapeHtml(carSummary(car)) + "</strong> — <a href=\"" + SITE_URL + "/index.html?car=" + encodeURIComponent(car.id) + "#cars\">View vehicle</a></li>";
+    }).join("");
+    const unsubscribeUrl = SITE_URL + "/manage-marketing.html?key=" + key + "&token=" + encodeURIComponent(rawToken);
+    try {
+      await sendEmail(email, "Your weekly Kiri Cars vehicle digest",
+        "<p>Here are vehicles relevant to your saved searches this week.</p><ul>" + rows + "</ul><p>Promotional emails are optional. <a href=\"" + unsubscribeUrl + "\">Unsubscribe from promotional emails</a>. Your separate saved-search alerts will remain active.</p>",
+        hash("weekly:" + email + ":" + weekKey + ":" + rawToken));
+      await tokenRef.update({ sentAt: Timestamp.now() });
+    } catch (error) {
+      console.error("Weekly promotional email failed for recipient hash " + hash(email).slice(0, 12), error.message);
+    }
+  }
+});
+
+exports.confirmGuestAlert = onCall(async function (request) {
+  const id = cleanText(request.data && request.data.id, 100);
+  const token = cleanText(request.data && request.data.token, 200);
+  if (!id || !token) throw new HttpsError("invalid-argument", "The confirmation link is incomplete.");
+  const ref = db.doc("savedSearches/" + id);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "This saved search no longer exists.");
+  const s = snap.data();
+  if (!s.isGuest || !s.reminderTokenHash || s.reminderTokenHash !== hash(token)) throw new HttpsError("permission-denied", "This confirmation link is invalid or already used.");
+  if (!s.reminderTokenExpiresAt || s.reminderTokenExpiresAt.toMillis() < Date.now()) throw new HttpsError("deadline-exceeded", "The confirmation period has expired. You can create a new saved search.");
+  const status = activateIfVerified(s);
+  await ref.update({
+    status: status,
+    reminderSentAt: null,
+    reminderTokenHash: null,
+    reminderTokenExpiresAt: null,
+    updatedAt: Timestamp.now(),
+    lastInteractionAt: Timestamp.now()
+  });
+  return { message: status === "active" ? "Thank you. Your saved-search alerts remain active." : "Your search is confirmed, but all selected contact channels must be verified before alerts can resume." };
+});
+
+exports.maintainInactiveGuestAlerts = onSchedule({
+  schedule: "every day 03:15",
+  timeZone: "Africa/Nairobi",
+  secrets: [RESEND_API_KEY, WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID]
+}, async function () {
+  const guests = await db.collection("savedSearches").where("isGuest", "==", true).get();
+  const now = Date.now();
+  const sixMonthsMs = 183 * 24 * 60 * 60 * 1000;
+  const fourteenDaysMs = 14 * 24 * 60 * 60 * 1000;
+  for (const item of guests.docs) {
+    const s = item.data();
+    if (s.status !== "active") continue;
+    if (s.reminderSentAt && s.reminderTokenExpiresAt && s.reminderTokenExpiresAt.toMillis() <= now) {
+      await item.ref.update({ status: "paused", pausedReason: "inactive_guest_no_confirmation", updatedAt: Timestamp.now() });
+      continue;
+    }
+    if (s.reminderSentAt) continue;
+    const lastInteraction = s.lastInteractionAt && s.lastInteractionAt.toMillis ? s.lastInteractionAt.toMillis() : (s.createdAt && s.createdAt.toMillis ? s.createdAt.toMillis() : now);
+    if (now - lastInteraction < sixMonthsMs) continue;
+    const token = randomToken();
+    const confirmUrl = SITE_URL + "/confirm-alert.html?id=" + item.id + "&token=" + encodeURIComponent(token);
+    let sent = false;
+    try {
+      if (s.email && s.emailVerified && (s.channels || []).includes("email")) {
+        await sendEmail(s.email, "Do you still want Kiri Cars alerts?",
+          "<p>Your saved search has been active for six months without interaction. Confirm within 14 days to keep receiving alerts.</p><p><a href=\"" + confirmUrl + "\">Keep my alerts active</a></p><p>If you do not confirm, your search will be paused. You can reactivate it later.</p>",
+          hash("inactive-reminder:" + item.id + ":" + Math.floor(now / fourteenDaysMs)));
+        sent = true;
+      }
+      if (s.whatsapp && s.whatsappVerified && (s.channels || []).includes("whatsapp") && process.env.KIRI_WHATSAPP_INACTIVITY_TEMPLATE) {
+        await sendWhatsAppTemplate(s.whatsapp, process.env.KIRI_WHATSAPP_INACTIVITY_TEMPLATE, [confirmUrl]);
+        sent = true;
+      }
+    } catch (error) {
+      console.error("Inactive guest reminder failed for alert " + item.id, error.message);
+    }
+    if (sent) {
+      await item.ref.update({
+        reminderSentAt: Timestamp.now(),
+        reminderTokenHash: hash(token),
+        reminderTokenExpiresAt: Timestamp.fromMillis(now + fourteenDaysMs)
+      });
+    }
+  }
+});
