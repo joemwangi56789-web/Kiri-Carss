@@ -73,6 +73,33 @@ function matchesSearch(car, search) {
   if (f.location && cleanText(car.location, 80).toLowerCase() !== f.location.toLowerCase()) return false;
   return true;
 }
+async function enqueueDelivery(searchId, search, carId, channel) {
+  const deliveryId = hash(searchId + ":" + carId + ":" + channel).slice(0, 40);
+  const deliveryRef = db.doc("alertDeliveries/" + deliveryId);
+  await db.runTransaction(async function (tx) {
+    const existing = await tx.get(deliveryRef);
+    if (existing.exists) return;
+    tx.set(deliveryRef, {
+      searchId: searchId,
+      carId: carId,
+      channel: channel,
+      status: "pending",
+      attempts: 0,
+      createdAt: Timestamp.now(),
+      dueAt: Timestamp.fromMillis(Date.now() + GROUP_WINDOW_MS),
+      ownerUid: search.ownerUid || null,
+      isGuest: search.isGuest === true
+    });
+  });
+}
+async function queueCurrentMatches(searchId, search) {
+  const cars = await db.collection("cars").get();
+  for (const item of cars.docs) {
+    const car = item.data();
+    if (!matchesSearch(car, search)) continue;
+    for (const channel of search.channels || []) await enqueueDelivery(searchId, search, item.id, channel);
+  }
+}
 function listingUrl(carId) { return SITE_URL + "/index.html?car=" + encodeURIComponent(carId) + "#cars"; }
 function escapeHtml(value) {
   return String(value || "").replace(/[&<>"']/g, function (char) {
@@ -309,7 +336,8 @@ exports.manageGuestAlert = onCall(async function (request) {
   }
   const status = action === "pause" ? "paused" : activateIfVerified(s);
   await ref.update({ status: status, updatedAt: Timestamp.now(), lastInteractionAt: Timestamp.now() });
-  return { message: status === "paused" ? "Alerts paused." : status === "active" ? "Alerts resumed." : "Verify every selected channel before alerts can resume." };
+  if (action === "resume" && status === "active") await queueCurrentMatches(id, { ...s, status: "active" });
+  return { message: status === "paused" ? "Alerts paused." : status === "active" ? "Alerts resumed. Newly matching available vehicles will be checked." : "Verify every selected channel before alerts can resume." };
 });
 
 exports.claimGuestSearches = onCall(async function (request) {
@@ -350,6 +378,33 @@ exports.claimGuestSearches = onCall(async function (request) {
   return { claimed: claimed, message: claimed ? "Transferred " + claimed + " verified guest search(es) to your account." : "No verified guest searches were found for your verified account email." };
 });
 
+exports.manageOwnedSavedSearch = onCall(async function (request) {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in to manage saved searches.");
+  const id = cleanText(request.data && request.data.id, 100);
+  const action = cleanText(request.data && request.data.action, 20);
+  if (!id || !["pause", "resume", "delete"].includes(action)) throw new HttpsError("invalid-argument", "Choose pause, resume or delete.");
+  const buyer = await db.doc("buyers/" + request.auth.uid).get();
+  if (!buyer.exists || buyer.data().role !== "buyer") throw new HttpsError("permission-denied", "A Kiri Cars buyer account is required.");
+  const ref = db.doc("savedSearches/" + id);
+  const snap = await ref.get();
+  if (!snap.exists || snap.data().ownerUid !== request.auth.uid) throw new HttpsError("permission-denied", "You cannot manage that saved search.");
+  const search = snap.data();
+  if (action === "delete") {
+    const deliveries = await db.collection("alertDeliveries").where("searchId", "==", id).get();
+    for (let offset = 0; offset < deliveries.docs.length; offset += 400) {
+      const batch = db.batch();
+      deliveries.docs.slice(offset, offset + 400).forEach(function (item) { batch.delete(item.ref); });
+      await batch.commit();
+    }
+    await ref.delete();
+    return { message: "Saved search deleted. Pending alerts have been cancelled." };
+  }
+  const status = action === "pause" ? "paused" : activateIfVerified(search);
+  await ref.update({ status: status, updatedAt: Timestamp.now(), lastInteractionAt: Timestamp.now() });
+  if (action === "resume" && status === "active") await queueCurrentMatches(id, { ...search, status: "active" });
+  return { message: status === "paused" ? "Alerts paused." : status === "active" ? "Alerts resumed. Newly matching available vehicles will be checked." : "Verify every selected contact channel before alerts can resume." };
+});
+
 exports.onCarListingChanged = onDocumentWritten("cars/{carId}", async function (event) {
   const after = event.data && event.data.after;
   if (!after || !after.exists) return;
@@ -360,19 +415,7 @@ exports.onCarListingChanged = onDocumentWritten("cars/{carId}", async function (
   for (const item of searches.docs) {
     const search = item.data();
     if (!matchesSearch(car, search)) continue;
-    for (const channel of search.channels || []) {
-      const deliveryId = hash(item.id + ":" + carId + ":" + channel).slice(0, 40);
-      const deliveryRef = db.doc("alertDeliveries/" + deliveryId);
-      await db.runTransaction(async function (tx) {
-        const existing = await tx.get(deliveryRef);
-        if (existing.exists) return;
-        tx.set(deliveryRef, {
-          searchId: item.id, carId: carId, channel: channel, status: "pending", attempts: 0,
-          createdAt: Timestamp.now(), dueAt: Timestamp.fromMillis(Date.now() + GROUP_WINDOW_MS),
-          ownerUid: search.ownerUid || null, isGuest: search.isGuest === true
-        });
-      });
-    }
+    for (const channel of search.channels || []) await enqueueDelivery(item.id, search, carId, channel);
   }
 });
 
