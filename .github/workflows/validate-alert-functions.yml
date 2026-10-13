@@ -17,6 +17,11 @@ jobs:
       - name: Install function dependencies
         run: npm install --no-audit --no-fund
         working-directory: functions
-      - name: Check JavaScript syntax
+      - name: Check Cloud Functions syntax
         run: node --check index.js
         working-directory: functions
+      - name: Check browser module syntax
+        run: |
+          for file in app.js admin.js buyer.js saved-searches.js verify-alert.js manage-alert.js manage-marketing.js confirm-alert.js; do
+            node --input-type=module --check < "$file"
+          done
