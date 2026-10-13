@@ -269,8 +269,19 @@ exports.manageGuestAlert = onCall(async function (request) {
   const s = snap.data();
   if (!s.isGuest || !s.manageTokenHash || s.manageTokenHash !== hash(token)) throw new HttpsError("permission-denied", "This management link is invalid or has been revoked.");
   if (action === "marketing-off") {
-    await ref.update({ marketingOptIn: false, updatedAt: Timestamp.now(), lastInteractionAt: Timestamp.now() });
-    return { message: "Promotional email consent has been withdrawn for this saved search." };
+    const sameEmail = s.email ? await db.collection("savedSearches").where("email", "==", s.email).get() : null;
+    if (sameEmail) {
+      for (let offset = 0; offset < sameEmail.docs.length; offset += 400) {
+        const batch = db.batch();
+        sameEmail.docs.slice(offset, offset + 400).forEach(function (entry) {
+          if (entry.data().marketingOptIn === true) batch.update(entry.ref, { marketingOptIn: false, updatedAt: Timestamp.now(), lastInteractionAt: Timestamp.now() });
+        });
+        await batch.commit();
+      }
+    } else {
+      await ref.update({ marketingOptIn: false, updatedAt: Timestamp.now(), lastInteractionAt: Timestamp.now() });
+    }
+    return { message: "Promotional email consent has been withdrawn. Vehicle-availability alerts remain separate." };
   }
   if (action === "delete") {
     const deliveries = await db.collection("alertDeliveries").where("searchId", "==", id).get();
