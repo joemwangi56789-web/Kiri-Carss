@@ -320,25 +320,31 @@ exports.claimGuestSearches = onCall(async function (request) {
   const email = String(request.auth.token.email).toLowerCase();
   const guests = await db.collection("savedSearches").where("email", "==", email).get();
   const existingSnap = await db.collection("savedSearches").where("ownerUid", "==", request.auth.uid).get();
-  const existingKeys = new Set(existingSnap.docs.map(function (docSnap) {
+  const existingByKey = new Map(existingSnap.docs.map(function (docSnap) {
     const data = docSnap.data();
-    return JSON.stringify({ filters: data.filters || {}, channels: (data.channels || []).slice().sort() });
+    return [JSON.stringify({ filters: data.filters || {}, channels: (data.channels || []).slice().sort() }), docSnap];
   }));
   let claimed = 0;
   for (const item of guests.docs) {
     const s = item.data();
     if (!s.isGuest || !s.emailVerified || s.ownerUid || s.status === "deleted") continue;
     const key = JSON.stringify({ filters: s.filters || {}, channels: (s.channels || []).slice().sort() });
-    if (existingKeys.has(key)) {
+    if (existingByKey.has(key)) {
+      const existing = existingByKey.get(key);
+      if (s.marketingOptIn === true && existing.data().marketingOptIn !== true) {
+        await existing.ref.update({ marketingOptIn: true, marketingConsentAt: s.marketingConsentAt || Timestamp.now(), updatedAt: Timestamp.now() });
+      }
       const deliveries = await db.collection("alertDeliveries").where("searchId", "==", item.id).get();
-      const batch = db.batch();
-      deliveries.docs.forEach(function (delivery) { batch.delete(delivery.ref); });
-      batch.delete(item.ref);
-      await batch.commit();
+      for (let offset = 0; offset < deliveries.docs.length; offset += 400) {
+        const batch = db.batch();
+        deliveries.docs.slice(offset, offset + 400).forEach(function (delivery) { batch.delete(delivery.ref); });
+        await batch.commit();
+      }
+      await item.ref.delete();
       continue;
     }
     await item.ref.update({ ownerUid: request.auth.uid, isGuest: false, manageTokenHash: null, manageTokenCreatedAt: null, updatedAt: Timestamp.now(), lastInteractionAt: Timestamp.now() });
-    existingKeys.add(key);
+    existingByKey.set(key, item);
     claimed += 1;
   }
   return { claimed: claimed, message: claimed ? "Transferred " + claimed + " verified guest search(es) to your account." : "No verified guest searches were found for your verified account email." };
