@@ -327,5 +327,10 @@ service cloud.firestore {
     match /alertDeliveries/{deliveryId} {
       allow read, write: if false;
     }
+
+    // Verification, reminder and unsubscribe tokens are never client-readable.
+    match /marketingUnsubscribeTokens/{tokenId} {
+      allow read, write: if false;
+    }
   }
 }
