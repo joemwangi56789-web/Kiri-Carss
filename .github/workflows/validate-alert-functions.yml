@@ -1,0 +1,22 @@
+name: Validate Kiri Cars alert functions
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feature/saved-search-alert-system]
+
+jobs:
+  functions-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install function dependencies
+        run: npm install --no-audit --no-fund
+        working-directory: functions
+      - name: Check JavaScript syntax
+        run: node --check index.js
+        working-directory: functions
