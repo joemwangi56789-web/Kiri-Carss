@@ -226,8 +226,8 @@ onAuthStateChanged(auth, async (user) => {
   if (user) {
     document.getElementById("contactEmail").value = user.email || "";
     document.getElementById("contactEmail").disabled = true;
-    document.getElementById("channelEmail").checked = true;
-    document.getElementById("channelEmail").disabled = !user.emailVerified;
+    document.getElementById("channelEmail").checked = user.emailVerified === true;
+    document.getElementById("channelEmail").disabled = user.emailVerified !== true;
     document.getElementById("channelEmail").title = user.emailVerified ? "" : "Verify your account email before selecting email alerts.";
     accountPanel.hidden = false;
     if (!user.emailVerified) setMessage("Your account email is not verified. Verify it before selecting email alerts.", true);
