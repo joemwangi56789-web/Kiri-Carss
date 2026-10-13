@@ -269,6 +269,7 @@ carForm.addEventListener("submit", async (event) => {
       year: readNumber("year"),
       price: readNumber("price"),
       status: document.getElementById("status").value,
+      location: document.getElementById("location").value.trim(),
       mileage: readNumber("mileage"),
       fuel: document.getElementById("fuel").value,
       transmission: document.getElementById("transmission").value,
@@ -348,7 +349,7 @@ function renderCar(car) {
 
   const details = document.createElement("p");
   const price = typeof car.price === "number" ? "KSh " + car.price.toLocaleString() : "Price not set";
-  details.textContent = [car.carType, car.status, car.fuel, car.transmission, price].filter(Boolean).join(" · ");
+  details.textContent = [car.carType, car.status, car.fuel, car.transmission, car.location, price].filter(Boolean).join(" · ");
 
   const photoUrls = Array.isArray(car.images) ? car.images.map((item) => item?.url).filter(Boolean) : [];
   const firstPhoto = photoUrls[0] || car.imageUrl;
