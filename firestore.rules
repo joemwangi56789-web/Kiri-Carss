@@ -298,6 +298,22 @@ service cloud.firestore {
       }
     }
 
+    // Buyers can manage their own favourites; a favourite must reference a public, available car.
+    match /buyers/{userId}/favourites/{carId} {
+      allow read, delete: if signedIn() && request.auth.uid == userId;
+      allow create, update: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['carId', 'createdAt'])
+        && request.resource.data.keys().hasAll(['carId', 'createdAt'])
+        && request.resource.data.carId == carId
+        && request.resource.data.createdAt == request.time
+        && exists(/databases/$(database)/documents/cars/$(carId))
+        && (
+          !('listingStatus' in get(/databases/$(database)/documents/cars/$(carId)).data)
+          || get(/databases/$(database)/documents/cars/$(carId)).data.listingStatus == 'active'
+        );
+    }
+
     // Saved searches are created by trusted Cloud Functions so guests cannot write
     // unverified contact details or alter verification state from the browser.
     match /savedSearches/{searchId} {
