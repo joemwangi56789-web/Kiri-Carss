@@ -145,24 +145,25 @@ exports.createSavedSearch = onCall({ secrets: [RESEND_API_KEY, WHATSAPP_ACCESS_T
     ownerUid = request.auth.uid;
     const buyerSnap = await db.doc("buyers/" + ownerUid).get();
     if (!buyerSnap.exists || buyerSnap.data().role !== "buyer") throw new HttpsError("permission-denied", "Sign in with a Kiri Cars buyer account.");
-    if (channels.includes("email")) {
+    if (channels.includes("email") || input.marketingOptIn === true) {
       email = cleanText(request.auth.token.email, 254).toLowerCase();
       emailVerified = request.auth.token.email_verified === true;
-      if (!email || !emailVerified) throw new HttpsError("failed-precondition", "Verify your account email before enabling email alerts.");
+      if (!email || (channels.includes("email") && !emailVerified)) throw new HttpsError("failed-precondition", "Verify your account email before enabling email alerts.");
+      if (input.marketingOptIn === true && !emailVerified) throw new HttpsError("failed-precondition", "Verify your account email before opting in to promotional emails.");
     } else email = "";
     if (channels.includes("whatsapp") && !whatsapp) throw new HttpsError("invalid-argument", "Enter a valid Kenyan WhatsApp number.");
     if (!channels.includes("whatsapp")) whatsapp = "";
   } else {
-    if (channels.includes("email") && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpsError("invalid-argument", "Enter a valid email address.");
+    if ((channels.includes("email") || input.marketingOptIn === true) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpsError("invalid-argument", "Enter a valid email address for the selected alerts or promotional emails.");
     if (channels.includes("whatsapp") && !whatsapp) throw new HttpsError("invalid-argument", "Enter a valid Kenyan WhatsApp number.");
-    if (!channels.includes("email")) email = "";
+    if (!channels.includes("email") && input.marketingOptIn !== true) email = "";
     if (!channels.includes("whatsapp")) whatsapp = "";
   }
   if (channels.includes("email") && !RESEND_API_KEY.value()) throw new HttpsError("failed-precondition", "Email delivery is not configured yet.");
   if (channels.includes("whatsapp") && (!WHATSAPP_ACCESS_TOKEN.value() || !WHATSAPP_PHONE_NUMBER_ID.value() || !process.env.KIRI_WHATSAPP_VERIFY_TEMPLATE)) throw new HttpsError("failed-precondition", "WhatsApp verification is not configured yet.");
 
   const id = db.collection("savedSearches").doc().id;
-  const verifyToken = isGuest && channels.includes("email") ? randomToken() : "";
+  const verifyToken = isGuest && (channels.includes("email") || input.marketingOptIn === true) ? randomToken() : "";
   const manageToken = isGuest ? randomToken() : "";
   const code = channels.includes("whatsapp") ? String(crypto.randomInt(100000, 1000000)) : "";
   const now = Timestamp.now();
@@ -193,7 +194,7 @@ exports.createSavedSearch = onCall({ secrets: [RESEND_API_KEY, WHATSAPP_ACCESS_T
   };
   await db.doc("savedSearches/" + id).set(search);
   try {
-    if (isGuest && channels.includes("email")) await sendGuestVerificationEmail(id, email, verifyToken, manageToken);
+    if (isGuest && (channels.includes("email") || input.marketingOptIn === true)) await sendGuestVerificationEmail(id, email, verifyToken, manageToken);
     if (channels.includes("whatsapp")) {
       const template = process.env.KIRI_WHATSAPP_VERIFY_TEMPLATE || "";
       const manageUrl = isGuest ? SITE_URL + "/manage-alert.html?id=" + id + "&token=" + manageToken : SITE_URL + "/saved-searches.html";
@@ -203,7 +204,7 @@ exports.createSavedSearch = onCall({ secrets: [RESEND_API_KEY, WHATSAPP_ACCESS_T
     await db.doc("savedSearches/" + id).update({ setupError: String(error.message || error).slice(0, 250) });
     throw new HttpsError("failed-precondition", "The request was recorded, but verification could not be sent. Please check Kiri Cars notification setup before trying again.");
   }
-  return { id: id, status: search.status, needsEmailVerification: isGuest && channels.includes("email"), needsWhatsAppVerification: channels.includes("whatsapp"), message: search.status === "active" ? "Saved search activated." : "Saved search created. Verify every selected contact channel before alerts can begin." };
+  return { id: id, status: search.status, needsEmailVerification: isGuest && (channels.includes("email") || input.marketingOptIn === true), needsWhatsAppVerification: channels.includes("whatsapp"), message: search.status === "active" ? "Saved search activated." : "Saved search created. Verify every selected contact channel before alerts can begin." };
 });
 
 exports.verifyEmailAlert = onCall(async function (request) {
@@ -450,7 +451,7 @@ exports.weeklyPromotionalEmail = onSchedule({
   const byEmail = new Map();
   for (const item of allSearches.docs) {
     const s = item.data();
-    if (s.marketingOptIn !== true || !(s.channels || []).includes("email") || s.emailVerified !== true || !s.email) continue;
+    if (s.marketingOptIn !== true || s.emailVerified !== true || !s.email) continue;
     if (!byEmail.has(s.email)) byEmail.set(s.email, []);
     byEmail.get(s.email).push(s);
   }
