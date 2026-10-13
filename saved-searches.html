@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Save a Kiri Cars vehicle search and get notified when matching vehicles become available.">
+  <title>Saved Searches & Alerts | Kiri Cars</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="dashboard-header">
+    <div><h1>Kiri Cars</h1><p>Saved vehicle searches and availability alerts</p></div>
+    <a class="secondary-link" href="index.html">Browse Cars</a>
+  </header>
+  <main class="account-layout">
+    <section class="account-panel">
+      <h2>Get notified when your car becomes available</h2>
+      <p class="account-muted">Choose the filters that matter to you. Kiri Cars will alert you only when every selected filter matches a vehicle. Searches are nationwide unless you enter a location.</p>
+      <form id="savedSearchForm" class="account-form">
+        <label for="keyword">Keyword (optional)</label>
+        <input id="keyword" type="text" maxlength="100" placeholder="e.g. hybrid, 4WD">
+        <label for="manufacturer">Manufacturer</label>
+        <input id="manufacturer" type="text" maxlength="60" placeholder="e.g. Toyota">
+        <label for="model">Model</label>
+        <input id="model" type="text" maxlength="80" placeholder="e.g. Fielder">
+        <label for="carType">Vehicle type</label>
+        <select id="carType">
+          <option value="">Any type</option><option>SUV</option><option>Sedan</option><option>Hatchback</option><option>Wagon</option><option>Van</option><option>Pickup</option><option>Coupe</option><option>Other</option>
+        </select>
+        <div class="alert-form-grid">
+          <div><label for="minYear">Minimum year</label><input id="minYear" type="number" min="1950" max="2035" placeholder="Any"></div>
+          <div><label for="maxYear">Maximum year</label><input id="maxYear" type="number" min="1950" max="2035" placeholder="Any"></div>
+          <div><label for="minPrice">Minimum price (KSh)</label><input id="minPrice" type="number" min="0" placeholder="Any"></div>
+          <div><label for="maxPrice">Maximum price (KSh)</label><input id="maxPrice" type="number" min="0" placeholder="Any"></div>
+        </div>
+        <label for="condition">Condition</label>
+        <select id="condition"><option value="">Any condition</option><option>Locally Used</option><option>Fresh Import</option><option>Brand New</option></select>
+        <label for="location">Town or region (optional)</label>
+        <input id="location" type="text" maxlength="80" placeholder="Leave blank for nationwide alerts">
+        <fieldset class="alert-channel-fieldset">
+          <legend>How should we notify you?</legend>
+          <label class="consent-label"><input id="channelEmail" type="checkbox" checked> Email</label>
+          <label class="consent-label"><input id="channelWhatsApp" type="checkbox"> WhatsApp</label>
+        </fieldset>
+        <div id="guestContactFields">
+          <label for="contactEmail">Email address</label>
+          <input id="contactEmail" type="email" autocomplete="email" placeholder="you@example.com">
+          <label for="contactWhatsApp">WhatsApp number</label>
+          <input id="contactWhatsApp" type="tel" inputmode="tel" autocomplete="tel" placeholder="0712345678 or 254712345678">
+          <p class="account-muted">Guests can request alerts without an account. Every selected contact channel must be verified before alerts start.</p>
+        </div>
+        <label class="consent-label"><input id="marketingOptIn" type="checkbox"> I separately agree to receive weekly promotional emails from Kiri Cars when promotional email delivery is enabled. This is optional and does not affect vehicle alerts.</label>
+        <button id="saveSearchButton" type="submit">Save Search & Set Alerts</button>
+      </form>
+      <p id="savedSearchMessage" role="status" aria-live="polite"></p>
+      <form id="whatsappVerificationForm" class="account-form" hidden>
+        <h3>Verify WhatsApp</h3>
+        <p>Enter the six-digit code sent to your WhatsApp number. If you selected both channels, the email address must also be verified before alerts begin.</p>
+        <input id="whatsappCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="Six-digit code" required>
+        <button type="submit">Verify WhatsApp Number</button>
+      </form>
+    </section>
+    <section id="accountSearchesPanel" class="account-panel" hidden>
+      <h2>Your saved searches</h2>
+      <p class="account-muted">Pause, resume or delete searches. A search can notify you once per listing; routine edits and repeated price changes won't send duplicate alerts.</p>
+      <button id="claimGuestSearchesButton" type="button">Transfer My Verified Guest Searches</button>
+      <p id="claimSearchesMessage" role="status" aria-live="polite"></p>
+      <div id="accountSearchesList">Loading saved searches...</div>
+    </section>
+    <p><a href="index.html">← Back to Kiri Cars</a></p>
+  </main>
+  <script type="module" src="saved-searches.js"></script>
+</body>
+</html>
