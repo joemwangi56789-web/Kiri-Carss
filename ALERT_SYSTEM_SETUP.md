@@ -18,6 +18,7 @@ This feature is being introduced behind a separate branch. It is not live until 
 - The email/WhatsApp providers have not been connected or tested from this repository.
 - Weekly promotional emails include an unsubscribe link that withdraws promotional consent across saved searches for that email address. Test the unsubscribe flow before enabling campaigns.
 - Guest inactivity reminders use a 14-day confirmation link and automatically pause unconfirmed searches. Test this flow end-to-end before production.
+- Guest management links currently use long-lived random tokens stored as hashes. Before production, add a customer-facing link rotation/reissue path and decide on expiry; sensitive actions such as changing contact details or deleting all personal data need fresh verification. The current UI deletes an individual saved search, not an entire customer account.
 - The one-minute scheduled alert worker polls after the 60-second grouping window, so actual dispatch may take longer than 60 seconds. Measure this in testing; a task-queue scheduler would be needed for tighter timing.
 - WhatsApp Cloud API requires the right Meta business setup, approved templates, consent, and provider policy compliance.
 - Firebase Functions costs money on Blaze beyond applicable no-cost allowances. Monitor usage; budget alerts alone do not stop billing.
