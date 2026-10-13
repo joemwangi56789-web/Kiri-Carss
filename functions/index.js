@@ -306,17 +306,19 @@ exports.onCarListingChanged = onDocumentWritten("cars/{carId}", async function (
   for (const item of searches.docs) {
     const search = item.data();
     if (!matchesSearch(car, search)) continue;
-    const deliveryId = hash(item.id + ":" + carId).slice(0, 40);
-    const deliveryRef = db.doc("alertDeliveries/" + deliveryId);
-    await db.runTransaction(async function (tx) {
-      const existing = await tx.get(deliveryRef);
-      if (existing.exists) return;
-      tx.set(deliveryRef, {
-        searchId: item.id, carId: carId, status: "pending", attempts: 0,
-        createdAt: Timestamp.now(), dueAt: Timestamp.fromMillis(Date.now() + GROUP_WINDOW_MS),
-        ownerUid: search.ownerUid || null, isGuest: search.isGuest === true
+    for (const channel of search.channels || []) {
+      const deliveryId = hash(item.id + ":" + carId + ":" + channel).slice(0, 40);
+      const deliveryRef = db.doc("alertDeliveries/" + deliveryId);
+      await db.runTransaction(async function (tx) {
+        const existing = await tx.get(deliveryRef);
+        if (existing.exists) return;
+        tx.set(deliveryRef, {
+          searchId: item.id, carId: carId, channel: channel, status: "pending", attempts: 0,
+          createdAt: Timestamp.now(), dueAt: Timestamp.fromMillis(Date.now() + GROUP_WINDOW_MS),
+          ownerUid: search.ownerUid || null, isGuest: search.isGuest === true
+        });
       });
-    });
+    }
   }
 });
 
@@ -343,16 +345,16 @@ exports.processPendingAlerts = onSchedule({
       continue;
     }
     const s = searchSnap.data();
-    for (const channel of s.channels || []) {
-      const recipient = channel === "email" ? s.email : s.whatsapp;
-      if (!recipient || (channel === "email" && s.emailVerified !== true) || (channel === "whatsapp" && s.whatsappVerified !== true)) continue;
-      const key = channel + ":" + recipient;
-      if (!groups.has(key)) groups.set(key, { channel: channel, recipient: recipient, items: [] });
-      groups.get(key).items.push({ ref: item.ref, delivery: delivery, car: carSnap.data(), carId: delivery.carId });
+    const channel = delivery.channel;
+    const recipient = channel === "email" ? s.email : s.whatsapp;
+    const verified = channel === "email" ? s.emailVerified === true : s.whatsappVerified === true;
+    if (!recipient || !verified) {
+      await item.ref.update({ status: "cancelled", finishedAt: Timestamp.now(), lastError: "The selected channel is not verified." });
+      continue;
     }
-    if (!(s.channels || []).some(function (channel) { return channel === "email" ? !!s.email && s.emailVerified === true : !!s.whatsapp && s.whatsappVerified === true; })) {
-      await item.ref.update({ status: "cancelled", finishedAt: Timestamp.now(), lastError: "No verified delivery channel." });
-    }
+    const key = channel + ":" + recipient;
+    if (!groups.has(key)) groups.set(key, { channel: channel, recipient: recipient, items: [] });
+    groups.get(key).items.push({ ref: item.ref, delivery: delivery, car: carSnap.data(), carId: delivery.carId });
   }
   for (const group of groups.values()) {
     const cars = Array.from(new Map(group.items.map(function (item) { return [item.carId, item]; })).values()).slice(0, 8);
