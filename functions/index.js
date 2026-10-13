@@ -88,13 +88,14 @@ async function enforceCreateRateLimit(request, isGuest) {
   const ip = cleanText(String(rawIp || "unknown").split(",")[0], 100);
   const identity = isGuest ? "guest:" + ip : "user:" + request.auth.uid;
   const hour = Math.floor(Date.now() / (60 * 60 * 1000));
-  const ref = db.doc("alertRequestRateLimits/" + hash(identity + ":" + hour).slice(0, 40));
+  const ref = db.doc("alertRequestRateLimits/" + hash(identity).slice(0, 40));
   const maximum = isGuest ? 5 : 20;
   await db.runTransaction(async function (tx) {
     const snap = await tx.get(ref);
-    const count = snap.exists ? Number(snap.data().count || 0) : 0;
+    const data = snap.exists ? snap.data() : {};
+    const count = Number(data.hour) === hour ? Number(data.count || 0) : 0;
     if (count >= maximum) throw new HttpsError("resource-exhausted", "Too many saved-search requests. Please wait before trying again.");
-    tx.set(ref, { count: count + 1, expiresAt: Timestamp.fromMillis((hour + 2) * 60 * 60 * 1000), updatedAt: Timestamp.now() }, { merge: true });
+    tx.set(ref, { hour: hour, count: count + 1, updatedAt: Timestamp.now() });
   });
 }
 function activateIfVerified(search) {
