@@ -252,7 +252,7 @@ carForm.addEventListener("submit", async (event) => {
     currentApprovalStatus = String(
       latestProfile.approvalStatus || (currentRole === "admin" ? "approved" : "pending")
     ).trim().toLowerCase();
-    currentCanPublish = currentRole === "admin" ||
+    currentCanPublish = (currentRole === "admin" && latestProfile.active === true) ||
       (currentRole === "dealer" && latestProfile.active === true && currentApprovalStatus === "approved");
 
     if (currentRole === "dealer" && currentApprovalStatus === "approved" && latestProfile.active === true) {
