@@ -149,9 +149,32 @@ service cloud.firestore {
         || (
           signedIn()
           && resource.data.addedBy == request.auth.uid
+          && request.resource.data.addedBy == resource.data.addedBy
           && isActiveSeller(request.auth.uid)
-          && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['listingStatus', 'soldAt', 'sellerWhatsApp', 'sellerName'])
+          && (
+            request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['listingStatus', 'soldAt', 'sellerWhatsApp', 'sellerName'])
+            || (
+              request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                'manufacturer', 'carType', 'model', 'year', 'price', 'status',
+                'mileage', 'fuel', 'transmission', 'description',
+                'vehicleRelationship', 'authorizationConfirmed', 'images',
+                'imageUrl', 'updatedAt'
+              ])
+              && request.resource.data.authorizationConfirmed == true
+              && request.resource.data.vehicleRelationship in [
+                'owner', 'broker', 'authorized_representative'
+              ]
+              && request.resource.data.manufacturer is string
+              && request.resource.data.model is string
+              && request.resource.data.year is number
+              && request.resource.data.price is number
+              && request.resource.data.images is list
+              && request.resource.data.images.size() > 0
+              && request.resource.data.imageUrl is string
+              && request.resource.data.updatedAt == request.time
+            )
+          )
         );
 
       allow delete: if isOwner()
