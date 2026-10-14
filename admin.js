@@ -300,6 +300,7 @@ carForm.addEventListener("submit", async (event) => {
   }
 
   addCarButton.disabled = true;
+  cancelEditButton.disabled = true;
   carPhotosInput.disabled = true;
   setText(formMessage, "Preparing vehicle photos...");
   try {
@@ -376,6 +377,7 @@ carForm.addEventListener("submit", async (event) => {
     setText(uploadProgress, "If photos uploaded before the error, they may remain in Cloudinary and need cleanup.", true);
   } finally {
     addCarButton.disabled = !currentCanPublish && !(currentRole === "dealer" && currentApprovalStatus === "pending");
+    cancelEditButton.disabled = false;
     carPhotosInput.disabled = !currentCanPublish && !(currentRole === "dealer" && currentApprovalStatus === "pending");
   }
 });
