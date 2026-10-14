@@ -231,6 +231,45 @@ whatsappForm.addEventListener("submit", async (event) => {
 carForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!currentUid) return;
+
+  // Re-read the seller profile before choosing draft vs public listing.
+  // A seller may already have this dashboard open when the owner approves them.
+  // In that case the in-memory approval status would otherwise remain "pending".
+  try {
+    const latestProfileSnap = await getDoc(doc(db, "admins", currentUid));
+    if (!latestProfileSnap.exists()) {
+      setText(formMessage, "Could not verify your seller account. Please sign in again.", true);
+      return;
+    }
+
+    const latestProfile = latestProfileSnap.data();
+    if (latestProfile.accountStatus === "suspended") {
+      setText(formMessage, "Your account is suspended. Contact Kiri Cars support.", true);
+      return;
+    }
+
+    currentProfile = latestProfile;
+    currentApprovalStatus = String(
+      latestProfile.approvalStatus || (currentRole === "admin" ? "approved" : "pending")
+    ).trim().toLowerCase();
+    currentCanPublish = currentRole === "admin" ||
+      (currentRole === "dealer" && latestProfile.active === true && currentApprovalStatus === "approved");
+
+    if (currentRole === "dealer" && currentApprovalStatus === "approved" && latestProfile.active === true) {
+      addCarButton.textContent = "Publish Vehicle";
+      setText(adminMessage, "Your seller account is approved. You can publish vehicles.");
+      setText(document.getElementById("listingPermissionNotice"), "Approved seller: new listings can be published after you confirm your permission to market each vehicle.");
+    } else if (currentRole === "dealer" && currentApprovalStatus === "pending") {
+      addCarButton.textContent = "Save Draft Listing";
+      setText(adminMessage, "Your seller application is pending review. You can prepare private draft listings, but buyers cannot see them yet.");
+      setText(document.getElementById("listingPermissionNotice"), "Draft mode: listings you save now stay private until your account is approved.");
+    }
+  } catch (error) {
+    console.error("Refresh seller approval status failed:", error);
+    setText(formMessage, "Could not refresh your approval status: " + (error.code || error.message), true);
+    return;
+  }
+
   if (!currentCanPublish && !(currentRole === "dealer" && currentApprovalStatus === "pending")) {
     setText(formMessage, "Your account is not permitted to create listings at this time.", true);
     return;
