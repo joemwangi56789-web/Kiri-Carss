@@ -20,6 +20,7 @@ const adminMessage = document.getElementById("adminMessage");
 const formMessage = document.getElementById("formMessage");
 const carForm = document.getElementById("carForm");
 const addCarButton = document.getElementById("addCarButton");
+const cancelEditButton = document.getElementById("cancelEditButton");
 const reloadCarsButton = document.getElementById("reloadCarsButton");
 const logoutButton = document.getElementById("logoutButton");
 const myCars = document.getElementById("myCars");
@@ -34,6 +35,7 @@ let currentRole = "";
 let currentProfile = null;
 let currentApprovalStatus = "";
 let currentCanPublish = false;
+let editingCar = null;
 
 function normalizeKenyanPhone(value) {
   let digits = String(value || "").replace(/\D/g, "");
@@ -162,6 +164,10 @@ function validatePhotos(files) {
 carPhotosInput.addEventListener("change", () => {
   photoPreview.replaceChildren();
   const files = Array.from(carPhotosInput.files || []);
+  if (editingCar && files.length === 0) {
+    setText(uploadProgress, "No new photos selected. Existing vehicle photos will be kept.");
+    return;
+  }
   const validationError = validatePhotos(files);
   if (validationError) {
     setText(uploadProgress, validationError, true);
@@ -285,23 +291,32 @@ carForm.addEventListener("submit", async (event) => {
   }
 
   const selectedPhotos = Array.from(carPhotosInput.files || []);
-  const photoError = validatePhotos(selectedPhotos);
-  if (photoError) {
-    setText(formMessage, photoError, true);
-    return;
+  if (!editingCar || selectedPhotos.length > 0) {
+    const photoError = validatePhotos(selectedPhotos);
+    if (photoError) {
+      setText(formMessage, photoError, true);
+      return;
+    }
   }
 
   addCarButton.disabled = true;
+  cancelEditButton.disabled = true;
   carPhotosInput.disabled = true;
   setText(formMessage, "Preparing vehicle photos...");
   try {
-    const images = [];
+    const uploadedImages = [];
     for (let i = 0; i < selectedPhotos.length; i += 1) {
-      images.push(await uploadPhoto(selectedPhotos[i], i + 1, selectedPhotos.length));
+      uploadedImages.push(await uploadPhoto(selectedPhotos[i], i + 1, selectedPhotos.length));
     }
 
-    const listingIsDraft = currentRole === "dealer" && currentApprovalStatus === "pending";
-    const car = {
+    const images = selectedPhotos.length
+      ? uploadedImages
+      : (Array.isArray(editingCar?.images) && editingCar.images.length
+          ? editingCar.images
+          : (editingCar?.imageUrl ? [{ url: editingCar.imageUrl, publicId: "" }] : []));
+    if (!images.length) throw new Error("This listing has no saved photos. Please select at least one photo.");
+
+    const vehicleFields = {
       manufacturer: document.getElementById("manufacturer").value.trim(),
       carType: document.getElementById("carType").value,
       model: document.getElementById("model").value.trim(),
@@ -315,23 +330,46 @@ carForm.addEventListener("submit", async (event) => {
       vehicleRelationship: document.getElementById("vehicleRelationship").value,
       authorizationConfirmed: true,
       images,
-      imageUrl: images[0].url,
-      addedBy: currentUid,
-      sellerWhatsApp: currentWhatsApp,
-      sellerName: currentAdminName,
-      listingStatus: listingIsDraft ? "draft" : "active",
-      createdAt: serverTimestamp()
+      imageUrl: images[0].url
     };
 
-    setText(uploadProgress, "Photos uploaded. Saving vehicle details...");
-    const targetCollection = listingIsDraft ? "dealerDrafts" : "cars";
-    await addDoc(collection(db, targetCollection), car);
+    const wasEditing = Boolean(editingCar);
+    setText(uploadProgress, selectedPhotos.length
+      ? "Photos uploaded. Saving vehicle details..."
+      : "Saving vehicle details...");
+    if (wasEditing) {
+      await updateDoc(doc(db, "cars", editingCar.id), {
+        ...vehicleFields,
+        updatedAt: serverTimestamp()
+      });
+    } else {
+      const listingIsDraft = currentRole === "dealer" && currentApprovalStatus === "pending";
+      const car = {
+        ...vehicleFields,
+        addedBy: currentUid,
+        sellerWhatsApp: currentWhatsApp,
+        sellerName: currentAdminName,
+        listingStatus: listingIsDraft ? "draft" : "active",
+        createdAt: serverTimestamp()
+      };
+      const targetCollection = listingIsDraft ? "dealerDrafts" : "cars";
+      await addDoc(collection(db, targetCollection), car);
+    }
+
+    editingCar = null;
     carForm.reset();
+    carPhotosInput.required = true;
+    cancelEditButton.hidden = true;
+    addCarButton.textContent = currentRole === "dealer"
+      ? (currentApprovalStatus === "pending" ? "Save Draft Listing" : "Publish Vehicle")
+      : "Add Vehicle";
     photoPreview.replaceChildren();
     setText(uploadProgress, "");
-    setText(formMessage, listingIsDraft
-      ? "Draft saved privately. It will not appear to buyers until your seller account is approved and you publish it."
-      : "Vehicle published successfully with " + images.length + (images.length === 1 ? " photo." : " photos."));
+    setText(formMessage, wasEditing
+      ? "Vehicle updated successfully. Your existing listing has been changed, not duplicated."
+      : (currentRole === "dealer" && currentApprovalStatus === "pending"
+          ? "Draft saved privately. It will not appear to buyers until your seller account is approved and you publish it."
+          : "Vehicle published successfully with " + images.length + (images.length === 1 ? " photo." : " photos.")));
     await loadMyCars();
   } catch (error) {
     console.error("Save vehicle failed:", error);
@@ -339,6 +377,7 @@ carForm.addEventListener("submit", async (event) => {
     setText(uploadProgress, "If photos uploaded before the error, they may remain in Cloudinary and need cleanup.", true);
   } finally {
     addCarButton.disabled = !currentCanPublish && !(currentRole === "dealer" && currentApprovalStatus === "pending");
+    cancelEditButton.disabled = false;
     carPhotosInput.disabled = !currentCanPublish && !(currentRole === "dealer" && currentApprovalStatus === "pending");
   }
 });
@@ -446,6 +485,14 @@ function renderCar(car) {
     card.appendChild(soldButton);
   }
 
+  if (currentCanPublish && car.listingStatus !== "sold" && car.listingStatus !== "suspended") {
+    const editButton = document.createElement("button");
+    editButton.type = "button";
+    editButton.textContent = "Edit Vehicle";
+    editButton.addEventListener("click", () => beginEditCar(car));
+    card.appendChild(editButton);
+  }
+
   if (currentCanPublish) {
     const removeButton = document.createElement("button");
     removeButton.type = "button";
@@ -455,6 +502,67 @@ function renderCar(car) {
   }
   return card;
 }
+
+function beginEditCar(car) {
+  if (!currentCanPublish || car._source !== "cars" || car.addedBy !== currentUid) {
+    alert("You can only edit your own published vehicles.");
+    return;
+  }
+  if (car.listingStatus === "sold" || car.listingStatus === "suspended") {
+    alert("Sold or suspended listings cannot be edited here.");
+    return;
+  }
+
+  editingCar = car;
+  [
+    "manufacturer", "carType", "model", "year", "price", "status",
+    "mileage", "fuel", "transmission", "vehicleRelationship", "description"
+  ].forEach((id) => {
+    const field = document.getElementById(id);
+    const value = car[id];
+    field.value = value === null || value === undefined ? "" : String(value);
+  });
+  document.getElementById("authorizationConfirmed").checked = car.authorizationConfirmed === true;
+  carPhotosInput.value = "";
+  carPhotosInput.required = false;
+  photoPreview.replaceChildren();
+
+  const savedImages = Array.isArray(car.images) && car.images.length
+    ? car.images.map((item) => item?.url).filter(Boolean)
+    : (car.imageUrl ? [car.imageUrl] : []);
+  savedImages.forEach((url, index) => {
+    const figure = document.createElement("figure");
+    figure.className = "photo-preview-item";
+    const image = document.createElement("img");
+    image.src = url;
+    image.alt = "Saved vehicle photo " + (index + 1);
+    image.loading = "lazy";
+    const caption = document.createElement("figcaption");
+    caption.textContent = "Current photo " + (index + 1);
+    figure.append(image, caption);
+    photoPreview.appendChild(figure);
+  });
+
+  setText(uploadProgress, "Existing photos will be kept unless you choose new photos.");
+  addCarButton.textContent = "Save Vehicle Changes";
+  cancelEditButton.hidden = false;
+  document.getElementById("carForm").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function cancelCarEdit() {
+  editingCar = null;
+  carForm.reset();
+  carPhotosInput.required = true;
+  cancelEditButton.hidden = true;
+  addCarButton.textContent = currentRole === "dealer"
+    ? (currentApprovalStatus === "pending" ? "Save Draft Listing" : "Publish Vehicle")
+    : "Add Vehicle";
+  photoPreview.replaceChildren();
+  setText(uploadProgress, "");
+  setText(formMessage, "Editing cancelled. No changes were saved.");
+}
+
+cancelEditButton.addEventListener("click", cancelCarEdit);
 
 async function publishDraft(car, button) {
   if (!currentCanPublish || car._source !== "dealerDrafts" || car.addedBy !== currentUid) return;
