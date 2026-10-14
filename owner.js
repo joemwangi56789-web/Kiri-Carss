@@ -447,7 +447,143 @@ async function removePublicSellerCategories() {
 }
 
 document.getElementById("refreshAccountsButton").addEventListener("click", loadAccountStats);
+
+// Recover eligible drafts left behind by the seller approval-status bug.
+// This is owner-only, preserves draft data, checks seller approval and skips duplicates.
+function draftFingerprint(data) {
+  const images = Array.isArray(data.images) ? data.images : [];
+  const firstImage = images[0];
+  const imageUrl = typeof firstImage === "string" ? firstImage : (firstImage?.url || data.imageUrl || "");
+  const createdAt = data.createdAt && typeof data.createdAt.toMillis === "function"
+    ? String(data.createdAt.toMillis())
+    : "";
+  return [
+    data.addedBy || "",
+    String(data.manufacturer || "").trim().toLowerCase(),
+    String(data.model || "").trim().toLowerCase(),
+    String(data.year ?? ""),
+    String(data.price ?? ""),
+    imageUrl,
+    createdAt
+  ].join("|");
+}
+
+async function recoverApprovedDealerDrafts() {
+  const button = document.getElementById("recoverApprovedDraftsButton");
+  const message = document.getElementById("recoverApprovedDraftsMessage");
+  if (!button || !message) return;
+
+  if (!confirm("Recover eligible drafts now? Only drafts belonging to active, approved dealers will be published. Pending/rejected/suspended sellers' drafts will remain private. Existing matching public listings will be skipped.")) return;
+
+  button.disabled = true;
+  message.textContent = "Checking dealer approvals, drafts and existing public listings...";
+  message.style.color = "#333";
+
+  try {
+    const [adminsSnapshot, draftsSnapshot, carsSnapshot] = await Promise.all([
+      getDocs(collection(db, "admins")),
+      getDocs(collection(db, "dealerDrafts")),
+      getDocs(collection(db, "cars"))
+    ]);
+
+    const profiles = new Map();
+    adminsSnapshot.forEach((item) => profiles.set(item.id, item.data()));
+
+    const publicFingerprints = new Set();
+    carsSnapshot.forEach((item) => publicFingerprints.add(draftFingerprint(item.data())));
+
+    const eligible = [];
+    let ineligibleSeller = 0;
+    let incomplete = 0;
+    let duplicate = 0;
+
+    draftsSnapshot.forEach((item) => {
+      const draft = item.data();
+      const seller = profiles.get(draft.addedBy);
+      const approved = seller
+        && String(seller.role || "").trim().toLowerCase() === "dealer"
+        && seller.active === true
+        && String(seller.approvalStatus || "").trim().toLowerCase() === "approved"
+        && String(seller.accountStatus || "").trim().toLowerCase() !== "suspended";
+
+      if (!approved) {
+        ineligibleSeller += 1;
+        return;
+      }
+
+      const relationship = String(draft.vehicleRelationship || "").trim().toLowerCase();
+      if (
+        draft.authorizationConfirmed !== true
+        || !["owner", "broker", "authorized_representative"].includes(relationship)
+        || !draft.manufacturer
+        || !draft.model
+        || !draft.price
+        || !Array.isArray(draft.images)
+        || draft.images.length === 0
+      ) {
+        incomplete += 1;
+        return;
+      }
+
+      const fingerprint = draftFingerprint(draft);
+      if (publicFingerprints.has(fingerprint)) {
+        duplicate += 1;
+        return;
+      }
+
+      // Reserve the fingerprint immediately so two identical drafts in this recovery
+      // run cannot create duplicate public listings.
+      publicFingerprints.add(fingerprint);
+      eligible.push({ ref: item.ref, data: draft, fingerprint });
+    });
+
+    if (!eligible.length) {
+      message.textContent = "Recovery complete: 0 drafts published. " +
+        ineligibleSeller + " kept private (seller not currently approved and active), " +
+        incomplete + " skipped (missing required listing details), " +
+        duplicate + " skipped (matching public listing already exists).";
+      return;
+    }
+
+    let publishedCount = 0;
+    for (let start = 0; start < eligible.length; start += 200) {
+      const batch = writeBatch(db);
+      const group = eligible.slice(start, start + 200);
+
+      group.forEach(({ ref, data }) => {
+        const publishedRef = doc(collection(db, "cars"));
+        const published = { ...data };
+        delete published.id;
+        delete published._source;
+        published.listingStatus = "active";
+        published.publishedAt = serverTimestamp();
+        batch.set(publishedRef, published);
+        batch.delete(ref);
+      });
+
+      await batch.commit();
+      publishedCount += group.length;
+      message.textContent = "Recovered " + publishedCount + " of " + eligible.length + " eligible drafts...";
+    }
+
+    await Promise.all([loadCarCount(), loadSellerApplications()]);
+    message.textContent = "Recovery complete: " + publishedCount + " draft(s) published. " +
+      ineligibleSeller + " kept private (seller not currently approved and active), " +
+      incomplete + " skipped (missing required listing details), " +
+      duplicate + " skipped (matching public listing already exists).";
+    message.style.color = "#167a35";
+  } catch (error) {
+    console.error("Recover approved dealer drafts failed:", error);
+    message.textContent = "Recovery stopped: " + (error.code || error.message) +
+      ". Any earlier completed batch remains saved; run recovery again to process remaining eligible drafts.";
+    message.style.color = "#c62828";
+  } finally {
+    button.disabled = false;
+  }
+}
+
 document.getElementById("removePublicSellerCategoriesButton")?.addEventListener("click", removePublicSellerCategories);
+document.getElementById("recoverApprovedDraftsButton")?.addEventListener("click", recoverApprovedDealerDrafts);
 
 // Wait for Firebase to tell us whether a user is signed in, then check the profile.
 onAuthStateChanged(auth, async (user) => {
