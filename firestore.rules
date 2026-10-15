@@ -138,11 +138,12 @@ service cloud.firestore {
           && isActiveSeller(request.auth.uid)
           && request.resource.data.authorizationConfirmed == true
           && request.resource.data.vehicleRelationship in ["owner", "broker", "authorized_representative"]
-          && (
-            get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == "admin"
-            || get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == "owner"
-            || request.resource.data.listingStatus == "active"
-          )
+          && request.resource.data.listingStatus == "pending_payment"
+          && request.resource.data.paymentStatus == "pending"
+          && request.resource.data.price is number
+          && request.resource.data.price > 0
+          && request.resource.data.listingFee is number
+          && request.resource.data.listingFee >= 0
         );
 
       allow update: if isOwner()
@@ -152,6 +153,10 @@ service cloud.firestore {
           && isActiveSeller(request.auth.uid)
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['listingStatus', 'soldAt', 'sellerWhatsApp', 'sellerName'])
+          && (
+            !request.resource.data.diff(resource.data).affectedKeys().hasAny(['listingStatus'])
+            || request.resource.data.listingStatus in ["sold", "pending_payment"]
+          )
         );
 
       allow delete: if isOwner()
