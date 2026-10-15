@@ -75,8 +75,8 @@ form.addEventListener("submit", async (event) => {
       name,
       email,
       role: "dealer",
-      active: false,
-      approvalStatus: "pending",
+      active: true,
+      approvalStatus: "approved",
       verificationStatus: "pending",
       sellerType: type,
       businessName: type === "dealership" ? businessName : "",
@@ -85,7 +85,7 @@ form.addEventListener("submit", async (event) => {
       createdBy: createdUser.uid
     });
 
-    showMessage("Registration received. Your account is pending owner review. You can sign in to prepare draft listings.");
+    showMessage("Your seller account is ready. You can sign in and start listing vehicles. Kiri Cars may still verify your business details.");
     form.reset();
     businessNameGroup.hidden = true;
     await signOut(auth);
