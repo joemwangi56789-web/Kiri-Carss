@@ -15,7 +15,8 @@ import {
   writeBatch,
   query,
   where,
-  serverTimestamp
+  serverTimestamp,
+  Timestamp
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
 const ownerMessage = document.getElementById("ownerMessage");
@@ -30,6 +31,128 @@ const recentAccountsList = document.getElementById("recentAccountsList");
 const sellerApplicationsList = document.getElementById("sellerApplicationsList");
 const sellerApplicationsMessage = document.getElementById("sellerApplicationsMessage");
 
+
+
+const listingPaymentsList = document.getElementById("listingPaymentsList");
+const listingPaymentsMessage = document.getElementById("listingPaymentsMessage");
+
+function feeForPrice(price) {
+  const amount = Number(price);
+  if (!Number.isFinite(amount) || amount <= 0) return 0;
+  if (amount < 500000) return 300;
+  if (amount < 1000000) return 500;
+  if (amount < 2000000) return 750;
+  if (amount < 4000000) return 1000;
+  if (amount < 7000000) return 1500;
+  if (amount < 10000000) return 2000;
+  return 2500;
+}
+function timestampMs(value) {
+  if (!value) return null;
+  if (typeof value.toMillis === "function") return value.toMillis();
+  if (typeof value.seconds === "number") return value.seconds * 1000;
+  return null;
+}
+async function loadListingPayments() {
+  if (!listingPaymentsList || !listingPaymentsMessage) return;
+  listingPaymentsMessage.textContent = "Loading pending payments and expired listings...";
+  listingPaymentsList.replaceChildren();
+  try {
+    const [carsSnapshot, adminsSnapshot] = await Promise.all([getDocs(collection(db, "cars")), getDocs(collection(db, "admins"))]);
+    const profiles = new Map();
+    adminsSnapshot.forEach((item) => profiles.set(item.id, item.data()));
+    const now = Date.now();
+    const queue = carsSnapshot.docs.map((item) => ({ id: item.id, ...item.data() })).filter((car) => {
+      if (car.listingStatus === "sold" || car.listingStatus === "suspended") return false;
+      const expiry = timestampMs(car.listingExpiresAt);
+      return car.paymentStatus === "pending" || car.listingStatus === "pending_payment" || (expiry !== null && expiry <= now);
+    }).sort((a, b) => (timestampMs(a.createdAt) || 0) - (timestampMs(b.createdAt) || 0));
+    if (!queue.length) {
+      listingPaymentsList.textContent = "No pending listing payments or expired listings.";
+      listingPaymentsMessage.textContent = "Payment queue is clear.";
+      return;
+    }
+    queue.forEach((car) => {
+      const row = document.createElement("article");
+      row.className = "admin-list-item";
+      const title = document.createElement("strong");
+      title.textContent = [car.year, car.manufacturer, car.model].filter(Boolean).join(" ") || "Vehicle listing";
+      const seller = profiles.get(car.addedBy) || {};
+      const details = document.createElement("p");
+      details.textContent = "Seller: " + (seller.name || car.sellerName || car.addedBy || "Unknown") + " · Price: KSh " + Number(car.price || 0).toLocaleString("en-KE") + " · Fee: KSh " + feeForPrice(car.price).toLocaleString("en-KE");
+      const status = document.createElement("p");
+      const expiry = timestampMs(car.listingExpiresAt);
+      status.textContent = "Listing: " + (car.listingStatus || "legacy") + " · Payment: " + (car.paymentStatus || "not recorded") + (expiry ? " · Expiry: " + new Date(expiry).toLocaleDateString("en-KE") : "");
+      row.append(title, details, status);
+      const actions = document.createElement("div");
+      actions.className = "seller-review-actions";
+      const addAction = (label, handler) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = label;
+        button.addEventListener("click", async () => {
+          button.disabled = true;
+          try {
+            await handler(car, seller);
+            listingPaymentsMessage.textContent = "Listing payment status updated.";
+            await loadListingPayments();
+            await loadCarCount();
+          } catch (error) {
+            console.error("Listing payment action failed:", error);
+            listingPaymentsMessage.textContent = "Could not update listing: " + (error.code || error.message);
+            button.disabled = false;
+          }
+        });
+        actions.appendChild(button);
+      };
+      const isExpired = expiry !== null && expiry <= now;
+      if (isExpired && car.paymentStatus !== "pending") {
+        addAction("Confirm Renewal Payment", async (listing) => {
+          const reference = prompt("Enter the M-Pesa receipt/transaction code after checking the payment:");
+          if (!reference || !reference.trim()) throw new Error("Renewal cancelled: M-Pesa receipt code is required.");
+          if (!confirm("You have independently verified M-Pesa receipt " + reference.trim() + "? Renew for 30 days?")) throw new Error("Renewal cancelled.");
+          await updateDoc(doc(db, "cars", listing.id), {
+            listingStatus: "active", paymentStatus: "paid", listingFee: feeForPrice(listing.price),
+            paymentReference: reference.trim(), paymentVerifiedBy: auth.currentUser.uid, paidAt: serverTimestamp(),
+            listingExpiresAt: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), renewedAt: serverTimestamp()
+          });
+        });
+      } else if (car.paymentStatus === "pending" || car.listingStatus === "pending_payment") {
+        const started = timestampMs(seller.freeTrialStartedAt);
+        const ends = timestampMs(seller.freeTrialEndsAt);
+        const freeEligible = (started !== null && ends !== null && now < ends) || (started === null && seller.freeTrialUsed !== true);
+        if (freeEligible) addAction("Approve Free Trial (60 days)", async (listing, profile) => {
+          if (!confirm("Approve this listing under the seller's one-time 30-day free-trial window? This listing will run for 60 days.")) throw new Error("Free approval cancelled.");
+          const currentTime = Date.now();
+          const startAt = started === null ? Timestamp.fromDate(new Date(currentTime)) : profile.freeTrialStartedAt;
+          const endAt = ends === null ? Timestamp.fromDate(new Date(currentTime + 30 * 24 * 60 * 60 * 1000)) : profile.freeTrialEndsAt;
+          await updateDoc(doc(db, "admins", listing.addedBy), { freeTrialStartedAt: startAt, freeTrialEndsAt: endAt, freeTrialUsed: true });
+          await updateDoc(doc(db, "cars", listing.id), {
+            listingStatus: "active", paymentStatus: "free_trial", listingFee: 0, freeTrialApprovedAt: serverTimestamp(),
+            listingExpiresAt: Timestamp.fromDate(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)), paymentVerifiedBy: auth.currentUser.uid
+          });
+        });
+        addAction("Confirm M-Pesa Payment (30 days)", async (listing) => {
+          const expectedFee = feeForPrice(listing.price);
+          const reference = prompt("Enter the M-Pesa receipt/transaction code after checking that KSh " + expectedFee.toLocaleString("en-KE") + " was received:");
+          if (!reference || !reference.trim()) throw new Error("Payment approval cancelled: M-Pesa receipt code is required.");
+          if (!confirm("You have independently verified receipt " + reference.trim() + " for KSh " + expectedFee.toLocaleString("en-KE") + "? Publish for 30 days?")) throw new Error("Payment approval cancelled.");
+          await updateDoc(doc(db, "cars", listing.id), {
+            listingStatus: "active", paymentStatus: "paid", listingFee: expectedFee, paymentReference: reference.trim(),
+            paymentVerifiedBy: auth.currentUser.uid, paidAt: serverTimestamp(),
+            listingExpiresAt: Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))
+          });
+        });
+      }
+      row.appendChild(actions);
+      listingPaymentsList.appendChild(row);
+    });
+    listingPaymentsMessage.textContent = "Loaded " + queue.length + " listing payment/renewal item(s).";
+  } catch (error) {
+    console.error("Load listing payment queue failed:", error);
+    listingPaymentsMessage.textContent = "Could not load payment queue. Confirm the latest Firestore rules are published.";
+  }
+}
 
 function setupOwnerNavigation() {
   const buttons = [...document.querySelectorAll("[data-owner-panel]")];
@@ -407,11 +530,12 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
 });
 
 document.getElementById("refreshButton").addEventListener("click", async () => {
-  await Promise.all([loadCarCount(), loadAdmins(), loadAccountStats(), loadSellerApplications()]);
+  await Promise.all([loadCarCount(), loadAdmins(), loadAccountStats(), loadSellerApplications(), loadListingPayments()]);
 });
 
 document.getElementById("loadAdminsButton").addEventListener("click", loadAdmins);
 document.getElementById("loadSellerApplicationsButton").addEventListener("click", loadSellerApplications);
+document.getElementById("loadListingPaymentsButton")?.addEventListener("click", loadListingPayments);
 
 async function removePublicSellerCategories() {
   const message = document.getElementById("publicSellerCategoriesMessage");
@@ -591,7 +715,7 @@ onAuthStateChanged(auth, async (user) => {
     const authorized = await requireOwner(user);
 
     if (authorized) {
-      await Promise.all([loadCarCount(), loadAdmins(), loadAccountStats(), loadSellerApplications()]);
+      await Promise.all([loadCarCount(), loadAdmins(), loadAccountStats(), loadSellerApplications(), loadListingPayments()]);
     }
   } catch (error) {
     console.error("Owner dashboard error:", error);
