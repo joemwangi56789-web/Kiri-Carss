@@ -308,5 +308,56 @@ service cloud.firestore {
         allow update, delete: if false;
       }
     }
+
+    // Buyers can manage their own favourites; a favourite must reference a public, available car.
+    match /buyers/{userId}/favourites/{carId} {
+      allow read, delete: if signedIn() && request.auth.uid == userId;
+      allow create, update: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['carId', 'createdAt'])
+        && request.resource.data.keys().hasAll(['carId', 'createdAt'])
+        && request.resource.data.carId == carId
+        && request.resource.data.createdAt == request.time
+        && exists(/databases/$(database)/documents/cars/$(carId))
+        && (
+          !('listingStatus' in get(/databases/$(database)/documents/cars/$(carId)).data)
+          || get(/databases/$(database)/documents/cars/$(carId)).data.listingStatus == 'active'
+        );
+    }
+
+    // Saved searches are created by trusted Cloud Functions so guests cannot write
+    // unverified contact details or alter verification state from the browser.
+    match /savedSearches/{searchId} {
+      allow read: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      allow create: if false;
+      allow update: if signedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'marketingOptIn', 'updatedAt', 'lastInteractionAt'])
+        && request.resource.data.status in ['active', 'paused', 'pending_verification']
+        && (
+          request.resource.data.status == 'paused'
+          || (
+            request.resource.data.status == 'active'
+            && (!resource.data.channels.hasAny(['email']) || resource.data.emailVerified == true)
+            && (!resource.data.channels.hasAny(['whatsapp']) || resource.data.whatsappVerified == true)
+          )
+          || request.resource.data.status == 'pending_verification'
+        )
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.lastInteractionAt == request.time
+        && request.resource.data.marketingOptIn is bool;
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // Notification queues and delivery records are server-only.
+    match /alertDeliveries/{deliveryId} {
+      allow read, write: if false;
+    }
+
+    // Verification, reminder and unsubscribe tokens are never client-readable.
+    match /marketingUnsubscribeTokens/{tokenId} {
+      allow read, write: if false;
+    }
   }
 }

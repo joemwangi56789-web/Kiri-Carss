@@ -138,6 +138,7 @@ function prepareFilters() {
 function createVehicleCard(car) {
   const card = document.createElement("article");
   card.className = "vehicle-card";
+  card.id = "vehicle-" + String(car.id || "");
 
   const photoUrls = Array.isArray(car.images)
     ? car.images.map((item) => safeImageUrl(item?.url)).filter(Boolean)
@@ -206,6 +207,7 @@ function createVehicleCard(car) {
   if (car.carType) detailParts.push(car.carType);
   if (car.fuel) detailParts.push(car.fuel);
   if (car.transmission) detailParts.push(car.transmission);
+  if (car.location) detailParts.push(car.location);
 
   details.textContent = detailParts.join(" • ");
   card.appendChild(details);
@@ -284,6 +286,37 @@ function createVehicleCard(car) {
   });
 
   card.appendChild(contactButton);
+
+  const favouriteButton = document.createElement("button");
+  favouriteButton.type = "button";
+  favouriteButton.className = "secondary-mode";
+  favouriteButton.textContent = "Save to Favourites";
+  favouriteButton.addEventListener("click", async () => {
+    const user = auth.currentUser;
+    if (!user) {
+      window.location.href = "buyer.html?mode=buyer&favourite=" + encodeURIComponent(car.id);
+      return;
+    }
+    favouriteButton.disabled = true;
+    try {
+      const buyerSnap = await getDoc(doc(db, "buyers", user.uid));
+      if (!buyerSnap.exists() || buyerSnap.data().role !== "buyer") {
+        window.location.href = "buyer.html?mode=buyer&favourite=" + encodeURIComponent(car.id);
+        return;
+      }
+      await setDoc(doc(db, "buyers", user.uid, "favourites", car.id), {
+        carId: car.id,
+        createdAt: serverTimestamp()
+      });
+      favouriteButton.textContent = "Saved to Favourites";
+      favouriteButton.disabled = false;
+    } catch (error) {
+      console.error("Save favourite failed:", error);
+      alert("Could not save this favourite: " + (error.code || error.message));
+      favouriteButton.disabled = false;
+    }
+  });
+  card.appendChild(favouriteButton);
 
   // Keep the original WhatsApp option alongside private on-site messaging.
   const whatsappButton = document.createElement("button");
@@ -425,6 +458,14 @@ async function loadCars() {
 
     prepareFilters();
     applyFilters();
+    const requestedCarId = new URLSearchParams(window.location.search).get("car");
+    if (requestedCarId) {
+      const target = document.getElementById("vehicle-" + requestedCarId);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        target.classList.add("alert-match-highlight");
+      }
+    }
 
   } catch (error) {
     console.error("Load public vehicles error:", error);
@@ -439,6 +480,18 @@ async function loadCars() {
     resultsCount.textContent = "Listings unavailable";
   }
 }
+
+document.getElementById("saveCurrentSearchButton")?.addEventListener("click", () => {
+  const params = new URLSearchParams();
+  if (searchInput.value.trim()) params.set("search", searchInput.value.trim());
+  if (manufacturerFilter.value) params.set("manufacturer", manufacturerFilter.value);
+  if (typeFilter.value) params.set("type", typeFilter.value);
+  if (yearFilter.value) params.set("year", yearFilter.value);
+  if (statusFilter.value) params.set("status", statusFilter.value);
+  if (minPriceInput.value.trim()) params.set("minPrice", minPriceInput.value.trim());
+  if (maxPriceInput.value.trim()) params.set("maxPrice", maxPriceInput.value.trim());
+  window.location.href = "saved-searches.html" + (params.toString() ? "?" + params.toString() : "");
+});
 
 filterForm.addEventListener("submit", (event) => {
   event.preventDefault();

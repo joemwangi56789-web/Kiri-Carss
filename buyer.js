@@ -8,6 +8,7 @@ import {
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -42,6 +43,9 @@ const messageForm = document.getElementById("messageForm");
 const messageText = document.getElementById("messageText");
 const sendMessageButton = document.getElementById("sendMessageButton");
 const refreshInbox = document.getElementById("refreshInbox");
+const favouritesPanel = document.getElementById("favouritesPanel");
+const favouritesList = document.getElementById("favouritesList");
+const refreshFavouritesButton = document.getElementById("refreshFavourites");
 
 let authMode = "signup";
 let currentUser = null;
@@ -63,6 +67,79 @@ function formatTime(value) {
   else if (value && typeof value.seconds === "number") date = new Date(value.seconds * 1000);
   if (!date) return "";
   return date.toLocaleString("en-KE", { dateStyle: "short", timeStyle: "short" });
+}
+
+async function saveFavourite(carId) {
+  if (!currentUser || currentRole !== "buyer") {
+    setMessage(buyerPageMessage, "Sign in with a buyer account to save favourites.", true);
+    return;
+  }
+  const carSnap = await getDoc(doc(db, "cars", carId));
+  if (!carSnap.exists()) throw new Error("This vehicle listing could not be found.");
+  const car = carSnap.data();
+  if (car.listingStatus === "sold" || car.listingStatus === "suspended" || car.listingStatus === "draft") {
+    throw new Error("This vehicle is no longer available to save as a new favourite.");
+  }
+  await setDoc(doc(db, "buyers", currentUser.uid, "favourites", carId), {
+    carId: carId,
+    createdAt: serverTimestamp()
+  });
+  await loadFavourites();
+  setMessage(buyerPageMessage, "Vehicle saved to your favourites.");
+}
+
+async function loadFavourites() {
+  if (!currentUser || currentRole !== "buyer" || !favouritesList) return;
+  favouritesList.textContent = "Loading favourites...";
+  try {
+    const result = await getDocs(collection(db, "buyers", currentUser.uid, "favourites"));
+    favouritesList.replaceChildren();
+    if (result.empty) {
+      favouritesList.textContent = "You have not saved any favourite vehicles yet. Browse cars and choose “Save to Favourites”.";
+      return;
+    }
+    for (const item of result.docs) {
+      const favourite = item.data();
+      const carSnap = await getDoc(doc(db, "cars", favourite.carId || item.id));
+      const card = document.createElement("article");
+      card.className = "admin-list-item";
+      if (!carSnap.exists()) {
+        const missing = document.createElement("p");
+        missing.textContent = "This vehicle listing is no longer available.";
+        card.appendChild(missing);
+      } else {
+        const car = carSnap.data();
+        const title = document.createElement("strong");
+        title.textContent = [car.year || "", car.manufacturer || "", car.model || ""].filter(Boolean).join(" ");
+        const price = document.createElement("p");
+        price.textContent = Number(car.price) > 0 ? "KSh " + Number(car.price).toLocaleString("en-KE") : "Price on request";
+        const status = document.createElement("p");
+        status.textContent = car.listingStatus === "sold" ? "SOLD — no longer available" : (car.location || car.status || "Vehicle listing");
+        const link = document.createElement("a");
+        link.href = "index.html?car=" + encodeURIComponent(favourite.carId || item.id) + "#cars";
+        link.textContent = "View listing";
+        card.append(title, price, status, link);
+      }
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "reset-button";
+      remove.textContent = "Remove Favourite";
+      remove.addEventListener("click", async () => {
+        remove.disabled = true;
+        try {
+          await deleteDoc(doc(db, "buyers", currentUser.uid, "favourites", item.id));
+          await loadFavourites();
+        } catch (error) {
+          setMessage(buyerPageMessage, "Could not remove favourite: " + (error.code || error.message), true);
+          remove.disabled = false;
+        }
+      });
+      card.appendChild(remove);
+      favouritesList.appendChild(card);
+    }
+  } catch (error) {
+    favouritesList.textContent = "Could not load favourites: " + (error.code || error.message);
+  }
 }
 
 function setAuthMode(mode) {
@@ -192,10 +269,23 @@ async function loadSession(user) {
       ? "Your private enquiries. Only you and the relevant dealer can access these conversations."
       : "Dealer inbox: private enquiries about your vehicles.";
     await loadConversations();
+    favouritesPanel.hidden = currentRole !== "buyer";
+    if (currentRole === "buyer") await loadFavourites();
 
     const params = new URLSearchParams(window.location.search);
     const carId = params.get("car");
+    const favouriteId = params.get("favourite");
     const conversationId = params.get("conversation");
+    if (favouriteId && currentRole === "buyer") {
+      try {
+        await saveFavourite(favouriteId);
+        const url = new URL(window.location.href);
+        url.searchParams.delete("favourite");
+        window.history.replaceState({}, "", url);
+      } catch (error) {
+        setMessage(buyerPageMessage, error.message || "Could not save this favourite.", true);
+      }
+    }
     if (carId && currentRole === "buyer") {
       await startConversation(carId);
     } else if (conversationId) {
@@ -412,6 +502,7 @@ refreshInbox.addEventListener("click", async () => {
   await loadConversations();
   if (selectedConversationId) await loadMessages(selectedConversationId);
 });
+refreshFavouritesButton?.addEventListener("click", loadFavourites);
 
 buyerSignOut.addEventListener("click", async () => {
   await signOut(auth);
