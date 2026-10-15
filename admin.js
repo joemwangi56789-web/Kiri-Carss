@@ -50,6 +50,18 @@ function setText(el, text, isError = false) {
 function normalizeRole(value) {
   return String(value || "").trim().toLowerCase();
 }
+
+function listingFeeForPrice(price) {
+  const amount = Number(price);
+  if (!Number.isFinite(amount) || amount <= 0) return 0;
+  if (amount < 500000) return 300;
+  if (amount < 1000000) return 500;
+  if (amount < 2000000) return 750;
+  if (amount < 4000000) return 1000;
+  if (amount < 7000000) return 1500;
+  if (amount < 10000000) return 2000;
+  return 2500;
+}
  
 function goToLogin() {
   window.location.replace("login.html");
@@ -319,7 +331,9 @@ carForm.addEventListener("submit", async (event) => {
       addedBy: currentUid,
       sellerWhatsApp: currentWhatsApp,
       sellerName: currentAdminName,
-      listingStatus: listingIsDraft ? "draft" : "active",
+      listingStatus: listingIsDraft ? "draft" : "pending_payment",
+      paymentStatus: listingIsDraft ? "not_due" : "pending",
+      listingFee: listingFeeForPrice(readNumber("price")),
       createdAt: serverTimestamp()
     };
 
@@ -329,9 +343,12 @@ carForm.addEventListener("submit", async (event) => {
     carForm.reset();
     photoPreview.replaceChildren();
     setText(uploadProgress, "");
+    const fee = listingFeeForPrice(car.price);
     setText(formMessage, listingIsDraft
-      ? "Draft saved privately. It will not appear to buyers until your seller account is approved and you publish it."
-      : "Vehicle published successfully with " + images.length + (images.length === 1 ? " photo." : " photos."));
+      ? "Draft saved privately. It will not appear to buyers until your seller account is approved."
+      : "Listing submitted with " + images.length + (images.length === 1 ? " photo. " : " photos. ") +
+        "Estimated listing fee: KSh " + fee.toLocaleString("en-KE") +
+        ". It remains hidden until Kiri Cars verifies payment or approves your eligible free-trial listing.");
     await loadMyCars();
   } catch (error) {
     console.error("Save vehicle failed:", error);
@@ -405,6 +422,9 @@ function renderCar(car) {
   if (car._source === "dealerDrafts" || car.listingStatus === "draft") {
     lifecycle.textContent = "PRIVATE DRAFT — not visible to buyers";
     lifecycle.classList.add("draft-label");
+  } else if (car.listingStatus === "pending_payment" || car.paymentStatus === "pending") {
+    lifecycle.textContent = "PAYMENT PENDING — hidden from buyers";
+    lifecycle.classList.add("expired-label");
   } else if (car.listingStatus === "suspended") {
     lifecycle.textContent = "SUSPENDED — not visible to buyers";
     lifecycle.classList.add("expired-label");
@@ -469,7 +489,10 @@ async function publishDraft(car, button) {
     const published = { ...car };
     delete published.id;
     delete published._source;
-    published.listingStatus = "active";
+    published.listingStatus = "pending_payment";
+    published.paymentStatus = "pending";
+    published.listingFee = listingFeeForPrice(published.price);
+    delete published.listingExpiresAt;
     published.publishedAt = serverTimestamp();
     await addDoc(collection(db, "cars"), published);
     await deleteDoc(doc(db, "dealerDrafts", car.id));
