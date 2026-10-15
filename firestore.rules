@@ -155,7 +155,13 @@ service cloud.firestore {
             .hasOnly(['listingStatus', 'soldAt', 'sellerWhatsApp', 'sellerName'])
           && (
             !request.resource.data.diff(resource.data).affectedKeys().hasAny(['listingStatus'])
-            || request.resource.data.listingStatus in ["sold", "pending_payment"]
+            || request.resource.data.listingStatus == "sold"
+            || (
+              request.resource.data.listingStatus == "pending_payment"
+              && ('listingExpiresAt' in resource.data)
+              && resource.data.listingExpiresAt <= request.time
+              && resource.data.listingStatus != "sold"
+            )
           )
         );
 
