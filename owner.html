@@ -28,6 +28,7 @@
       <button type="button" class="owner-nav-button" data-owner-panel="accounts" aria-selected="false">Account Management</button>
       <button type="button" class="owner-nav-button" data-owner-panel="sellers" aria-selected="false">Seller Approvals</button>
       <button type="button" class="owner-nav-button" data-owner-panel="vehicles" aria-selected="false">Vehicle Listings</button>
+      <button type="button" class="owner-nav-button" data-owner-panel="payments" aria-selected="false">Listing Payments</button>
     </nav>
 
     <section id="owner-panel-overview" class="owner-panel">
@@ -106,6 +107,15 @@
         <button id="recoverApprovedDraftsButton" type="button">Recover Eligible Dealer Drafts</button>
         <p id="recoverApprovedDraftsMessage" role="status" aria-live="polite"></p>
         <a class="dashboard-link" href="index.html">View Public Vehicle Listings</a>
+      </section>
+    </section>
+
+    <section id="owner-panel-payments" class="owner-panel" hidden>
+      <div class="owner-section-heading"><h2>Listing Payments &amp; Renewals</h2><p>Approve an eligible free-trial listing or verify the M-Pesa payment yourself before publishing. Do not mark a payment paid until you have checked the actual M-Pesa confirmation.</p></div>
+      <section class="dashboard-card">
+        <button id="loadListingPaymentsButton" type="button">Refresh Payment Queue</button>
+        <p id="listingPaymentsMessage" role="status" aria-live="polite"></p>
+        <div id="listingPaymentsList"></div>
       </section>
     </section>
   </main>
