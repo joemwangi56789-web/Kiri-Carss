@@ -72,8 +72,8 @@ service cloud.firestore {
           && request.resource.data.name.size() <= 80
           && request.resource.data.email == request.auth.token.email
           && request.resource.data.role == "dealer"
-          && request.resource.data.active == false
-          && request.resource.data.approvalStatus == "pending"
+          && request.resource.data.active == true
+          && request.resource.data.approvalStatus == "approved"
           && request.resource.data.verificationStatus == "pending"
           && request.resource.data.sellerType in ["dealership", "broker"]
           && request.resource.data.businessName is string
