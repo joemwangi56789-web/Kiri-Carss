@@ -54,7 +54,8 @@ function timestampMillis(value) {
 }
 
 function publicListingIsVisible(car) {
-  if (car.listingStatus === "draft" || car.listingStatus === "suspended") return false;
+  if (car.listingStatus === "draft" || car.listingStatus === "suspended" || car.listingStatus === "pending_payment") return false;
+  if (car.paymentStatus && !["paid", "free_trial"].includes(car.paymentStatus)) return false;
   const now = Date.now();
   const expiry = timestampMillis(car.listingExpiresAt);
   if (expiry !== null && expiry <= now) return false;
