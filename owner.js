@@ -679,7 +679,10 @@ async function recoverApprovedDealerDrafts() {
         const published = { ...data };
         delete published.id;
         delete published._source;
-        published.listingStatus = "active";
+        published.listingStatus = "pending_payment";
+        published.paymentStatus = "pending";
+        published.listingFee = feeForPrice(published.price);
+        delete published.listingExpiresAt;
         published.publishedAt = serverTimestamp();
         batch.set(publishedRef, published);
         batch.delete(ref);
