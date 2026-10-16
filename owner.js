@@ -35,6 +35,10 @@ const sellerApplicationsMessage = document.getElementById("sellerApplicationsMes
 
 const listingPaymentsList = document.getElementById("listingPaymentsList");
 const listingPaymentsMessage = document.getElementById("listingPaymentsMessage");
+const promoteOwnerForm = document.getElementById("promoteOwnerForm");
+const promoteOwnerEmail = document.getElementById("promoteOwnerEmail");
+const promoteOwnerButton = document.getElementById("promoteOwnerButton");
+const promoteOwnerMessage = document.getElementById("promoteOwnerMessage");
 
 function feeForPrice(price) {
   const amount = Number(price);
@@ -93,10 +97,10 @@ async function loadListingPayments() {
         button.addEventListener("click", async () => {
           button.disabled = true;
           try {
-            await handler(car, seller);
-            listingPaymentsMessage.textContent = "Listing payment status updated.";
+            const successMessage = await handler(car, seller);
             await loadListingPayments();
             await loadCarCount();
+            if (successMessage) listingPaymentsMessage.textContent = successMessage;
           } catch (error) {
             console.error("Listing payment action failed:", error);
             listingPaymentsMessage.textContent = "Could not update listing: " + (error.code || error.message);
@@ -126,11 +130,18 @@ async function loadListingPayments() {
           const currentTime = Date.now();
           const startAt = started === null ? Timestamp.fromDate(new Date(currentTime)) : profile.freeTrialStartedAt;
           const endAt = ends === null ? Timestamp.fromDate(new Date(currentTime + 30 * 24 * 60 * 60 * 1000)) : profile.freeTrialEndsAt;
-          await updateDoc(doc(db, "admins", listing.addedBy), { freeTrialStartedAt: startAt, freeTrialEndsAt: endAt, freeTrialUsed: true });
-          await updateDoc(doc(db, "cars", listing.id), {
+          const batch = writeBatch(db);
+          batch.update(doc(db, "admins", listing.addedBy), {
+            freeTrialStartedAt: startAt,
+            freeTrialEndsAt: endAt,
+            freeTrialUsed: true
+          });
+          batch.update(doc(db, "cars", listing.id), {
             listingStatus: "active", paymentStatus: "free_trial", listingFee: 0, freeTrialApprovedAt: serverTimestamp(),
             listingExpiresAt: Timestamp.fromDate(new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)), paymentVerifiedBy: auth.currentUser.uid
           });
+          await batch.commit();
+          return "Free trial approved. The vehicle is live for buyers and has been removed from the payment queue.";
         });
         addAction("Confirm M-Pesa Payment (30 days)", async (listing) => {
           const expectedFee = feeForPrice(listing.price);
@@ -367,6 +378,64 @@ async function loadAdmins() {
     console.error("Load administrators error:", error);
   }
 }
+
+promoteOwnerForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const email = promoteOwnerEmail.value.trim().toLowerCase();
+  if (!email) return;
+
+  promoteOwnerButton.disabled = true;
+  promoteOwnerMessage.textContent = "Looking up the registered account...";
+
+  try {
+    const snapshot = await getDocs(collection(db, "admins"));
+    const matches = snapshot.docs.filter((item) =>
+      String(item.data().email || "").trim().toLowerCase() === email
+    );
+
+    if (matches.length !== 1) {
+      promoteOwnerMessage.textContent = matches.length === 0
+        ? "No registered dealer or administrator profile matches that email."
+        : "More than one profile matches that email. Resolve the duplicate profiles before granting access.";
+      promoteOwnerMessage.style.color = "#c62828";
+      return;
+    }
+
+    const account = matches[0];
+    const profile = account.data();
+    if (String(profile.role || "").trim().toLowerCase() === "owner" && profile.active === true) {
+      promoteOwnerMessage.textContent = "This account already has active owner access.";
+      promoteOwnerMessage.style.color = "#167a35";
+      return;
+    }
+
+    const accountName = profile.name || email;
+    if (!confirm("Grant full owner access to " + accountName + " (" + email + ")? This allows marketplace-wide account, seller, listing and payment management.")) {
+      promoteOwnerMessage.textContent = "Owner promotion cancelled.";
+      promoteOwnerMessage.style.color = "#475569";
+      return;
+    }
+
+    await updateDoc(doc(db, "admins", account.id), {
+      role: "owner",
+      active: true,
+      accountStatus: "active",
+      accessUpdatedAt: serverTimestamp(),
+      accessUpdatedBy: auth.currentUser.uid
+    });
+
+    promoteOwnerMessage.textContent = email + " now has owner access. They should sign out and sign back in.";
+    promoteOwnerMessage.style.color = "#167a35";
+    promoteOwnerForm.reset();
+    await Promise.all([loadAdmins(), loadAccountStats()]);
+  } catch (error) {
+    console.error("Grant owner access failed:", error);
+    promoteOwnerMessage.textContent = "Could not grant owner access: " + (error.code || error.message);
+    promoteOwnerMessage.style.color = "#c62828";
+  } finally {
+    promoteOwnerButton.disabled = false;
+  }
+});
 
 async function loadSellerApplications() {
   sellerApplicationsMessage.textContent = "Loading seller applications...";

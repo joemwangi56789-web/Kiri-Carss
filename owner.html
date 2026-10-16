@@ -74,6 +74,16 @@
         <button id="loadAdminsButton" type="button">Load Admin &amp; Dealer Accounts</button>
         <div id="adminsList"></div>
       </section>
+      <section class="dashboard-card">
+        <h3>Grant Owner Access</h3>
+        <p>Promote a registered Kiri Cars account to owner. Owners can manage accounts, seller approvals, listings and payments.</p>
+        <form id="promoteOwnerForm">
+          <label for="promoteOwnerEmail">Registered account email</label>
+          <input id="promoteOwnerEmail" type="email" autocomplete="email" required>
+          <button id="promoteOwnerButton" type="submit">Grant Owner Access</button>
+        </form>
+        <p id="promoteOwnerMessage" role="status" aria-live="polite"></p>
+      </section>
     </section>
 
     <section id="owner-panel-sellers" class="owner-panel" hidden>
