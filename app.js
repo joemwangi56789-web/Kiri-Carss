@@ -78,7 +78,7 @@ function formatPrice(price) {
   return "KSh " + amount.toLocaleString("en-KE");
 }
 
-function displayVehicleStatus(status) {
+function normalizeVehicleStatus(status) {
   const legacyStatuses = {
     used: "Locally Used",
     certified_preowned: "Locally Used",
@@ -192,7 +192,7 @@ function createVehicleCard(car) {
 
   const status = document.createElement("span");
   status.className = "status-tag";
-  status.textContent = car.listingStatus === "sold" ? "SOLD" : displayVehicleStatus(car.status);
+  status.textContent = car.listingStatus === "sold" ? "SOLD" : normalizeVehicleStatus(car.status);
   if (car.listingStatus === "sold") status.classList.add("sold-label");
   card.appendChild(status);
 
@@ -345,7 +345,7 @@ function applyFilters() {
       car.manufacturer,
       car.model,
       car.carType,
-      displayVehicleStatus(car.status),
+      normalizeVehicleStatus(car.status),
       car.fuel,
       car.transmission,
       car.year
@@ -372,7 +372,7 @@ function applyFilters() {
       return false;
     }
 
-    if (status && displayVehicleStatus(car.status) !== status) {
+    if (status && normalizeVehicleStatus(car.status) !== status) {
       return false;
     }
 

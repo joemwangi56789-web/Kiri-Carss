@@ -145,7 +145,7 @@ function normalizeRole(value) {
   return String(value || "").trim().toLowerCase();
 }
 
-function displayVehicleStatus(status) {
+function normalizeVehicleStatus(status) {
   const legacyStatuses = {
     used: "Locally Used",
     certified_preowned: "Locally Used",
@@ -485,7 +485,7 @@ carForm.addEventListener("submit", async (event) => {
       model: document.getElementById("model").value.trim(),
       year: readNumber("year"),
       price: readNumber("price"),
-      status: document.getElementById("status").value,
+      status: normalizeVehicleStatus(document.getElementById("status").value),
       mileage: readNumber("mileage"),
       fuel: document.getElementById("fuel").value,
       transmission: document.getElementById("transmission").value,
@@ -691,7 +691,7 @@ function renderCar(car) {
 
   const details = document.createElement("p");
   const price = typeof car.price === "number" ? "KSh " + car.price.toLocaleString() : "Price not set";
-  details.textContent = [car.carType, displayVehicleStatus(car.status), car.fuel, car.transmission, price].filter(Boolean).join(" · ");
+  details.textContent = [car.carType, normalizeVehicleStatus(car.status), car.fuel, car.transmission, price].filter(Boolean).join(" · ");
 
   const photoUrls = Array.isArray(car.images) ? car.images.map((item) => item?.url).filter(Boolean) : [];
   const firstPhoto = photoUrls[0] || car.imageUrl;
@@ -896,7 +896,7 @@ async function editCar(car) {
   document.getElementById("model").value = car.model || "";
   document.getElementById("year").value = car.year || "";
   document.getElementById("price").value = car.price || "";
-  document.getElementById("status").value = displayVehicleStatus(car.status);
+  document.getElementById("status").value = normalizeVehicleStatus(car.status);
   document.getElementById("mileage").value = car.mileage || "";
   document.getElementById("fuel").value = car.fuel || "";
   document.getElementById("transmission").value = car.transmission || "";

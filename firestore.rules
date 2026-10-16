@@ -178,8 +178,13 @@ service cloud.firestore {
         && request.resource.data.price is number
         && request.resource.data.price > 0
         && request.resource.data.status in ["Fresh Import", "Locally Used", "Brand New"]
-        && request.resource.data.mileage is int
-        && request.resource.data.mileage >= 0
+        && (
+          request.resource.data.mileage == null
+          || (
+            request.resource.data.mileage is int
+            && request.resource.data.mileage >= 0
+          )
+        )
         && request.resource.data.fuel in ["petrol", "diesel", "hybrid", "electric", "plug_in_hybrid", "cng", "lpg"]
         && request.resource.data.transmission in ["manual", "automatic", "cvt", "dct", "amt"]
         && request.resource.data.description is string
@@ -236,8 +241,13 @@ service cloud.firestore {
         && request.resource.data.price is number
         && request.resource.data.price > 0
         && request.resource.data.status in ["Fresh Import", "Locally Used", "Brand New"]
-        && request.resource.data.mileage is int
-        && request.resource.data.mileage >= 0
+        && (
+          request.resource.data.mileage == null
+          || (
+            request.resource.data.mileage is int
+            && request.resource.data.mileage >= 0
+          )
+        )
         && request.resource.data.fuel in ["petrol", "diesel", "hybrid", "electric", "plug_in_hybrid", "cng", "lpg"]
         && request.resource.data.transmission in ["manual", "automatic", "cvt", "dct", "amt"]
         && request.resource.data.description is string
