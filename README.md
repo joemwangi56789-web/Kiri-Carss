@@ -13,6 +13,8 @@ Kiri Cars is a Kenyan vehicle marketplace built with HTML, CSS, JavaScript ES mo
 - Email/password login for owner and showroom administrators.
 - Owner dashboard for creating administrator accounts, viewing administrator profiles, and counting listings.
 - Admin dashboard for adding vehicles and viewing/deleting listings created by that admin.
+- Approved dealers can publish listings directly under a 60-day free trial; expired listings stay in the dealer dashboard and remain hidden from buyers until an owner verifies payment.
+- The owner dashboard shows live updates when dealers add vehicle listings.
 - Account checks in the owner and admin dashboards wait for Firebase Authentication to restore the signed-in session.
 
 ## Project files

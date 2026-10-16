@@ -15,9 +15,26 @@ import {
   writeBatch,
   query,
   where,
+  orderBy,
+  limit,
+  onSnapshot,
   serverTimestamp,
   Timestamp
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+/**
+ * Normalise legacy vehicle status values for display.
+ * Copied from the shared utility in app.js/admin.js.
+ */
+function normalizeVehicleStatus(status) {
+  const legacyStatuses = {
+    used: "Locally Used",
+    unknown: "Unknown status",
+    unsold: "For Sale",
+  };
+  if (!status) return "";
+  return legacyStatuses[status] ?? status;
+}
 
 const ownerMessage = document.getElementById("ownerMessage");
 const carCount = document.getElementById("carCount");
@@ -39,6 +56,12 @@ const promoteOwnerForm = document.getElementById("promoteOwnerForm");
 const promoteOwnerEmail = document.getElementById("promoteOwnerEmail");
 const promoteOwnerButton = document.getElementById("promoteOwnerButton");
 const promoteOwnerMessage = document.getElementById("promoteOwnerMessage");
+const vehicleActivityMessage = document.getElementById("vehicleActivityMessage");
+const vehicleActivityList = document.getElementById("vehicleActivityList");
+let stopVehicleActivityListener = null;
+// Global user id for the signed‑in owner. Set by onAuthStateChanged.
+let ownerUid = null;
+let hasLoadedVehicleActivity = false;
 
 function feeForPrice(price) {
   const amount = Number(price);
@@ -56,6 +79,51 @@ function timestampMs(value) {
   if (typeof value.toMillis === "function") return value.toMillis();
   if (typeof value.seconds === "number") return value.seconds * 1000;
   return null;
+}
+function startVehicleActivityListener() {
+  stopVehicleActivityListener?.();
+  hasLoadedVehicleActivity = false;
+  const activityQuery = query(collection(db, "cars"), orderBy("createdAt", "desc"), limit(10));
+  stopVehicleActivityListener = onSnapshot(activityQuery, (snapshot) => {
+    const newListings = hasLoadedVehicleActivity
+      ? snapshot.docChanges().filter((change) => change.type === "added")
+      : [];
+    hasLoadedVehicleActivity = true;
+    vehicleActivityList.replaceChildren();
+    const listings = snapshot.docs.map((item) => ({ id: item.id, ...item.data() }));
+    if (!listings.length) {
+      vehicleActivityList.textContent = "No vehicle listings have been added yet.";
+    } else {
+      listings.forEach((car) => {
+        const row = document.createElement("article");
+        row.className = "admin-list-item";
+        const title = document.createElement("strong");
+        title.textContent = [car.year, car.manufacturer, car.model].filter(Boolean).join(" ") || "Vehicle listing";
+        const details = document.createElement("p");
+        const createdAt = timestampMs(car.createdAt);
+        const expiry = timestampMs(car.listingExpiresAt);
+        details.textContent = "Added by " + (car.sellerName || "Dealer") +
+          (createdAt ? " · " + new Date(createdAt).toLocaleString("en-KE") : "") +
+          (car.paymentStatus === "free_trial" && expiry ? " · Free trial ends " + new Date(expiry).toLocaleDateString("en-KE") : "");
+        const status = document.createElement("p");
+        status.textContent = car.listingStatus === "active" && car.paymentStatus === "free_trial"
+          ? "Live for buyers during the free trial."
+          : "Listing status: " + (car.listingStatus || "legacy") + " · Payment: " + (car.paymentStatus || "not recorded");
+        row.append(title, details, status);
+        vehicleActivityList.appendChild(row);
+      });
+    }
+    if (newListings.length) {
+      const latest = newListings[0].doc.data();
+      const title = [latest.year, latest.manufacturer, latest.model].filter(Boolean).join(" ") || "a vehicle";
+      vehicleActivityMessage.textContent = (latest.sellerName || "A dealer") + " added " + title + ".";
+    } else if (!vehicleActivityMessage.textContent || vehicleActivityMessage.textContent === "Waiting for listing activity...") {
+      vehicleActivityMessage.textContent = "Live updates are on. Recent vehicle listings are shown below.";
+    }
+  }, (error) => {
+    console.error("Listen for dealer listing activity failed:", error);
+    vehicleActivityMessage.textContent = "Could not load live listing activity: " + (error.code || error.message);
+  });
 }
 async function loadListingPayments() {
   if (!listingPaymentsList || !listingPaymentsMessage) return;
@@ -187,6 +255,48 @@ function setupOwnerNavigation() {
 }
 
 setupOwnerNavigation();
+
+/**
+ * List the vehicles that were created by the currently logged‑in owner.
+ *
+ * The owner can only create vehicles when they have an owner profile.
+ * Here we query the `cars` collection where `addedBy` matches the owner’s
+ * user id and render a lightweight card for each result.
+ */
+async function loadOwnerCars() {
+  const container = document.getElementById("myOwnerCars");
+  if (!container) return;
+  container.textContent = "Loading your listings…";
+  if (!ownerUid) {
+    container.textContent = "Could not determine your user id. Sign out and sign back in.";
+    return;
+  }
+  try {
+    const snapshot = await getDocs(
+      query(collection(db, "cars"), where("addedBy", "==", ownerUid))
+    );
+    const items = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    container.replaceChildren();
+    if (!items.length) {
+      container.textContent = "You have not added any vehicles yet.";
+      return;
+    }
+    items.forEach((car) => {
+      const card = document.createElement("div");
+      card.className = "owner-card";
+      const title = document.createElement("h4");
+      title.textContent = [car.year, car.manufacturer, car.model].filter(Boolean).join(" ");
+      const price = typeof car.price === "number" ? "KSh " + car.price.toLocaleString() : "Price not set";
+      const details = document.createElement("p");
+      details.textContent = `${car.carType || ""} · ${normalizeVehicleStatus(car.status) || ""} · ${car.fuel || ""} · ${car.transmission || ""} · ${price}`;
+      card.append(title, details);
+      container.append(card);
+    });
+  } catch (error) {
+    console.error("Could not load owner listings:", error);
+    container.textContent = "Could not load your listings: " + (error.message || error.code);
+  }
+}
 
 function showMessage(element, text, isError = false) {
   element.textContent = text;
@@ -786,8 +896,16 @@ onAuthStateChanged(auth, async (user) => {
   try {
     const authorized = await requireOwner(user);
 
-    if (authorized) {
-      await Promise.all([loadCarCount(), loadAdmins(), loadAccountStats(), loadSellerApplications(), loadListingPayments()]);
+   if (authorized) {
+     // This user is the owner; remember the uid for filtering the vehicle list.
+     ownerUid = user?.uid || null;
+     startVehicleActivityListener();
+     await Promise.all([loadCarCount(), loadAdmins(), loadAccountStats(), loadSellerApplications(), loadListingPayments()]);
+     // Show the owner’s own vehicle listings.
+     await loadOwnerCars();
+   } else {
+      stopVehicleActivityListener?.();
+      stopVehicleActivityListener = null;
     }
   } catch (error) {
     console.error("Owner dashboard error:", error);

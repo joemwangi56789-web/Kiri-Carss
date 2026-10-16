@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login | Kiri Cars</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
 <body>
   <main class="login-container">
@@ -167,14 +168,26 @@
 
       } catch (error) {
         console.error("Google sign-in error:", error);
-        let errorText = "Google sign-in failed. Please try again.";
+        let errorText = error.code
+          ? "Google sign-in failed (" + error.code + ")."
+          : "Google sign-in failed. Please try again.";
 
-        if (error.code === "auth/popup-closed-by-user") {
+        if (error.code === "auth/unauthorized-domain") {
+          errorText = "This website domain is not authorized for Firebase sign-in. Add the current hostname under Firebase Authentication > Settings > Authorized domains.";
+        } else if (error.code === "auth/operation-not-allowed") {
+          errorText = "Google sign-in is not enabled for this Firebase project. Enable Google under Firebase Authentication > Sign-in method.";
+        } else if (error.code === "auth/popup-blocked") {
+          errorText = "Your browser blocked the Google sign-in popup. Allow popups for this site and try again.";
+        } else if (error.code === "auth/popup-closed-by-user") {
           errorText = "Sign-in cancelled.";
         } else if (error.code === "auth/cancelled-popup-request") {
-          errorText = "Please allow popups for this site to sign in with Google.";
+          errorText = "A Google sign-in popup was already open. Close it and try again.";
         } else if (error.code === "permission-denied" || error.code === "firestore/permission-denied") {
-          errorText = "We couldn't verify your account right now. Please try again later or contact Kiri Cars support.";
+          errorText = "Google authentication succeeded, but Firestore denied access to the account profile. Confirm the account profile exists and the latest Firestore rules are published.";
+        } else if (error.code === "auth/account-exists-with-different-credential") {
+          errorText = "This email already uses another sign-in method. Sign in with that method first.";
+        } else if (error.code === "auth/network-request-failed") {
+          errorText = "Google sign-in could not reach Firebase. Check your connection and try again.";
         }
 
         showMessage(errorText);

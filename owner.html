@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Owner Dashboard | Kiri Cars</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
 <body>
   <header class="dashboard-header owner-header">
@@ -28,6 +29,7 @@
       <button type="button" class="owner-nav-button" data-owner-panel="accounts" aria-selected="false">Account Management</button>
       <button type="button" class="owner-nav-button" data-owner-panel="sellers" aria-selected="false">Seller Approvals</button>
       <button type="button" class="owner-nav-button" data-owner-panel="vehicles" aria-selected="false">Vehicle Listings</button>
+      <button type="button" class="owner-nav-button" data-owner-panel="my-cars" aria-selected="false">My Listings</button>
       <button type="button" class="owner-nav-button" data-owner-panel="payments" aria-selected="false">Listing Payments</button>
     </nav>
 
@@ -117,6 +119,18 @@
         <button id="recoverApprovedDraftsButton" type="button">Recover Eligible Dealer Drafts</button>
         <p id="recoverApprovedDraftsMessage" role="status" aria-live="polite"></p>
         <a class="dashboard-link" href="index.html">View Public Vehicle Listings</a>
+      </section>
+      <section class="dashboard-card">
+        <h3>New Dealer Listings</h3>
+        <p id="vehicleActivityMessage" role="status" aria-live="polite">Waiting for listing activity...</p>
+        <div id="vehicleActivityList"></div>
+      </section>
+    </section>
+
+    <section id="owner-panel-my-cars" class="owner-panel" hidden>
+      <div class="owner-section-heading"><h2>My Vehicle Listings</h2><p>Listings added by your owner account.</p></div>
+      <section class="dashboard-card">
+        <div id="myOwnerCars" class="cars-grid"></div>
       </section>
     </section>
 

@@ -470,10 +470,3 @@ minPriceInput.addEventListener("input", applyFilters);
 maxPriceInput.addEventListener("input", applyFilters);
 
 loadCars();
-
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initAboutCounters);
-} else {
-  initAboutCounters();
-}

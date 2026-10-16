@@ -14,7 +14,8 @@ import {
   query,
   where,
   getDocs,
-  serverTimestamp
+  serverTimestamp,
+  Timestamp
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 import {
   ref,
@@ -78,6 +79,7 @@ const overviewCountElements = {
 };
 
 const EXPIRING_SOON_MS = 7 * 24 * 60 * 60 * 1000;
+const FREE_TRIAL_LISTING_MS = 60 * 24 * 60 * 60 * 1000;
 
 function timestampMillis(value) {
   if (typeof value?.toMillis === "function") return value.toMillis();
@@ -243,8 +245,8 @@ onAuthStateChanged(auth, async (user) => {
       setText(document.getElementById("listingPermissionNotice"), "Listing creation is disabled while your account is " + approvalStatus + ".", true);
       carForm.querySelectorAll("input, select, textarea, button").forEach((element) => { element.disabled = true; });
     } else if (role === "dealer") {
-      setText(adminMessage, "Your seller account is approved. You can publish vehicles. Approval does not replace vehicle-by-vehicle checks.");
-      setText(document.getElementById("listingPermissionNotice"), "Approved seller: new listings can be published after you confirm your permission to market each vehicle.");
+      setText(adminMessage, "Your seller account is approved. New vehicles go live immediately for a 60-day free trial; no vehicle-by-vehicle approval is needed.");
+      setText(document.getElementById("listingPermissionNotice"), "Confirm your permission to advertise each vehicle. Approved dealers' listings go live immediately for 60 days, then stay private until Kiri Cars verifies the listing fee.");
       addCarButton.textContent = "Publish Vehicle";
     } else {
       setText(adminMessage, "Signed in as " + currentAdminName);
@@ -513,6 +515,7 @@ carForm.addEventListener("submit", async (event) => {
       await loadMyCars();
     } else {
       // CREATE MODE: Add new vehicle
+      const isDealerTrial = currentRole === "dealer" && currentCanPublish && !listingIsDraft;
       const car = {
         ...carData,
         images,
@@ -520,11 +523,15 @@ carForm.addEventListener("submit", async (event) => {
         addedBy: currentUid,
         sellerWhatsApp: currentWhatsApp,
         sellerName: currentAdminName,
-        listingStatus: listingIsDraft ? "draft" : "pending_payment",
-        paymentStatus: listingIsDraft ? "not_due" : "pending",
-        listingFee: listingFeeForPrice(readNumber("price")),
+        listingStatus: listingIsDraft ? "draft" : isDealerTrial ? "active" : "pending_payment",
+        paymentStatus: listingIsDraft ? "not_due" : isDealerTrial ? "free_trial" : "pending",
+        listingFee: isDealerTrial ? 0 : listingFeeForPrice(readNumber("price")),
         createdAt: serverTimestamp()
       };
+      if (isDealerTrial) {
+        car.listingExpiresAt = Timestamp.fromDate(new Date(Date.now() + FREE_TRIAL_LISTING_MS));
+        car.freeTrialApprovedAt = serverTimestamp();
+      }
 
       // DEBUG: Log the exact car object being sent to Firestore
       console.log("=== FIRESTORE WRITE DEBUG ===");
@@ -555,9 +562,11 @@ carForm.addEventListener("submit", async (event) => {
       const fee = listingFeeForPrice(car.price);
       setText(formMessage, listingIsDraft
         ? "Draft saved privately. It will not appear to buyers until your seller account is approved."
-        : "Listing submitted with " + images.length + (images.length === 1 ? " photo. " : " photos. ") +
-          "Estimated listing fee: KSh " + fee.toLocaleString("en-KE") +
-          ". It remains hidden until Kiri Cars verifies payment or approves your eligible free-trial listing.");
+        : isDealerTrial
+          ? "Vehicle published and now visible to buyers for a 60-day free trial. After the trial, it will stay in your seller dashboard but be hidden from buyers until Kiri Cars verifies the listing fee."
+          : "Listing submitted with " + images.length + (images.length === 1 ? " photo. " : " photos. ") +
+            "Estimated listing fee: KSh " + fee.toLocaleString("en-KE") +
+            ". It remains hidden until Kiri Cars verifies payment.");
       await loadMyCars();
     }
   } catch (error) {
@@ -721,6 +730,8 @@ function renderCar(car) {
   } else if (car.listingExpiresAt?.toMillis && car.listingExpiresAt.toMillis() <= Date.now()) {
     lifecycle.textContent = "EXPIRED — hidden from public listings until renewed";
     lifecycle.classList.add("expired-label");
+  } else if (car.paymentStatus === "free_trial" && car.listingExpiresAt?.toMillis) {
+    lifecycle.textContent = "LIVE — free trial ends " + new Date(car.listingExpiresAt.toMillis()).toLocaleDateString("en-KE");
   } else {
     lifecycle.textContent = "Listing status: Active";
   }
@@ -792,11 +803,16 @@ async function publishDraft(car, button) {
     const published = { ...car };
     delete published.id;
     delete published._source;
-    published.listingStatus = "pending_payment";
-    published.paymentStatus = "pending";
-    published.listingFee = listingFeeForPrice(published.price);
     delete published.listingExpiresAt;
-    published.publishedAt = serverTimestamp();
+    delete published.freeTrialApprovedAt;
+    const isDealerTrial = currentRole === "dealer";
+    published.listingStatus = isDealerTrial ? "active" : "pending_payment";
+    published.paymentStatus = isDealerTrial ? "free_trial" : "pending";
+    published.listingFee = isDealerTrial ? 0 : listingFeeForPrice(published.price);
+    if (isDealerTrial) {
+      published.listingExpiresAt = Timestamp.fromDate(new Date(Date.now() + FREE_TRIAL_LISTING_MS));
+      published.freeTrialApprovedAt = serverTimestamp();
+    }
     await addDoc(collection(db, "cars"), published);
     await deleteDoc(doc(db, "dealerDrafts", car.id));
     await loadMyCars();

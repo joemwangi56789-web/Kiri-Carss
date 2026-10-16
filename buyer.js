@@ -539,6 +539,16 @@ async function startConversation(carId) {
       return;
     }
     const car = carSnap.data();
+    const expiryMs = car.listingExpiresAt?.toMillis?.()
+      || (typeof car.listingExpiresAt?.seconds === "number" ? car.listingExpiresAt.seconds * 1000 : null);
+    if (
+      ["draft", "pending_payment", "suspended"].includes(car.listingStatus)
+      || (car.paymentStatus && !["paid", "free_trial"].includes(car.paymentStatus))
+      || (expiryMs !== null && expiryMs <= Date.now())
+    ) {
+      setMessage(buyerPageMessage, "This listing is no longer available to buyers.", true);
+      return;
+    }
     if (car.listingStatus === "sold") {
       setMessage(buyerPageMessage, "This vehicle has been marked as sold. You cannot start an enquiry.", true);
       return;
@@ -828,6 +838,7 @@ buyerGoogleAuthButton.addEventListener("click", async () => {
         name: user.displayName || "Buyer",
         email: user.email,
         role: "buyer",
+        active: true,
         createdAt: serverTimestamp(),
         authProvider: "google"
       });
@@ -838,14 +849,26 @@ buyerGoogleAuthButton.addEventListener("click", async () => {
 
   } catch (error) {
     console.error("Buyer Google sign-in error:", error);
-    let errorText = "Google sign-in failed. Please try again.";
+    let errorText = error.code
+      ? "Google sign-in failed (" + error.code + ")."
+      : "Google sign-in failed. Please try again.";
 
-    if (error.code === "auth/popup-closed-by-user") {
+    if (error.code === "auth/unauthorized-domain") {
+      errorText = "This website domain is not authorized for Firebase sign-in. Add the current hostname under Firebase Authentication > Settings > Authorized domains.";
+    } else if (error.code === "auth/operation-not-allowed") {
+      errorText = "Google sign-in is not enabled for this Firebase project. Enable Google under Firebase Authentication > Sign-in method.";
+    } else if (error.code === "auth/popup-blocked") {
+      errorText = "Your browser blocked the Google sign-in popup. Allow popups for this site and try again.";
+    } else if (error.code === "auth/popup-closed-by-user") {
       errorText = "Sign-in cancelled.";
     } else if (error.code === "auth/cancelled-popup-request") {
-      errorText = "Please allow popups for this site to sign in with Google.";
+      errorText = "A Google sign-in popup was already open. Close it and try again.";
     } else if (error.code === "permission-denied" || error.code === "firestore/permission-denied") {
-      errorText = "We couldn't verify your account right now. Please try again later.";
+      errorText = "Google authentication succeeded, but Firestore denied access to the buyer profile. Confirm the latest buyer profile rules are published.";
+    } else if (error.code === "auth/account-exists-with-different-credential") {
+      errorText = "This email already uses another sign-in method. Sign in with that method first.";
+    } else if (error.code === "auth/network-request-failed") {
+      errorText = "Google sign-in could not reach Firebase. Check your connection and try again.";
     }
 
     setMessage(buyerAuthMessage, errorText, true);

@@ -115,19 +115,33 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.auth.uid == userId
         && request.resource.data.keys().hasOnly([
-          'name', 'email', 'phone', 'active', 'createdAt'
+          'name', 'email', 'role', 'phone', 'active', 'createdAt',
+          'authProvider'
         ])
         && request.resource.data.keys().hasAll([
-          'name', 'email', 'phone', 'active', 'createdAt'
+          'name', 'email', 'role', 'createdAt'
         ])
         && request.resource.data.name is string
         && request.resource.data.name.size() >= 2
         && request.resource.data.name.size() <= 80
         && request.resource.data.email == request.auth.token.email
-        && request.resource.data.phone is string
-        && request.resource.data.phone.size() >= 10
-        && request.resource.data.phone.size() <= 15
-        && request.resource.data.active == true
+        && request.resource.data.role == "buyer"
+        && (
+          !('phone' in request.resource.data)
+          || (
+            request.resource.data.phone is string
+            && request.resource.data.phone.size() >= 10
+            && request.resource.data.phone.size() <= 15
+          )
+        )
+        && (
+          !('active' in request.resource.data)
+          || request.resource.data.active == true
+        )
+        && (
+          !('authProvider' in request.resource.data)
+          || request.resource.data.authProvider == "google"
+        )
         && request.resource.data.createdAt == request.time;
 
       allow update: if signedIn()
@@ -156,7 +170,7 @@ service cloud.firestore {
           'images', 'imageUrl',
           'addedBy', 'sellerWhatsApp', 'sellerName',
           'listingStatus', 'paymentStatus', 'listingFee',
-          'createdAt'
+          'createdAt', 'listingExpiresAt', 'freeTrialApprovedAt'
         ])
         && request.resource.data.keys().hasAll([
           'manufacturer', 'carType', 'model', 'year', 'price',
@@ -205,10 +219,26 @@ service cloud.firestore {
         && request.resource.data.sellerName is string
         && request.resource.data.sellerName.size() >= 2
         && request.resource.data.sellerName.size() <= 80
-        && request.resource.data.listingStatus in ["pending_payment", "draft"]
-        && request.resource.data.paymentStatus in ["pending", "not_due"]
-        && request.resource.data.listingFee is number
-        && request.resource.data.listingFee >= 0;
+        && (
+          (
+            request.resource.data.listingStatus == "active"
+            && request.resource.data.paymentStatus == "free_trial"
+            && request.resource.data.listingFee == 0
+            && request.resource.data.listingExpiresAt is timestamp
+            && request.resource.data.listingExpiresAt > request.time
+            && request.resource.data.freeTrialApprovedAt == request.time
+            && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == "dealer"
+            && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.approvalStatus == "approved"
+          )
+          || (
+            request.resource.data.listingStatus == "pending_payment"
+            && request.resource.data.paymentStatus == "pending"
+            && request.resource.data.listingFee is number
+            && request.resource.data.listingFee >= 0
+            && !('listingExpiresAt' in request.resource.data)
+            && !('freeTrialApprovedAt' in request.resource.data)
+          )
+        );
 
       // Anyone can read active listings
       allow read: if true;
@@ -229,6 +259,30 @@ service cloud.firestore {
           && request.resource.data.paymentVerifiedBy == request.auth.uid
         )
         || (
+          isOwner()
+          && request.resource.data.diff(resource.data)
+            .affectedKeys().hasOnly([
+              'listingStatus', 'paymentStatus', 'listingFee',
+              'listingExpiresAt', 'paymentReference', 'paymentVerifiedBy',
+              'paidAt', 'renewedAt'
+            ])
+          && request.resource.data.listingStatus == "active"
+          && request.resource.data.paymentStatus == "paid"
+          && request.resource.data.listingFee is number
+          && request.resource.data.listingFee >= 0
+          && request.resource.data.listingExpiresAt is timestamp
+          && request.resource.data.listingExpiresAt > request.time
+          && request.resource.data.paymentReference is string
+          && request.resource.data.paymentReference.size() > 0
+          && request.resource.data.paymentReference.size() <= 100
+          && request.resource.data.paymentVerifiedBy == request.auth.uid
+          && request.resource.data.paidAt == request.time
+          && (
+            !('renewedAt' in request.resource.data)
+            || request.resource.data.renewedAt == request.time
+          )
+        )
+        || (
           isActiveSeller(request.auth.uid)
           && resource.data.addedBy == request.auth.uid
           && (
@@ -242,7 +296,6 @@ service cloud.firestore {
               'status', 'mileage', 'fuel', 'transmission', 'description',
               'vehicleRelationship', 'authorizationConfirmed',
               'images', 'imageUrl',
-              'listingStatus', 'paymentStatus', 'listingFee',
               'updatedAt'
             ])
           && request.resource.data.manufacturer is string
@@ -276,8 +329,6 @@ service cloud.firestore {
           && request.resource.data.images.size() <= 20
           && request.resource.data.imageUrl is string
           && request.resource.data.imageUrl.size() > 0
-          && request.resource.data.listingFee is number
-          && request.resource.data.listingFee >= 0
         );
 
       // Sellers can delete their own listings
@@ -381,6 +432,22 @@ service cloud.firestore {
           || get(
             /databases/$(database)/documents/cars/$(request.resource.data.carId)
           ).data.listingStatus != "sold"
+        )
+        && (
+          !('paymentStatus' in get(
+            /databases/$(database)/documents/cars/$(request.resource.data.carId)
+          ).data)
+          || get(
+            /databases/$(database)/documents/cars/$(request.resource.data.carId)
+          ).data.paymentStatus in ["paid", "free_trial"]
+        )
+        && (
+          !('listingExpiresAt' in get(
+            /databases/$(database)/documents/cars/$(request.resource.data.carId)
+          ).data)
+          || get(
+            /databases/$(database)/documents/cars/$(request.resource.data.carId)
+          ).data.listingExpiresAt > request.time
         )
         && isActiveSeller(request.resource.data.sellerId)
         && request.resource.data.buyerName is string
