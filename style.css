@@ -2919,3 +2919,216 @@ p {
     transform: none;
   }
 }
+
+/* Showroom admin overview and listing tools */
+.listing-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0 0 24px;
+}
+
+.overview-stat {
+  display: flex;
+  min-width: 0;
+  min-height: 150px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 18px;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  text-align: left;
+  box-shadow: var(--card-shadow);
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.overview-stat:hover {
+  transform: translateY(-3px);
+  border-color: var(--blue-accent);
+  background: var(--bg-secondary);
+  box-shadow: var(--shadow);
+}
+
+.overview-stat-label {
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.overview-stat strong {
+  color: var(--text-primary);
+  font-size: clamp(1.8rem, 3vw, 2.45rem);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.overview-stat-action {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  color: var(--blue-accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.overview-stat-action span {
+  font-size: 1rem;
+}
+
+.overview-quick-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.overview-quick-actions h3 {
+  margin-bottom: 5px;
+}
+
+.overview-quick-actions p {
+  margin-bottom: 0;
+  color: var(--text-secondary);
+}
+
+.overview-action-links {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.overview-action-links button {
+  margin: 0;
+}
+
+.overview-action-primary {
+  background: var(--blue);
+}
+
+.overview-action-primary:hover {
+  background: var(--blue-dark);
+}
+
+.overview-action-secondary {
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.overview-action-secondary:hover {
+  background: var(--hover-bg);
+}
+
+.listing-filters {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.5fr) repeat(2, minmax(150px, 1fr)) auto;
+  align-items: end;
+  gap: 14px;
+  margin-top: 20px;
+  padding: 18px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-primary);
+}
+
+.listing-filters label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.listing-filters input,
+.listing-filters select {
+  min-height: 44px;
+  background: var(--input-bg);
+}
+
+.listing-filters .listing-filter-reset {
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.listing-filters .listing-filter-reset:hover {
+  background: var(--hover-bg);
+}
+
+.listing-filter-summary {
+  margin: 14px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+}
+
+#myCars > .dashboard-card {
+  min-width: 0;
+  margin: 0;
+}
+
+#myCars > p {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 20px;
+  border: 1px dashed var(--border-color);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+@media (max-width: 1100px) {
+  .listing-overview-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .listing-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .listing-overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .overview-quick-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .overview-action-links {
+    width: 100%;
+  }
+
+  .overview-action-links button {
+    flex: 1 1 auto;
+  }
+
+  .listing-filters {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .listing-overview-grid {
+    gap: 10px;
+  }
+
+  .overview-stat {
+    min-height: 138px;
+    padding: 14px;
+  }
+
+  .overview-stat-action {
+    font-size: 0.72rem;
+  }
+}

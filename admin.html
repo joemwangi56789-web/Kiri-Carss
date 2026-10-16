@@ -164,12 +164,52 @@
     <!-- Dashboard Section -->
     <section class="content-section active" id="section-dashboard" aria-labelledby="dashboard-title">
       <div class="welcome-card">
-        <h2 id="dashboard-title">Manage Your Vehicles</h2>
-        <p>Add vehicles to Kiri Cars and manage the listings you created.</p>
+        <p class="eyebrow">SHOWROOM OVERVIEW</p>
+        <h2 id="dashboard-title">Your showroom at a glance</h2>
+        <p>See what is live, what needs attention, and how your inventory is performing.</p>
         <p id="adminMessage" role="status" aria-live="polite">
           Checking your account...
         </p>
       </div>
+
+      <section class="listing-overview-grid" aria-label="Your listing overview">
+        <button type="button" class="overview-stat" data-listing-filter="live">
+          <span class="overview-stat-label">Live listings</span>
+          <strong id="overviewLiveCount" aria-live="polite">—</strong>
+          <span class="overview-stat-action">View live listings <span aria-hidden="true">→</span></span>
+        </button>
+        <button type="button" class="overview-stat" data-listing-filter="draft">
+          <span class="overview-stat-label">Private drafts</span>
+          <strong id="overviewDraftCount" aria-live="polite">—</strong>
+          <span class="overview-stat-action">View drafts <span aria-hidden="true">→</span></span>
+        </button>
+        <button type="button" class="overview-stat" data-listing-filter="pending">
+          <span class="overview-stat-label">Payment pending</span>
+          <strong id="overviewPendingCount" aria-live="polite">—</strong>
+          <span class="overview-stat-action">View pending <span aria-hidden="true">→</span></span>
+        </button>
+        <button type="button" class="overview-stat" data-listing-filter="sold">
+          <span class="overview-stat-label">Sold</span>
+          <strong id="overviewSoldCount" aria-live="polite">—</strong>
+          <span class="overview-stat-action">View sold listings <span aria-hidden="true">→</span></span>
+        </button>
+        <button type="button" class="overview-stat" data-listing-filter="expiring">
+          <span class="overview-stat-label">Expiring in 7 days</span>
+          <strong id="overviewExpiringCount" aria-live="polite">—</strong>
+          <span class="overview-stat-action">Review expiring <span aria-hidden="true">→</span></span>
+        </button>
+      </section>
+
+      <section class="dashboard-card overview-quick-actions" aria-label="Showroom quick actions">
+        <div>
+          <h3>Keep your inventory moving</h3>
+          <p>Add a vehicle or review your current listings and follow-ups.</p>
+        </div>
+        <div class="overview-action-links">
+          <button type="button" class="overview-action-primary" data-open-section="add-vehicle">Add a vehicle</button>
+          <button type="button" class="overview-action-secondary" data-open-section="my-listings">Manage listings</button>
+        </div>
+      </section>
     </section>
 
     <!-- Add Vehicle Section -->
@@ -311,6 +351,36 @@
       <div class="dashboard-card">
         <h3 id="my-listings-title">Your Vehicle Listings</h3>
         <p>Only vehicles you added can be edited or removed from this dashboard.</p>
+        <div class="listing-filters" aria-label="Filter and sort your listings">
+          <div class="listing-filter-search">
+            <label for="listingSearchInput">Search vehicles</label>
+            <input id="listingSearchInput" type="search" placeholder="Search make or model">
+          </div>
+          <div>
+            <label for="listingStatusFilter">Listing status</label>
+            <select id="listingStatusFilter">
+              <option value="">All statuses</option>
+              <option value="live">Live</option>
+              <option value="draft">Private draft</option>
+              <option value="pending">Payment pending</option>
+              <option value="sold">Sold</option>
+              <option value="expired">Expired</option>
+              <option value="suspended">Suspended</option>
+              <option value="expiring">Expiring in 7 days</option>
+            </select>
+          </div>
+          <div>
+            <label for="listingSortSelect">Sort by</label>
+            <select id="listingSortSelect">
+              <option value="newest">Newest first</option>
+              <option value="price-low">Price: low to high</option>
+              <option value="price-high">Price: high to low</option>
+              <option value="expiry">Expiry: soonest first</option>
+            </select>
+          </div>
+          <button id="clearListingFiltersButton" type="button" class="listing-filter-reset">Clear filters</button>
+        </div>
+        <p id="listingFilterSummary" class="listing-filter-summary" aria-live="polite"></p>
         <div id="myCars">
           Loading your vehicles...
         </div>

@@ -28,6 +28,10 @@ const formMessage = document.getElementById("formMessage");
 const carForm = document.getElementById("carForm");
 const addCarButton = document.getElementById("addCarButton");
 const myCars = document.getElementById("myCars");
+const listingSearchInput = document.getElementById("listingSearchInput");
+const listingStatusFilter = document.getElementById("listingStatusFilter");
+const listingSortSelect = document.getElementById("listingSortSelect");
+const listingFilterSummary = document.getElementById("listingFilterSummary");
 const whatsappForm = document.getElementById("whatsappForm");
 const adminWhatsAppInput = document.getElementById("adminWhatsApp");
 const whatsappMessage = document.getElementById("whatsappMessage");
@@ -63,6 +67,67 @@ let currentRole = "";
 let currentProfile = null;
 let currentApprovalStatus = "";
 let currentCanPublish = false;
+let allMyCars = [];
+
+const overviewCountElements = {
+  live: document.getElementById("overviewLiveCount"),
+  draft: document.getElementById("overviewDraftCount"),
+  pending: document.getElementById("overviewPendingCount"),
+  sold: document.getElementById("overviewSoldCount"),
+  expiring: document.getElementById("overviewExpiringCount")
+};
+
+const EXPIRING_SOON_MS = 7 * 24 * 60 * 60 * 1000;
+
+function timestampMillis(value) {
+  if (typeof value?.toMillis === "function") return value.toMillis();
+  if (typeof value?.seconds === "number") return value.seconds * 1000;
+  if (value instanceof Date) return value.getTime();
+  return null;
+}
+
+function listingCategory(car, now = Date.now()) {
+  if (car._source === "dealerDrafts" || car.listingStatus === "draft") return "draft";
+  if (car.listingStatus === "sold") return "sold";
+  if (
+    car.listingStatus === "pending_payment" ||
+    (car.paymentStatus && !["paid", "free_trial"].includes(car.paymentStatus))
+  ) {
+    return "pending";
+  }
+  if (car.listingStatus === "suspended") return "suspended";
+
+  const expiry = timestampMillis(car.listingExpiresAt);
+  if (expiry !== null && expiry <= now) return "expired";
+  return "live";
+}
+
+function isExpiringSoon(car, now = Date.now()) {
+  if (listingCategory(car, now) !== "live") return false;
+  const expiry = timestampMillis(car.listingExpiresAt);
+  return expiry !== null && expiry > now && expiry <= now + EXPIRING_SOON_MS;
+}
+
+function updateListingOverview(cars) {
+  const now = Date.now();
+  const counts = {
+    live: 0,
+    draft: 0,
+    pending: 0,
+    sold: 0,
+    expiring: 0
+  };
+
+  cars.forEach((car) => {
+    const category = listingCategory(car, now);
+    if (Object.hasOwn(counts, category)) counts[category] += 1;
+    if (isExpiringSoon(car, now)) counts.expiring += 1;
+  });
+
+  Object.entries(overviewCountElements).forEach(([category, element]) => {
+    if (element) element.textContent = counts[category].toLocaleString("en-KE");
+  });
+}
 
 function normalizeKenyanPhone(value) {
   let digits = String(value || "").replace(/\D/g, "");
@@ -545,19 +610,67 @@ async function loadMyCars() {
       cars = result.docs.map((d) => ({ id: d.id, _source: "cars", ...d.data() }));
     }
 
-    cars.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-    myCars.replaceChildren();
-
-    if (cars.length === 0) {
-      myCars.textContent = "You have not added any vehicles yet.";
-      return;
-    }
-
-    cars.forEach((car) => myCars.appendChild(renderCar(car)));
+    allMyCars = cars;
+    updateListingOverview(allMyCars);
+    renderFilteredCars();
   } catch (error) {
     console.error("Load vehicles failed:", error);
     myCars.textContent = "Could not load vehicles: " + (error.code || error.message);
+    if (listingFilterSummary) listingFilterSummary.textContent = "Listings could not be loaded.";
+    Object.values(overviewCountElements).forEach((element) => {
+      if (element) element.textContent = "—";
+    });
   }
+}
+
+function renderFilteredCars() {
+  const search = listingSearchInput.value.trim().toLocaleLowerCase();
+  const status = listingStatusFilter.value;
+  const now = Date.now();
+  const cars = allMyCars.filter((car) => {
+    const searchableText = [car.year, car.manufacturer, car.model]
+      .filter(Boolean)
+      .join(" ")
+      .toLocaleLowerCase();
+
+    if (search && !searchableText.includes(search)) return false;
+    if (status === "expiring") return isExpiringSoon(car, now);
+    return !status || listingCategory(car, now) === status;
+  });
+
+  const sortBy = listingSortSelect.value;
+  cars.sort((a, b) => {
+    if (sortBy === "price-low" || sortBy === "price-high") {
+      const priceA = Number(a.price) || 0;
+      const priceB = Number(b.price) || 0;
+      return sortBy === "price-low" ? priceA - priceB : priceB - priceA;
+    }
+
+    if (sortBy === "expiry") {
+      const expiryA = timestampMillis(a.listingExpiresAt) ?? Number.POSITIVE_INFINITY;
+      const expiryB = timestampMillis(b.listingExpiresAt) ?? Number.POSITIVE_INFINITY;
+      if (expiryA !== expiryB) return expiryA - expiryB;
+    }
+
+    return (timestampMillis(b.createdAt) || 0) - (timestampMillis(a.createdAt) || 0);
+  });
+
+  myCars.replaceChildren();
+  if (listingFilterSummary) {
+    listingFilterSummary.textContent = `Showing ${cars.length.toLocaleString("en-KE")} of ${allMyCars.length.toLocaleString("en-KE")} listings`;
+  }
+
+  if (allMyCars.length === 0) {
+    myCars.textContent = "You have not added any vehicles yet.";
+    return;
+  }
+
+  if (cars.length === 0) {
+    myCars.textContent = "No listings match these filters. Try a different search or status.";
+    return;
+  }
+
+  cars.forEach((car) => myCars.appendChild(renderCar(car)));
 }
 
 function renderCar(car) {
@@ -1139,6 +1252,32 @@ function showSection(sectionId) {
 navItems.forEach(item => {
   item.addEventListener("click", () => {
     showSection(item.dataset.section);
+  });
+});
+
+listingSearchInput.addEventListener("input", renderFilteredCars);
+listingStatusFilter.addEventListener("change", renderFilteredCars);
+listingSortSelect.addEventListener("change", renderFilteredCars);
+
+document.getElementById("clearListingFiltersButton").addEventListener("click", () => {
+  listingSearchInput.value = "";
+  listingStatusFilter.value = "";
+  listingSortSelect.value = "newest";
+  renderFilteredCars();
+});
+
+document.querySelectorAll("[data-listing-filter]").forEach((button) => {
+  button.addEventListener("click", () => {
+    listingSearchInput.value = "";
+    listingStatusFilter.value = button.dataset.listingFilter;
+    listingSortSelect.value = "newest";
+    showSection("my-listings");
+  });
+});
+
+document.querySelectorAll("[data-open-section]").forEach((button) => {
+  button.addEventListener("click", () => {
+    showSection(button.dataset.openSection);
   });
 });
 
