@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,176 +8,361 @@
 </head>
 <body>
   <header class="dashboard-header">
-    <div>
-      <h1>Kiri Cars</h1>
-      <p>Showroom Admin Dashboard</p>
+    <div class="header-left">
+      <button id="sidebarToggle" type="button" class="sidebar-toggle" aria-label="Toggle navigation menu">☰</button>
+      <div class="header-brand">
+        <h1>Kiri Cars</h1>
+        <p>Showroom Admin Dashboard</p>
+      </div>
     </div>
-    <button id="logoutButton" type="button">Sign Out</button>
+    <div class="header-right" style="display: flex; align-items: center; gap: 12px;">
+      <button id="themeToggle" type="button" class="theme-toggle" aria-label="Toggle light/dark mode" title="Toggle theme">☀️</button>
+      <div class="profile-dropdown" id="profileDropdown">
+        <button id="profileAvatarBtn" type="button" class="profile-avatar-btn" aria-label="User menu" aria-expanded="false" aria-haspopup="true" title="Your account">
+          <span class="avatar-placeholder">👤</span>
+          <img id="profileAvatarImg" src="" alt="Profile picture" class="profile-avatar-img" style="display: none;" />
+        </button>
+        
+        <!-- Dropdown menu -->
+        <div class="profile-dropdown-menu" id="profileDropdownMenu" role="menu" hidden>
+          <div class="profile-dropdown-header">
+            <div class="profile-dropdown-avatar">
+              <span class="avatar-placeholder">👤</span>
+              <img id="profileDropdownAvatarImg" src="" alt="" class="profile-avatar-img" style="display: none;" />
+            </div>
+            <div class="profile-dropdown-info">
+              <span id="profileDropdownName" class="profile-dropdown-name">Loading...</span>
+              <span id="profileDropdownEmail" class="profile-dropdown-email"></span>
+              <span id="profileDropdownRole" class="profile-dropdown-role"></span>
+            </div>
+          </div>
+          <div class="profile-dropdown-divider"></div>
+          <button type="button" class="profile-dropdown-item" id="editProfileBtn" role="menuitem">
+            <span class="dropdown-item-icon">✏️</span>
+            <span>Edit Profile</span>
+          </button>
+          <button type="button" class="profile-dropdown-item" id="changePasswordBtn" role="menuitem">
+            <span class="dropdown-item-icon">🔒</span>
+            <span>Change Password</span>
+          </button>
+          <div class="profile-dropdown-divider"></div>
+          <button type="button" class="profile-dropdown-item profile-dropdown-danger" id="logoutDropdownBtn" role="menuitem">
+            <span class="dropdown-item-icon">🚪</span>
+            <span>Sign Out</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </header>
 
-  <main class="dashboard-container">
-    <section class="welcome-card">
-      <h2>Manage Your Vehicles</h2>
-      <p>Add vehicles to Kiri Cars and manage the listings you created.</p>
-      <p id="adminMessage" role="status" aria-live="polite">
-        Checking your account...
-      </p>
-    </section>
+  <!-- Edit Profile Modal -->
+  <div class="modal-overlay" id="editProfileModal" role="dialog" aria-labelledby="editProfileModalTitle" aria-modal="true" hidden>
+    <div class="modal-container">
+      <div class="modal-header">
+        <h2 id="editProfileModalTitle">Edit Profile</h2>
+        <button type="button" class="modal-close" id="closeEditProfileModal" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="editProfileForm">
+          <div class="edit-profile-avatar-section">
+            <div class="edit-profile-avatar-preview" id="editProfileAvatarPreview">
+              <span class="avatar-placeholder">👤</span>
+              <img id="editProfileAvatarImg" src="" alt="Profile picture" class="profile-avatar-img" style="display: none;" />
+            </div>
+            <label for="editProfileAvatarInput" class="edit-profile-avatar-label">
+              <span>📷</span> Change Photo
+            </label>
+            <input type="file" id="editProfileAvatarInput" accept="image/jpeg,image/png,image/webp" style="display: none;" />
+            <p class="edit-profile-avatar-hint">JPG, PNG, or WebP. Max 2MB.</p>
+          </div>
+          <div class="form-group">
+            <label for="editProfileName">Full Name</label>
+            <input type="text" id="editProfileName" name="name" required maxlength="100" />
+          </div>
+          <div class="form-group">
+            <label for="editProfileEmail">Email</label>
+            <input type="email" id="editProfileEmail" name="email" required disabled />
+            <small class="form-hint">Email cannot be changed here. Contact support to update.</small>
+          </div>
+          <div class="form-group">
+            <label for="editProfileRole">Role</label>
+            <input type="text" id="editProfileRole" name="role" disabled />
+            <small class="form-hint">Role is assigned by administrator.</small>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" id="cancelEditProfileBtn">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 
-    <section class="dashboard-card">
-      <h3>Your Buyer Contact Number</h3>
-      <p>Buyers will use this number to contact you about your vehicles on WhatsApp. Use your Kenyan mobile number.</p>
-      <form id="whatsappForm">
-        <label for="adminWhatsApp">WhatsApp number</label>
-        <input id="adminWhatsApp" type="tel" inputmode="tel" placeholder="0712345678 or 254712345678" required>
-        <button id="saveWhatsAppButton" type="submit">Save WhatsApp Number</button>
-      </form>
-      <p id="whatsappMessage" role="status" aria-live="polite"></p>
-    </section>
+  <aside class="sidebar expanded" id="sidebar" role="navigation" aria-label="Main navigation">
+    <nav class="sidebar-nav">
+      <ul class="nav-list">
+        <li class="nav-section">
+          <span class="nav-section-title">Main</span>
+        </li>
+        <li>
+          <button type="button" class="nav-item active" data-section="dashboard">
+            <span class="nav-icon">📊</span>
+            <span class="nav-text">Dashboard</span>
+          </button>
+        </li>
+        <li>
+          <button type="button" class="nav-item" data-section="add-vehicle">
+            <span class="nav-icon">➕</span>
+            <span class="nav-text">Add Vehicle</span>
+          </button>
+        </li>
+        <li>
+          <button type="button" class="nav-item" data-section="my-listings">
+            <span class="nav-icon">📋</span>
+            <span class="nav-text">My Listings</span>
+          </button>
+        </li>
+        <li class="nav-section">
+          <span class="nav-section-title">Account</span>
+        </li>
+        <li>
+          <button type="button" class="nav-item" data-section="whatsapp">
+            <span class="nav-icon">📱</span>
+            <span class="nav-text">WhatsApp Contact</span>
+          </button>
+        </li>
+        <li>
+          <button type="button" class="nav-item" data-section="diagnostics">
+            <span class="nav-icon">🔍</span>
+            <span class="nav-text">Account Diagnostics</span>
+          </button>
+        </li>
+        <li>
+          <button type="button" class="nav-item" data-section="seller-directory">
+            <span class="nav-icon">👥</span>
+            <span class="nav-text">Seller Directory</span>
+          </button>
+        </li>
+        <li class="nav-section danger-section">
+          <span class="nav-section-title">Danger Zone</span>
+        </li>
+        <li>
+          <button type="button" class="nav-item danger" data-section="danger-zone">
+            <span class="nav-icon">⚠️</span>
+            <span class="nav-text">Delete Account</span>
+          </button>
+        </li>
+      </ul>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="buyer.html?mode=inbox" class="sidebar-link"><span class="nav-icon">💬</span><span class="nav-text">Buyer Messages</span></a>
+      <a href="index.html" class="sidebar-link"><span class="nav-icon">🌐</span><span class="nav-text">Public Website</span></a>
+    </div>
+  </aside>
 
-    <section class="dashboard-card">
-      <h3>Kiri Cars Seller Directory</h3>
-      <p>For approved team members only. See the seller category and showroom affiliation of other Kiri Cars accounts. This information is not shown on public vehicle cards.</p>
-      <button id="loadSellerDirectoryButton" type="button">Load Seller Directory</button>
-      <p id="sellerDirectoryMessage" role="status" aria-live="polite"></p>
-      <div id="sellerDirectoryList"></div>
-    </section>
-
-    <section class="dashboard-card">
-      <h3>Add a Vehicle</h3>
-      <p id="listingPermissionNotice" role="status" aria-live="polite"></p>
-
-      <form id="carForm">
-        <label for="manufacturer">Manufacturer</label>
-        <input
-          id="manufacturer"
-          type="text"
-          placeholder="e.g. Toyota"
-          required
-        >
-
-        <label for="carType">Car type</label>
-        <select id="carType" required>
-          <option value="">Select car type</option>
-          <option value="SUV">SUV</option>
-          <option value="Sedan">Sedan</option>
-          <option value="Hatchback">Hatchback</option>
-          <option value="Wagon">Wagon</option>
-          <option value="Van">Van / Minivan</option>
-          <option value="Pickup">Pickup</option>
-          <option value="Coupe">Coupe</option>
-          <option value="Other">Other</option>
-        </select>
-
-        <label for="model">Model</label>
-        <input
-          id="model"
-          type="text"
-          placeholder="e.g. Toyota Fielder Hybrid"
-          required
-        >
-
-        <label for="year">Year of manufacture</label>
-        <input
-          id="year"
-          type="number"
-          min="1950"
-          max="2035"
-          placeholder="e.g. 2020"
-          required
-        >
-
-        <label for="price">Price in KSh</label>
-        <input
-          id="price"
-          type="number"
-          min="1"
-          step="1"
-          placeholder="e.g. 1850000"
-          required
-        >
-        <p class="upload-help">Listing fee by price: under KSh 500,000 = KSh 300; KSh 500,000–999,999 = KSh 500; KSh 1,000,000–1,999,999 = KSh 750; KSh 2,000,000–3,999,999 = KSh 1,000; KSh 4,000,000–6,999,999 = KSh 1,500; KSh 7,000,000–9,999,999 = KSh 2,000; KSh 10,000,000+ = KSh 2,500. Eligible free-trial listings are reviewed separately.</p>
-
-        <label for="status">Vehicle status</label>
-        <select id="status" required>
-          <option value="">Select status</option>
-          <option value="Locally Used">Locally Used</option>
-          <option value="Fresh Import">Fresh Import</option>
-          <option value="Brand New">Brand New</option>
-        </select>
-
-        <label for="mileage">Mileage in kilometres</label>
-        <input
-          id="mileage"
-          type="number"
-          min="0"
-          placeholder="e.g. 45000"
-        >
-
-        <label for="fuel">Fuel type</label>
-        <select id="fuel" required>
-          <option value="">Select fuel type</option>
-          <option value="Petrol">Petrol</option>
-          <option value="Diesel">Diesel</option>
-          <option value="Hybrid">Hybrid</option>
-          <option value="Electric">Electric</option>
-          <option value="Other">Other</option>
-        </select>
-
-        <label for="transmission">Transmission</label>
-        <select id="transmission" required>
-          <option value="">Select transmission</option>
-          <option value="Automatic">Automatic</option>
-          <option value="Manual">Manual</option>
-          <option value="CVT">CVT</option>
-          <option value="Other">Other</option>
-        </select>
-
-        <label for="vehicleRelationship">Your relationship to this vehicle</label>
-        <select id="vehicleRelationship" required>
-          <option value="">Choose your relationship</option>
-          <option value="owner">I am the vehicle owner</option>
-          <option value="broker">I am an independent sales representative acting for the owner</option>
-          <option value="authorized_representative">I am authorized to market it for the owner/dealership</option>
-        </select>
-        <label class="consent-label"><input id="authorizationConfirmed" type="checkbox" required> I confirm I have permission to advertise this specific vehicle and will provide supporting evidence if requested.</label>
-
-        <label for="description">Vehicle description</label>
-        <textarea
-          id="description"
-          rows="4"
-          placeholder="Describe the vehicle, features and condition"
-        ></textarea>
-
-        <label for="carPhotos">Vehicle photos (required)</label>
-        <input
-          id="carPhotos"
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          multiple
-          required
-        >
-        <p class="upload-help">Choose one or more JPG, PNG or WebP photos. Maximum 8 MB per photo.</p>
-        <div id="photoPreview" class="photo-preview" aria-live="polite"></div>
-        <p id="uploadProgress" role="status" aria-live="polite"></p>
-
-        <button id="addCarButton" type="submit">Add Vehicle</button>
-      </form>
-
-      <p id="formMessage" role="status" aria-live="polite"></p>
-    </section>
-
-    <section class="dashboard-card">
-      <h3>Your Vehicle Listings</h3>
-      <p>Only vehicles you added can be edited or removed from this dashboard.</p>
-      <button id="reloadCarsButton" type="button">Refresh Listings</button>
-      <div id="myCars">
-        Loading your vehicles...
+  <main class="dashboard-container" id="mainContent">
+    <!-- Dashboard Section -->
+    <section class="content-section active" id="section-dashboard" aria-labelledby="dashboard-title">
+      <div class="welcome-card">
+        <h2 id="dashboard-title">Manage Your Vehicles</h2>
+        <p>Add vehicles to Kiri Cars and manage the listings you created.</p>
+        <p id="adminMessage" role="status" aria-live="polite">
+          Checking your account...
+        </p>
       </div>
     </section>
 
-    <p><a class="dashboard-link" href="buyer.html?mode=inbox">Open Private Buyer Messages</a></p>
-    <p><a href="index.html">View Public Website</a></p>
+    <!-- Add Vehicle Section -->
+    <section class="content-section" id="section-add-vehicle" aria-labelledby="add-vehicle-title">
+      <div class="dashboard-card">
+        <h3 id="add-vehicle-title">Add a Vehicle</h3>
+        <p id="listingPermissionNotice" role="status" aria-live="polite"></p>
+
+        <form id="carForm">
+          <label for="manufacturer">Manufacturer</label>
+          <input
+            id="manufacturer"
+            type="text"
+            placeholder="e.g. Toyota"
+            required
+          >
+
+          <label for="carType">Car type</label>
+          <select id="carType" required>
+            <option value="">Select car type</option>
+            <option value="suv">SUV</option>
+            <option value="sedan">Sedan</option>
+            <option value="hatchback">Hatchback</option>
+            <option value="wagon">Wagon</option>
+            <option value="van">Van</option>
+            <option value="pickup">Pickup</option>
+            <option value="coupe">Coupe</option>
+            <option value="convertible">Convertible</option>
+            <option value="minivan">Minivan</option>
+            <option value="other">Other</option>
+          </select>
+
+          <label for="model">Model</label>
+          <input
+            id="model"
+            type="text"
+            placeholder="e.g. Corolla"
+            required
+          >
+
+          <label for="year">Year</label>
+          <input
+            id="year"
+            type="number"
+            min="1990"
+            max="2030"
+            placeholder="e.g. 2020"
+            required
+          >
+
+          <label for="price">Price (KES)</label>
+          <input
+            id="price"
+            type="number"
+            min="1"
+            placeholder="e.g. 1500000"
+            required
+          >
+
+          <label for="status">Vehicle status</label>
+          <select id="status" required>
+            <option value="">Select status</option>
+            <option value="used">Used</option>
+            <option value="new">New</option>
+            <option value="certified_preowned">Certified Pre-Owned</option>
+          </select>
+
+          <label for="mileage">Mileage (km)</label>
+          <input
+            id="mileage"
+            type="number"
+            min="0"
+            placeholder="e.g. 45000"
+          >
+
+          <label for="fuel">Fuel type</label>
+          <select id="fuel" required>
+            <option value="">Select fuel type</option>
+            <option value="petrol">Petrol</option>
+            <option value="diesel">Diesel</option>
+            <option value="hybrid">Hybrid</option>
+            <option value="plug_in_hybrid">Plug-in Hybrid</option>
+            <option value="electric">Electric</option>
+            <option value="cng">CNG</option>
+            <option value="lpg">LPG</option>
+          </select>
+
+          <label for="transmission">Transmission</label>
+          <select id="transmission" required>
+            <option value="">Select transmission</option>
+            <option value="automatic">Automatic</option>
+            <option value="manual">Manual</option>
+            <option value="cvt">CVT</option>
+            <option value="dct">DCT</option>
+            <option value="amt">AMT</option>
+          </select>
+
+          <label for="vehicleRelationship">Your relationship to this vehicle</label>
+          <select id="vehicleRelationship" required>
+            <option value="">Choose your relationship</option>
+            <option value="owner">I am the vehicle owner</option>
+            <option value="broker">I am an independent sales representative acting for the owner</option>
+            <option value="authorized_representative">I am authorized to market it for the owner/dealership</option>
+          </select>
+          <label class="consent-label"><input id="authorizationConfirmed" type="checkbox" required> I confirm I have permission to advertise this specific vehicle and will provide supporting evidence if requested.</label>
+
+          <label for="description">Vehicle description</label>
+          <textarea
+            id="description"
+            rows="4"
+            placeholder="Describe the vehicle, features and condition"
+          ></textarea>
+
+          <label for="carPhotos">Vehicle photos (required)</label>
+          <input
+            id="carPhotos"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            multiple
+            required
+          >
+          <p class="upload-help">Choose one or more JPG, PNG or WebP photos. Maximum 8 MB per photo.</p>
+          <p class="upload-help" style="font-size: 0.8rem; color: var(--muted);">Tip: Hold <kbd>Ctrl</kbd> (Windows) or <kbd>Cmd</kbd> (Mac) while clicking to select multiple photos at once.</p>
+          <div id="photoPreview" class="photo-preview" aria-live="polite"></div>
+          <p id="uploadProgress" role="status" aria-live="polite"></p>
+
+          <div class="form-actions">
+            <button id="addCarButton" type="submit">Add Vehicle</button>
+            <button id="cancelEditButton" type="button" style="display: none;" class="secondary">Cancel Edit</button>
+          </div>
+        </form>
+
+        <p id="formMessage" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <!-- My Listings Section -->
+    <section class="content-section" id="section-my-listings" aria-labelledby="my-listings-title">
+      <div class="dashboard-card">
+        <h3 id="my-listings-title">Your Vehicle Listings</h3>
+        <p>Only vehicles you added can be edited or removed from this dashboard.</p>
+        <div id="myCars">
+          Loading your vehicles...
+        </div>
+      </div>
+    </section>
+
+    <!-- WhatsApp Section -->
+    <section class="content-section" id="section-whatsapp" aria-labelledby="whatsapp-title">
+      <div class="dashboard-card">
+        <h3 id="whatsapp-title">Your Buyer Contact Number</h3>
+        <p>Buyers will use this number to contact you about your vehicles on WhatsApp. Use your Kenyan mobile number.</p>
+        <form id="whatsappForm">
+          <label for="adminWhatsApp">WhatsApp number</label>
+          <input id="adminWhatsApp" type="tel" inputmode="tel" placeholder="0712345678 or 254712345678" required>
+          <button id="saveWhatsAppButton" type="submit">Save WhatsApp Number</button>
+        </form>
+        <p id="whatsappMessage" role="status" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <!-- Account Diagnostics Section -->
+    <section class="content-section" id="section-diagnostics" aria-labelledby="diagnostics-title">
+      <div class="dashboard-card">
+        <h3 id="diagnostics-title">Account Status Diagnostics</h3>
+        <p>Check your current seller profile status to understand why you may not be able to publish vehicles.</p>
+        <button id="checkProfileButton" type="button">Check My Profile Status</button>
+        <p id="profileDiagnosticsMessage" role="status" aria-live="polite"></p>
+        <pre id="profileDiagnosticsOutput" style="display:none; background:#f5f5f5; padding:12px; border-radius:8px; overflow:auto; max-height:300px; font-size:0.85rem;"></pre>
+      </div>
+    </section>
+
+    <!-- Seller Directory Section -->
+    <section class="content-section" id="section-seller-directory" aria-labelledby="seller-directory-title">
+      <div class="dashboard-card">
+        <h3 id="seller-directory-title">Kiri Cars Seller Directory</h3>
+        <p>For approved team members only. See the seller category and showroom affiliation of other Kiri Cars accounts. This information is not shown on public vehicle cards.</p>
+        <button id="loadSellerDirectoryButton" type="button">Load Seller Directory</button>
+        <p id="sellerDirectoryMessage" role="status" aria-live="polite"></p>
+        <div id="sellerDirectoryList"></div>
+      </div>
+    </section>
+
+    <!-- Danger Zone Section -->
+    <section class="content-section" id="section-danger-zone" aria-labelledby="danger-zone-title">
+      <div class="dashboard-card danger-zone">
+        <h3 id="danger-zone-title">⚠️ Danger Zone</h3>
+        <p>Permanently delete your Kiri Cars account. This action cannot be undone.</p>
+        <p class="danger-warning">This will delete your profile, all your vehicle listings, and your Firebase Auth account.</p>
+        <button id="deleteAccountButton" type="button" class="delete-button">Delete My Account Permanently</button>
+        <p id="deleteAccountMessage" role="status" aria-live="polite"></p>
+      </div>
+    </section>
   </main>
 
   <script type="module" src="admin.js"></script>

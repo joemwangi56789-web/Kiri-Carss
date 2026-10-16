@@ -1,9 +1,13 @@
-import { auth, db } from "./firebase-config.js";
+import { auth, db, storage } from "./firebase-config.js";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  deleteUser,
+  signInWithPopup,
+  GoogleAuthProvider,
+  updateProfile
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
 import {
   addDoc,
@@ -16,8 +20,14 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
-  where
+  where,
+  deleteDoc
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL
+} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-storage.js";
 
 const authPanel = document.getElementById("authPanel");
 const inboxPanel = document.getElementById("inboxPanel");
@@ -31,7 +41,9 @@ const buyerAuthButton = document.getElementById("buyerAuthButton");
 const buyerAuthMessage = document.getElementById("buyerAuthMessage");
 const showSignup = document.getElementById("showSignup");
 const showLogin = document.getElementById("showLogin");
-const buyerSignOut = document.getElementById("buyerSignOut");
+
+const buyerGoogleAuthButton = document.getElementById("buyerGoogleAuthButton");
+const buyerGoogleAuthText = document.getElementById("buyerGoogleAuthText");
 const accountWelcome = document.getElementById("accountWelcome");
 const accountRoleNote = document.getElementById("accountRoleNote");
 const buyerPageMessage = document.getElementById("buyerPageMessage");
@@ -42,6 +54,33 @@ const messageForm = document.getElementById("messageForm");
 const messageText = document.getElementById("messageText");
 const sendMessageButton = document.getElementById("sendMessageButton");
 const refreshInbox = document.getElementById("refreshInbox");
+
+// Profile dropdown elements
+const profileDropdown = document.getElementById("profileDropdown");
+const profileAvatarBtn = document.getElementById("profileAvatarBtn");
+const profileAvatarImg = document.getElementById("profileAvatarImg");
+const profileDropdownMenu = document.getElementById("profileDropdownMenu");
+const profileDropdownName = document.getElementById("profileDropdownName");
+const profileDropdownEmail = document.getElementById("profileDropdownEmail");
+const profileDropdownRole = document.getElementById("profileDropdownRole");
+const profileDropdownAvatarImg = document.getElementById("profileDropdownAvatarImg");
+const editProfileBtn = document.getElementById("editProfileBtn");
+const changePasswordBtn = document.getElementById("changePasswordBtn");
+const logoutDropdownBtn = document.getElementById("logoutDropdownBtn");
+
+// Edit profile modal elements
+const editProfileModal = document.getElementById("editProfileModal");
+const editProfileForm = document.getElementById("editProfileForm");
+const editProfileAvatarPreview = document.getElementById("editProfileAvatarPreview");
+const editProfileAvatarImg = document.getElementById("editProfileAvatarImg");
+const editProfileAvatarUpload = document.getElementById("editProfileAvatarInput");
+const editProfileNameInput = document.getElementById("editProfileNameInput");
+const editProfileEmail = document.getElementById("editProfileEmail");
+const editProfileRole = document.getElementById("editProfileRole");
+const editProfileCloseBtn = document.getElementById("closeEditProfileModal");
+const editProfileCancelBtn = document.getElementById("cancelEditProfileBtn");
+const editProfileSaveBtn = document.getElementById("saveEditProfileBtn");
+const editProfileMessage = document.getElementById("editProfileMessage");
 
 let authMode = "signup";
 let currentUser = null;
@@ -80,6 +119,276 @@ function setAuthMode(mode) {
 
 showSignup.addEventListener("click", () => setAuthMode("signup"));
 showLogin.addEventListener("click", () => setAuthMode("login"));
+
+// ===== Profile Dropdown Functions =====
+function toggleProfileDropdown() {
+  const isHidden = profileDropdownMenu.hidden;
+  profileDropdownMenu.hidden = !isHidden;
+  profileAvatarBtn.setAttribute("aria-expanded", isHidden);
+}
+
+function closeProfileDropdown() {
+  profileDropdownMenu.hidden = true;
+  profileAvatarBtn.setAttribute("aria-expanded", "false");
+}
+
+// Close dropdown when clicking outside
+document.addEventListener("click", (e) => {
+  if (profileDropdown && !profileDropdown.contains(e.target)) {
+    closeProfileDropdown();
+  }
+});
+
+// Close dropdown on Escape key
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    closeProfileDropdown();
+  }
+});
+
+// Load profile avatar and info
+async function loadProfileAvatar(user) {
+  const avatarUrl = user.photoURL || (currentProfile?.avatarUrl || "");
+  
+  // Header avatar
+  if (profileAvatarImg) {
+    if (avatarUrl) {
+      profileAvatarImg.src = avatarUrl;
+      profileAvatarImg.style.display = "block";
+      profileAvatarBtn.querySelector(".avatar-placeholder").style.display = "none";
+    } else {
+      profileAvatarImg.style.display = "none";
+      profileAvatarBtn.querySelector(".avatar-placeholder").style.display = "block";
+    }
+  }
+  
+  // Dropdown avatar
+  if (profileDropdownAvatarImg) {
+    if (avatarUrl) {
+      profileDropdownAvatarImg.src = avatarUrl;
+      profileDropdownAvatarImg.style.display = "block";
+      profileDropdownAvatarImg.previousElementSibling.style.display = "none";
+    } else {
+      profileDropdownAvatarImg.style.display = "none";
+      profileDropdownAvatarImg.previousElementSibling.style.display = "block";
+    }
+  }
+  
+  // Modal avatar
+  if (editProfileAvatarImg) {
+    if (avatarUrl) {
+      editProfileAvatarImg.src = avatarUrl;
+      editProfileAvatarImg.style.display = "block";
+      editProfileAvatarImg.previousElementSibling.style.display = "none";
+    } else {
+      editProfileAvatarImg.style.display = "none";
+      editProfileAvatarImg.previousElementSibling.style.display = "block";
+    }
+  }
+}
+
+// Update dropdown user info
+function updateProfileDropdown(user) {
+  if (profileDropdownName) {
+    profileDropdownName.textContent = currentProfile?.name || user.displayName || "Buyer";
+  }
+  if (profileDropdownEmail) {
+    profileDropdownEmail.textContent = user.email || currentProfile?.email || "";
+  }
+  if (profileDropdownRole) {
+    profileDropdownRole.textContent = "Buyer";
+  }
+}
+
+// ===== Edit Profile Modal Functions =====
+function openEditProfileModal() {
+  closeProfileDropdown();
+  if (!editProfileNameInput || !currentProfile) return;
+  
+  editProfileNameInput.value = currentProfile.name || "";
+  editProfileMessage.textContent = "";
+  editProfileMessage.style.color = "";
+  editProfileModal.hidden = false;
+  editProfileModal.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+  editProfileNameInput.focus();
+}
+
+function closeEditProfileModal() {
+  editProfileModal.hidden = true;
+  editProfileModal.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+  editProfileMessage.textContent = "";
+}
+
+// Save profile changes (name + avatar)
+async function saveProfileChanges() {
+  if (!currentUser || !currentProfile) return;
+  
+  const newName = editProfileNameInput?.value?.trim();
+  if (!newName || newName.length < 2 || newName.length > 100) {
+    editProfileMessage.textContent = "Name must be between 2 and 100 characters.";
+    editProfileMessage.style.color = "#c62828";
+    return;
+  }
+  
+  editProfileSaveBtn.disabled = true;
+  editProfileSaveBtn.textContent = "Saving...";
+  editProfileMessage.textContent = "";
+  
+  try {
+    const updateData = {
+      name: newName,
+      updatedAt: new Date()
+    };
+    
+    await updateDoc(doc(db, "buyers", currentUser.uid), updateData);
+    
+    // Update local profile
+    currentProfile.name = newName;
+    
+    // Update UI
+    if (profileDropdownName) profileDropdownName.textContent = newName;
+    if (accountWelcome) accountWelcome.textContent = `Welcome, ${newName}!`;
+    
+    editProfileMessage.textContent = "Profile updated successfully!";
+    editProfileMessage.style.color = "#167a35";
+    
+    setTimeout(() => {
+      closeEditProfileModal();
+    }, 1500);
+    
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    editProfileMessage.textContent = "Failed to update profile. Please try again.";
+    editProfileMessage.style.color = "#c62828";
+  } finally {
+    editProfileSaveBtn.disabled = false;
+    editProfileSaveBtn.textContent = "Save Changes";
+  }
+}
+
+// Avatar upload in edit profile modal
+async function handleEditProfileAvatarUpload(file) {
+  if (!currentUser) return;
+  
+  // Validate file
+  const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+  if (!allowedTypes.includes(file.type)) {
+    editProfileMessage.textContent = "Please upload a JPEG, PNG, or WebP image.";
+    editProfileMessage.style.color = "#c62828";
+    return;
+  }
+  
+  if (file.size > 2 * 1024 * 1024) {
+    editProfileMessage.textContent = "Image must be less than 2MB.";
+    editProfileMessage.style.color = "#c62828";
+    return;
+  }
+  
+  editProfileAvatarUpload.value = ""; // Reset file input
+  
+  try {
+    editProfileMessage.textContent = "Uploading...";
+    editProfileMessage.style.color = "#167a35";
+    
+    const ext = file.name.split(".").pop().toLowerCase();
+    const fileName = `buyer-avatars/${currentUser.uid}.${ext}`;
+    const fileRef = ref(storage, fileName);
+    
+    await uploadBytes(fileRef, file);
+    const downloadURL = await getDownloadURL(fileRef);
+    
+    // Update Firestore
+    await updateDoc(doc(db, "buyers", currentUser.uid), {
+      avatarUrl: downloadURL,
+      updatedAt: new Date()
+    });
+    
+    // Update local profile
+    currentProfile.avatarUrl = downloadURL;
+    
+    // Reload avatars everywhere
+    await loadProfileAvatar(currentUser);
+    
+    editProfileMessage.textContent = "Avatar updated!";
+    editProfileMessage.style.color = "#167a35";
+    
+  } catch (error) {
+    console.error("Avatar upload error:", error);
+    editProfileMessage.textContent = "Failed to upload avatar. Please try again.";
+    editProfileMessage.style.color = "#c62828";
+  }
+}
+
+// Sign out from dropdown
+async function handleSignOut() {
+  closeProfileDropdown();
+  try {
+    await signOut(auth);
+    window.location.href = "index.html";
+  } catch (error) {
+    console.error("Sign out error:", error);
+  }
+}
+
+// ===== Profile Dropdown Event Listeners =====
+if (profileAvatarBtn) {
+  profileAvatarBtn.addEventListener("click", toggleProfileDropdown);
+}
+
+if (editProfileBtn) {
+  editProfileBtn.addEventListener("click", openEditProfileModal);
+}
+
+if (changePasswordBtn) {
+  changePasswordBtn.addEventListener("click", () => {
+    closeProfileDropdown();
+    alert("Use Firebase Auth 'Forgot Password' on the sign-in page to reset your password.");
+  });
+}
+
+if (signOutBtn) {
+  signOutBtn.addEventListener("click", handleSignOut);
+}
+
+// ===== Edit Profile Modal Event Listeners =====
+if (editProfileCloseBtn) {
+  editProfileCloseBtn.addEventListener("click", closeEditProfileModal);
+}
+
+if (editProfileCancelBtn) {
+  editProfileCancelBtn.addEventListener("click", closeEditProfileModal);
+}
+
+if (editProfileSaveBtn) {
+  editProfileSaveBtn.addEventListener("click", saveProfileChanges);
+}
+
+// Avatar upload in modal
+if (editProfileAvatarUpload) {
+  editProfileAvatarUpload.addEventListener("change", (e) => {
+    if (e.target.files[0]) {
+      handleEditProfileAvatarUpload(e.target.files[0]);
+    }
+  });
+}
+
+// Close modal on overlay click
+if (editProfileModal) {
+  editProfileModal.addEventListener("click", (e) => {
+    if (e.target === editProfileModal) {
+      closeEditProfileModal();
+    }
+  });
+}
+
+// Close modal on Escape
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !editProfileModal.hidden) {
+    closeEditProfileModal();
+  }
+});
 
 buyerAuthForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -134,7 +443,7 @@ onAuthStateChanged(auth, async (user) => {
     currentRole = "";
     authPanel.hidden = false;
     inboxPanel.hidden = true;
-    buyerSignOut.hidden = true;
+    if (profileDropdown) profileDropdown.hidden = true;
     return;
   }
   await loadSession(user);
@@ -161,7 +470,7 @@ async function loadSession(user) {
         currentRole = "";
         authPanel.hidden = false;
         inboxPanel.hidden = true;
-        buyerSignOut.hidden = true;
+        if (profileDropdown) profileDropdown.hidden = true;
         setAuthMode("signup");
         setMessage(buyerAuthMessage, "To contact a dealer, create or sign in to a buyer account. Your dealer session has been signed out on this device.", false);
         return;
@@ -179,6 +488,7 @@ async function loadSession(user) {
         currentRole = "";
         authPanel.hidden = false;
         inboxPanel.hidden = true;
+        if (profileDropdown) profileDropdown.hidden = true;
         setMessage(buyerAuthMessage, "This page needs a buyer account. Please create one or sign in.", true);
         return;
       }
@@ -186,11 +496,17 @@ async function loadSession(user) {
 
     authPanel.hidden = true;
     inboxPanel.hidden = false;
-    buyerSignOut.hidden = false;
+    if (profileDropdown) profileDropdown.hidden = false;
+
     accountWelcome.textContent = "Welcome, " + (currentProfile.name || user.email || "Kiri Cars user");
     accountRoleNote.textContent = currentRole === "buyer"
       ? "Your private enquiries. Only you and the relevant dealer can access these conversations."
       : "Dealer inbox: private enquiries about your vehicles.";
+
+    // Load profile avatar and dropdown info
+    await loadProfileAvatar(user);
+    updateProfileDropdown(user);
+
     await loadConversations();
 
     const params = new URLSearchParams(window.location.search);
@@ -416,6 +732,127 @@ refreshInbox.addEventListener("click", async () => {
 buyerSignOut.addEventListener("click", async () => {
   await signOut(auth);
   window.location.href = "index.html";
+});
+
+const deleteBuyerAccountButton = document.getElementById("deleteBuyerAccountButton");
+const deleteBuyerAccountMessage = document.getElementById("deleteBuyerAccountMessage");
+
+deleteBuyerAccountButton?.addEventListener("click", async () => {
+  const confirmed = window.confirm(
+    "⚠️ DANGER ZONE ⚠️\n\n" +
+    "This will PERMANENTLY DELETE:\n" +
+    "• Your Kiri Cars buyer account\n" +
+    "• ALL your conversations and messages\n" +
+    "• Your Firebase Auth account\n\n" +
+    "This action CANNOT BE UNDONE.\n\n" +
+    "Type 'DELETE' to confirm:"
+  );
+
+  if (!confirmed) return;
+
+  const userInput = window.prompt("Type 'DELETE' to confirm permanent account deletion:");
+  if (userInput !== "DELETE") {
+    deleteBuyerAccountMessage.textContent = "Deletion cancelled - confirmation text did not match.";
+    deleteBuyerAccountMessage.style.color = "#dc2626";
+    return;
+  }
+
+  deleteBuyerAccountButton.disabled = true;
+  deleteBuyerAccountButton.textContent = "Deleting account...";
+  deleteBuyerAccountMessage.textContent = "Deleting your account and all conversations...";
+  deleteBuyerAccountMessage.style.color = "#6b7280";
+
+  try {
+    const user = auth.currentUser;
+    const uid = user?.uid;
+
+    if (!uid) {
+      throw new Error("No authenticated user found");
+    }
+
+    // Delete all conversations where this user is a participant
+    const conversationsQuery = query(
+      collection(db, "conversations"),
+      where("participants", "array-contains", uid)
+    );
+    const conversationsSnapshot = await getDocs(conversationsQuery);
+
+    const deletePromises = conversationsSnapshot.docs.map((docSnap) => deleteDoc(docSnap.ref));
+    await Promise.all(deletePromises);
+
+    // Delete the buyer profile document
+    await deleteDoc(doc(db, "buyers", uid));
+
+    // Delete the Firebase Auth user
+    await deleteUser(user);
+
+    deleteBuyerAccountMessage.textContent = "Account deleted successfully. Redirecting...";
+    deleteBuyerAccountMessage.style.color = "#059669";
+
+    // Redirect to home page after a short delay
+    setTimeout(() => {
+      window.location.href = "index.html";
+    }, 2000);
+
+  } catch (error) {
+    console.error("Account deletion failed:", error);
+    deleteBuyerAccountButton.disabled = false;
+    deleteBuyerAccountButton.textContent = "Delete My Account Permanently";
+
+    if (error.code === "auth/requires-recent-login") {
+      deleteBuyerAccountMessage.textContent = "Please sign in again and try deleting your account (security requirement).";
+    } else {
+      deleteBuyerAccountMessage.textContent = "Failed to delete account: " + error.message;
+    }
+    deleteBuyerAccountMessage.style.color = "#dc2626";
+  }
+});
+
+buyerGoogleAuthButton.addEventListener("click", async () => {
+  const provider = new GoogleAuthProvider();
+  buyerGoogleAuthButton.disabled = true;
+  buyerGoogleAuthText.textContent = "Signing in...";
+  setMessage(buyerAuthMessage, "Redirecting to Google...", false);
+
+  try {
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+
+    // Check if buyer profile exists, if not create it
+    const buyerRef = doc(db, "buyers", user.uid);
+    const buyerSnap = await getDoc(buyerRef);
+
+    if (!buyerSnap.exists()) {
+      // Create buyer profile from Google account info
+      await setDoc(buyerRef, {
+        name: user.displayName || "Buyer",
+        email: user.email,
+        role: "buyer",
+        createdAt: serverTimestamp(),
+        authProvider: "google"
+      });
+    }
+
+    // Load the session (this will handle the redirect to inbox)
+    await loadSession(user);
+
+  } catch (error) {
+    console.error("Buyer Google sign-in error:", error);
+    let errorText = "Google sign-in failed. Please try again.";
+
+    if (error.code === "auth/popup-closed-by-user") {
+      errorText = "Sign-in cancelled.";
+    } else if (error.code === "auth/cancelled-popup-request") {
+      errorText = "Please allow popups for this site to sign in with Google.";
+    } else if (error.code === "permission-denied" || error.code === "firestore/permission-denied") {
+      errorText = "We couldn't verify your account right now. Please try again later.";
+    }
+
+    setMessage(buyerAuthMessage, errorText, true);
+  } finally {
+    buyerGoogleAuthButton.disabled = false;
+    buyerGoogleAuthText.textContent = "Continue with Google";
+  }
 });
 
 setAuthMode("signup");

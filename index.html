@@ -35,26 +35,92 @@
   </header>
 
   <main>
+    <section class=\"hero hero-section\" id=\"home\">
+
+
     <section class="hero" id="home">
+      <div class="hero-background">
+        <div class="hero-bg-shape shape-1"></div>
+        <div class="hero-bg-shape shape-2"></div>
+        <div class="hero-bg-shape shape-3"></div>
+        <div class="hero-grid-overlay"></div>
+      </div>
+
       <div class="hero-content">
         <p class="eyebrow">YOUR JOURNEY STARTS HERE</p>
 
-        <h1>Find the car that moves you.</h1>
+        <h1>Find the car that <span class="highlight">moves you.</span></h1>
 
         <p class="hero-description">
           Discover quality vehicles from different manufacturers,
           compare your options, and connect with a dealer through Kiri Cars.
         </p>
+        <div class=\"hero-stats\" aria-label=\"Platform statistics\">\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"5000\">0</div>\n            <div class=\"stat-label\">Vehicles Listed</div>\n          </div>\n          <div class=\"stat-divider\"></div>\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"200\">0</div>\n            <div class=\"stat-label\">Trusted Dealers</div>\n          </div>\n          <div class=\"stat-divider\"></div>\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"50000\">0</div>\n            <div class=\"stat-label\">Happy Buyers</div>\n          </div>\n          <div class=\"stat-divider\"></div>\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"47\">0</div>\n            <div class=\"stat-label\">Car Brands</div>\n          </div>\n        </div>
+        <div class=\"hero-stats\" aria-label=\"Platform statistics\">\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"5000\">0</div>\n            <div class=\"stat-label\">Vehicles Listed</div>\n          </div>\n          <div class=\"stat-divider\"></div>\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"200\">0</div>\n            <div class=\"stat-label\">Trusted Dealers</div>\n          </div>\n          <div class=\"stat-divider\"></div>\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"50000\">0</div>\n            <div class=\"stat-label\">Happy Buyers</div>\n          </div>\n          <div class=\"stat-divider\"></div>\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"47\">0</div>\n            <div class=\"stat-label\">Car Brands</div>\n          </div>\n        </div>
+        </p>
 
         <div class="hero-actions">
-          <a class="primary-link" href="#cars">Explore Vehicles</a>
-          <a class="secondary-link" href="#about">Discover Kiri Cars</a>
+          <a class="primary-link hero-cta-btn" href="#cars">
+            <span>Explore Vehicles</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </a>
+          <a class="secondary-link hero-cta-btn" href="#about">Discover Kiri Cars</a>
         </div>
 
-        <div class="hero-values">
-          <span>Choice</span>
-          <span>Trust</span>
-          <span>Value</span>
+        <div class="hero-trust">
+          <div class="trust-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            <span>Verified Listings</span>
+          </div>
+          <div class="trust-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <rect x="2" y="4" width="20" height="16" rx="2"/>
+              <path d="M6 8h12M12 4v16"/>
+            </svg>
+            <span>Direct Dealer Contact</span>
+          </div>
+          <div class="trust-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 6v6l4 2"/>
+            </svg>
+            <span>Real-time Updates</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-scroll-indicator" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 5v14M19 12l-7 7-7-7"/>
+        </svg>
+      </div>
+    </section>
+
+    <!-- Trust & Stats Bar -->
+    <section class="trust-bar" aria-label="Platform trust indicators">
+      <div class="trust-bar-inner">
+        <div class="trust-stat">
+          <div class="trust-number" data-target="5000">0</div>
+          <div class="trust-label">Active Listings</div>
+        </div>
+        <div class="trust-divider"></div>
+        <div class="trust-stat">
+          <div class="trust-number" data-target="200">0</div>
+          <div class="trust-label">Verified Dealers</div>
+        </div>
+        <div class="trust-divider"></div>
+        <div class="trust-stat">
+          <div class="trust-number" data-target="50000">0</div>
+          <div class="trust-label">Monthly Visitors</div>
+        </div>
+        <div class="trust-divider"></div>
+        <div class="trust-stat">
+          <div class="trust-number" data-target="47">0</div>
+          <div class="trust-label">Car Brands</div>
         </div>
       </div>
     </section>
@@ -72,7 +138,7 @@
           <input
             id="searchInput"
             type="search"
-            placeholder="Make or model"
+            placeholder="Make or model (e.g., Toyota Harrier)"
           >
         </div>
 
@@ -142,40 +208,81 @@
     </section>
 
     <section class="about-section" id="about">
-      <div class="about-content">
-        <p class="eyebrow">ABOUT KIRI CARS</p>
-        <h2>A smarter way to discover vehicles.</h2>
+      <div class="about-background">
+        <div class="about-bg-shape shape-1"></div>
+        <div class="about-bg-shape shape-2"></div>
+        <div class="about-bg-shape shape-3"></div>
+      </div>
 
-        <p>
-          Kiri Cars brings vehicle listings together in one convenient place.
-          Explore different makes, models, years and prices to find an option
-          that fits your needs.
-        </p>
+      <div class="about-content">
+        <div class="about-header">
+          <p class="eyebrow">ABOUT KIRI CARS</p>
+          <h2>A smarter way to <span class="highlight">discover vehicles.</span></h2>
+          <p class="about-lead">
+            Kiri Cars brings vehicle listings together in one convenient place.
+            Explore different makes, models, years and prices to find an option
+            that fits your needs.
+          </p>
+        </div>
+
+        <div class="about-stats" aria-label="Platform statistics">
+          <div class="stat-item">
+            <div class="stat-number" data-target="5000">0</div>
+            <div class="stat-label">Vehicles Listed</div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <div class="stat-number" data-target="200">0</div>
+            <div class="stat-label">Trusted Dealers</div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <div class="stat-number" data-target="50000">0</div>
+            <div class="stat-label">Happy Buyers</div>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <div class="stat-number" data-target="47">0</div>
+            <div class="stat-label">Car Brands</div>
+          </div>
+        </div>
 
         <div class="about-values">
-          <article>
+          <article class="value-card" data-value="mission">
+            <div class="value-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              </svg>
+            </div>
             <h3>Our Mission</h3>
-            <p>
-              Make vehicle discovery simpler by helping buyers explore
-              available options in one marketplace.
-            </p>
+            <p>Make vehicle discovery simpler by helping buyers explore available options in one trusted marketplace.</p>
           </article>
 
-          <article>
+          <article class="value-card" data-value="values">
+            <div class="value-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+            </div>
             <h3>Our Values</h3>
-            <p>
-              We value clear information, convenient access and better
-              connections between buyers and dealers.
-            </p>
+            <p>Clear information, convenient access, and better connections between buyers and dealers.</p>
           </article>
 
-          <article>
+          <article class="value-card" data-value="goal">
+            <div class="value-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 6v6l4 2"/>
+              </svg>
+            </div>
             <h3>Our Goal</h3>
-            <p>
-              Build a useful vehicle marketplace that grows with the needs
-              of Kenyan car buyers and dealerships.
-            </p>
+            <p>Build Kenya's most useful vehicle marketplace that grows with the needs of car buyers and dealerships.</p>
           </article>
+        </div>
+
+        <div class="about-cta">
+          <a href="#cars" class="primary-link about-cta-btn">Start Exploring Vehicles</a>
+          <a href="seller-register.html" class="secondary-link about-cta-btn">Become a Seller</a>
         </div>
       </div>
     </section>

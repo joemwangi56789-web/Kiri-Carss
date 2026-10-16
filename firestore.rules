@@ -86,141 +86,239 @@ service cloud.firestore {
         );
 
       // Only the owner can change approval, activity, or verification status.
-      // A signed-in seller can update only their own WhatsApp number.
+      // A signed-in seller can update their own name and WhatsApp number.
       allow update: if isOwner()
         || (
           signedIn()
           && request.auth.uid == userId
           && request.resource.data.diff(resource.data)
-            .affectedKeys().hasOnly(['whatsapp'])
+            .affectedKeys().hasOnly(['name', 'whatsapp', 'updatedAt'])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() >= 2
+          && request.resource.data.name.size() <= 100
           && request.resource.data.whatsapp is string
+          && request.resource.data.whatsapp.size() >= 10
+          && request.resource.data.whatsapp.size() <= 15
+          && request.resource.data.updatedAt == request.time
         );
 
-      allow delete: if isOwner();
+      allow delete: if isOwner()
+        || (signedIn() && request.auth.uid == userId);
     }
 
     match /buyers/{userId} {
       allow read: if signedIn()
-        && (isOwner() || request.auth.uid == userId);
+        && (isOwner() || request.auth.uid == userId || isActiveSeller(request.auth.uid));
 
       allow create: if signedIn()
         && request.auth.uid == userId
-        && request.resource.data.keys().hasOnly(['name', 'email', 'role', 'createdAt'])
-        && request.resource.data.keys().hasAll(['name', 'email', 'role', 'createdAt'])
-        && request.resource.data.role == "buyer"
+        && request.resource.data.keys().hasOnly([
+          'name', 'email', 'phone', 'active', 'createdAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'name', 'email', 'phone', 'active', 'createdAt'
+        ])
         && request.resource.data.name is string
         && request.resource.data.name.size() >= 2
         && request.resource.data.name.size() <= 80
         && request.resource.data.email == request.auth.token.email
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() >= 10
+        && request.resource.data.phone.size() <= 15
+        && request.resource.data.active == true
         && request.resource.data.createdAt == request.time;
 
-      allow update: if isOwner()
-        || (
-          signedIn()
-          && request.auth.uid == userId
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name'])
-          && request.resource.data.name is string
-          && request.resource.data.name.size() >= 2
-          && request.resource.data.name.size() <= 80
-        );
+      allow update: if signedIn()
+        && (isOwner() || request.auth.uid == userId)
+        && request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly(['name', 'phone', 'active'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 80
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() >= 10
+        && request.resource.data.phone.size() <= 15;
 
-      allow delete: if isOwner();
+      allow delete: if isOwner()
+        || (signedIn() && request.auth.uid == userId);
     }
 
     match /cars/{carId} {
-      // Drafts are stored separately, so public vehicle listings remain readable.
+      // Active sellers can create new vehicle listings
+      allow create: if isActiveSeller(request.auth.uid)
+        && request.resource.data.addedBy == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'manufacturer', 'carType', 'model', 'year', 'price',
+          'status', 'mileage', 'fuel', 'transmission', 'description',
+          'vehicleRelationship', 'authorizationConfirmed',
+          'images', 'imageUrl',
+          'addedBy', 'sellerWhatsApp', 'sellerName',
+          'listingStatus', 'paymentStatus', 'listingFee',
+          'createdAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'manufacturer', 'carType', 'model', 'year', 'price',
+          'status', 'mileage', 'fuel', 'transmission', 'description',
+          'vehicleRelationship', 'authorizationConfirmed',
+          'images', 'imageUrl',
+          'addedBy', 'sellerWhatsApp', 'sellerName',
+          'listingStatus', 'paymentStatus', 'listingFee',
+          'createdAt'
+        ])
+        && request.resource.data.manufacturer is string
+        && request.resource.data.manufacturer.size() >= 1
+        && request.resource.data.manufacturer.size() <= 50
+        && request.resource.data.carType in ["sedan", "suv", "hatchback", "coupe", "convertible", "wagon", "pickup", "van", "minivan", "other"]
+        && request.resource.data.model is string
+        && request.resource.data.model.size() >= 1
+        && request.resource.data.model.size() <= 50
+        && request.resource.data.year is int
+        && request.resource.data.year >= 1990
+        && request.resource.data.year <= 2030
+        && request.resource.data.price is number
+        && request.resource.data.price > 0
+        && request.resource.data.status in ["new", "used", "certified_preowned"]
+        && request.resource.data.mileage is int
+        && request.resource.data.mileage >= 0
+        && request.resource.data.fuel in ["petrol", "diesel", "hybrid", "electric", "plug_in_hybrid", "cng", "lpg"]
+        && request.resource.data.transmission in ["manual", "automatic", "cvt", "dct", "amt"]
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 5000
+        && request.resource.data.vehicleRelationship in ["owner", "broker", "authorized_representative"]
+        && request.resource.data.authorizationConfirmed == true
+        && request.resource.data.images is list
+        && request.resource.data.images.size() >= 1
+        && request.resource.data.images.size() <= 20
+        && request.resource.data.imageUrl is string
+        && request.resource.data.imageUrl.size() > 0
+        && request.resource.data.addedBy == request.auth.uid
+        && request.resource.data.sellerWhatsApp is string
+        && request.resource.data.sellerWhatsApp.size() >= 10
+        && request.resource.data.sellerWhatsApp.size() <= 15
+        && request.resource.data.sellerName is string
+        && request.resource.data.sellerName.size() >= 2
+        && request.resource.data.sellerName.size() <= 80
+        && request.resource.data.listingStatus in ["pending_payment", "draft"]
+        && request.resource.data.paymentStatus in ["pending", "not_due"]
+        && request.resource.data.listingFee is number
+        && request.resource.data.listingFee >= 0;
+
+      // Anyone can read active listings
       allow read: if true;
 
-      allow create: if isOwner()
-        || (
-          signedIn()
-          && request.resource.data.addedBy == request.auth.uid
-          && isActiveSeller(request.auth.uid)
-          && request.resource.data.authorizationConfirmed == true
-          && request.resource.data.vehicleRelationship in ["owner", "broker", "authorized_representative"]
-          && request.resource.data.listingStatus == "pending_payment"
-          && request.resource.data.paymentStatus == "pending"
-          && request.resource.data.price is number
-          && request.resource.data.price > 0
-          && request.resource.data.listingFee is number
-          && request.resource.data.listingFee >= 0
-        );
+      // Sellers can update their own listings (not sold/suspended)
+      allow update: if isActiveSeller(request.auth.uid)
+        && resource.data.addedBy == request.auth.uid
+        && (
+          !('listingStatus' in resource.data)
+          || resource.data.listingStatus != "sold"
+          && resource.data.listingStatus != "suspended"
+        )
+        && request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly([
+            'manufacturer', 'carType', 'model', 'year', 'price',
+            'status', 'mileage', 'fuel', 'transmission', 'description',
+            'vehicleRelationship', 'authorizationConfirmed',
+            'images', 'imageUrl',
+            'listingStatus', 'paymentStatus', 'listingFee',
+            'updatedAt'
+          ])
+        && request.resource.data.manufacturer is string
+        && request.resource.data.manufacturer.size() >= 1
+        && request.resource.data.manufacturer.size() <= 50
+        && request.resource.data.carType in ["sedan", "suv", "hatchback", "coupe", "convertible", "wagon", "pickup", "van", "minivan", "other"]
+        && request.resource.data.model is string
+        && request.resource.data.model.size() >= 1
+        && request.resource.data.model.size() <= 50
+        && request.resource.data.year is int
+        && request.resource.data.year >= 1990
+        && request.resource.data.year <= 2030
+        && request.resource.data.price is number
+        && request.resource.data.price > 0
+        && request.resource.data.status in ["new", "used", "certified_preowned"]
+        && request.resource.data.mileage is int
+        && request.resource.data.mileage >= 0
+        && request.resource.data.fuel in ["petrol", "diesel", "hybrid", "electric", "plug_in_hybrid", "cng", "lpg"]
+        && request.resource.data.transmission in ["manual", "automatic", "cvt", "dct", "amt"]
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 5000
+        && request.resource.data.vehicleRelationship in ["owner", "broker", "authorized_representative"]
+        && request.resource.data.authorizationConfirmed == true
+        && request.resource.data.images is list
+        && request.resource.data.images.size() >= 1
+        && request.resource.data.images.size() <= 20
+        && request.resource.data.imageUrl is string
+        && request.resource.data.imageUrl.size() > 0
+        && request.resource.data.listingFee is number
+        && request.resource.data.listingFee >= 0;
 
-      allow update: if isOwner()
-        || (
-          signedIn()
-          && resource.data.addedBy == request.auth.uid
-          && isActiveSeller(request.auth.uid)
-          && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['listingStatus', 'soldAt', 'sellerWhatsApp', 'sellerName'])
-          && (
-            !request.resource.data.diff(resource.data).affectedKeys().hasAny(['listingStatus'])
-            || request.resource.data.listingStatus == "sold"
-            || (
-              request.resource.data.listingStatus == "pending_payment"
-              && ('listingExpiresAt' in resource.data)
-              && resource.data.listingExpiresAt <= request.time
-              && resource.data.listingStatus != "sold"
-            )
-          )
-        );
-
-      allow delete: if isOwner()
-        || (
-          signedIn()
-          && resource.data.addedBy == request.auth.uid
-          && isActiveSeller(request.auth.uid)
+      // Sellers can delete their own listings
+      allow delete: if isActiveSeller(request.auth.uid)
+        && resource.data.addedBy == request.auth.uid
+        && (
+          !('listingStatus' in resource.data)
+          || resource.data.listingStatus != "sold"
         );
     }
 
-    // Pending sellers can save private draft listings without making them public.
     match /dealerDrafts/{draftId} {
-      allow read: if signedIn()
-        && (isOwner() || resource.data.addedBy == request.auth.uid);
-
-      allow create: if signedIn()
-        && isPendingDealer(request.auth.uid)
+      // Pending dealers can create drafts
+      allow create: if isPendingDealer(request.auth.uid)
         && request.resource.data.addedBy == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          'manufacturer', 'carType', 'model', 'year', 'price',
+          'status', 'mileage', 'fuel', 'transmission', 'description',
+          'vehicleRelationship', 'authorizationConfirmed',
+          'images', 'imageUrl',
+          'addedBy', 'sellerWhatsApp', 'sellerName',
+          'listingStatus', 'paymentStatus', 'listingFee',
+          'createdAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'manufacturer', 'carType', 'model', 'year', 'price',
+          'status', 'mileage', 'fuel', 'transmission', 'description',
+          'vehicleRelationship', 'authorizationConfirmed',
+          'images', 'imageUrl',
+          'addedBy', 'sellerWhatsApp', 'sellerName',
+          'listingStatus', 'paymentStatus', 'listingFee',
+          'createdAt'
+        ])
         && request.resource.data.listingStatus == "draft"
-        && request.resource.data.authorizationConfirmed == true
-        && request.resource.data.vehicleRelationship in ["owner", "broker", "authorized_representative"];
+        && request.resource.data.paymentStatus == "not_due";
 
-      allow update: if signedIn()
-        && (
-          isOwner()
-          || (
-            isPendingDealer(request.auth.uid)
-            && resource.data.addedBy == request.auth.uid
-            && request.resource.data.addedBy == request.auth.uid
-            && request.resource.data.listingStatus == "draft"
-            && request.resource.data.authorizationConfirmed == true
-            && request.resource.data.vehicleRelationship in ["owner", "broker", "authorized_representative"]
-          )
-        );
+      // Pending dealers can read their own drafts
+      allow read: if isPendingDealer(request.auth.uid)
+        && resource.data.addedBy == request.auth.uid;
 
-      allow delete: if isOwner()
-        || (
-          signedIn()
-          && resource.data.addedBy == request.auth.uid
-          && (isPendingDealer(request.auth.uid) || isActiveSeller(request.auth.uid))
-        );
+      // Pending dealers can update their own drafts
+      allow update: if isPendingDealer(request.auth.uid)
+        && resource.data.addedBy == request.auth.uid
+        && request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly([
+            'manufacturer', 'carType', 'model', 'year', 'price',
+            'status', 'mileage', 'fuel', 'transmission', 'description',
+            'vehicleRelationship', 'authorizationConfirmed',
+            'images', 'imageUrl',
+            'listingStatus', 'paymentStatus', 'listingFee',
+            'updatedAt'
+          ])
+        && request.resource.data.listingStatus == "draft";
+
+      // Pending dealers can delete their own drafts
+      allow delete: if isPendingDealer(request.auth.uid)
+        && resource.data.addedBy == request.auth.uid;
     }
 
     match /conversations/{conversationId} {
-      // Allow a signed-in user to check whether a deterministic conversation ID exists.
       allow read: if signedIn()
+        && isActiveParticipant(request.auth.uid)
         && (
-          !exists(/databases/$(database)/documents/conversations/$(conversationId))
-          || (
-            isActiveParticipant(request.auth.uid)
-            && (
-              resource.data.buyerId == request.auth.uid
-              || resource.data.sellerId == request.auth.uid
-            )
-          )
+          resource.data.buyerId == request.auth.uid
+          || resource.data.sellerId == request.auth.uid
         );
 
       allow create: if signedIn()
+        && isActiveBuyer(request.auth.uid)
         && request.resource.data.keys().hasOnly([
           'buyerId', 'buyerName', 'sellerId', 'sellerName',
           'carId', 'carTitle', 'createdAt', 'lastMessageAt', 'lastMessage'
