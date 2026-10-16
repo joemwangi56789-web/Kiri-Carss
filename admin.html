@@ -9,7 +9,7 @@
 <body>
   <header class="dashboard-header">
     <div class="header-left">
-      <button id="sidebarToggle" type="button" class="sidebar-toggle" aria-label="Toggle navigation menu">☰</button>
+      <button id="sidebarToggle" type="button" class="sidebar-toggle" aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidebar">☰</button>
       <div class="header-brand">
         <h1>Kiri Cars</h1>
         <p>Showroom Admin Dashboard</p>
@@ -159,6 +159,7 @@
       <a href="index.html" class="sidebar-link"><span class="nav-icon">🌐</span><span class="nav-text">Public Website</span></a>
     </div>
   </aside>
+  <button id="sidebarOverlay" type="button" class="sidebar-overlay" aria-label="Close navigation menu" aria-hidden="true" tabindex="-1"></button>
 
   <main class="dashboard-container" id="mainContent">
     <!-- Dashboard Section -->

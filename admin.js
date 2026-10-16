@@ -1233,8 +1233,21 @@ deleteAccountButton?.addEventListener("click", async () => {
 // ===== Sidebar Navigation =====
 const sidebarToggle = document.getElementById("sidebarToggle");
 const sidebar = document.getElementById("sidebar");
+const sidebarOverlay = document.getElementById("sidebarOverlay");
 const navItems = document.querySelectorAll(".nav-item");
 const contentSections = document.querySelectorAll(".content-section");
+
+function setMobileSidebarOpen(isOpen) {
+  sidebar.classList.toggle("open", isOpen);
+  sidebar.classList.toggle("expanded", isOpen);
+  sidebar.inert = !isOpen;
+  sidebar.setAttribute("aria-hidden", String(!isOpen));
+  sidebarToggle.setAttribute("aria-expanded", String(isOpen));
+  sidebarToggle.setAttribute("aria-label", isOpen ? "Close navigation menu" : "Open navigation menu");
+  sidebarOverlay.classList.toggle("visible", isOpen);
+  sidebarOverlay.setAttribute("aria-hidden", String(!isOpen));
+  sidebarOverlay.tabIndex = isOpen ? 0 : -1;
+}
 
 function showSection(sectionId) {
   // Update nav items
@@ -1254,7 +1267,7 @@ function showSection(sectionId) {
 
   // On mobile, collapse sidebar after selection
   if (window.innerWidth <= 768) {
-    sidebar.classList.remove("expanded");
+    setMobileSidebarOpen(false);
   }
 }
 
@@ -1292,19 +1305,42 @@ document.querySelectorAll("[data-open-section]").forEach((button) => {
 
 // Hamburger menu toggles sidebar expanded/collapsed
 sidebarToggle?.addEventListener("click", () => {
+  if (window.innerWidth <= 768) {
+    setMobileSidebarOpen(!sidebar.classList.contains("open"));
+    return;
+  }
+
   sidebar.classList.toggle("expanded");
+  sidebarToggle.setAttribute("aria-expanded", String(sidebar.classList.contains("expanded")));
 });
+
+sidebarOverlay?.addEventListener("click", () => setMobileSidebarOpen(false));
 
 // Handle window resize
 window.addEventListener("resize", () => {
   // On mobile, collapse sidebar (use .open for mobile slide-in)
   // On desktop, keep sidebar expanded by default
   if (window.innerWidth <= 768) {
-    sidebar.classList.remove("expanded");
+    setMobileSidebarOpen(false);
   } else {
+    sidebar.classList.remove("open");
     sidebar.classList.add("expanded");
+    sidebar.inert = false;
+    sidebar.removeAttribute("aria-hidden");
+    sidebarToggle.setAttribute("aria-expanded", "true");
+    sidebarToggle.setAttribute("aria-label", "Collapse navigation menu");
+    sidebarOverlay.classList.remove("visible");
+    sidebarOverlay.setAttribute("aria-hidden", "true");
+    sidebarOverlay.tabIndex = -1;
   }
 });
+
+if (window.innerWidth <= 768) {
+  setMobileSidebarOpen(false);
+} else {
+  sidebarToggle.setAttribute("aria-expanded", "true");
+  sidebarToggle.setAttribute("aria-label", "Collapse navigation menu");
+}
 
 // Theme toggle functionality
 function initTheme() {
