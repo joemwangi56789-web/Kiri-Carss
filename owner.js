@@ -29,8 +29,8 @@ import {
 function normalizeVehicleStatus(status) {
   const legacyStatuses = {
     used: "Locally Used",
-    unknown: "Unknown status",
-    unsold: "For Sale",
+    certified_preowned: "Locally Used",
+    new: "Brand New",
   };
   if (!status) return "";
   return legacyStatuses[status] ?? status;
@@ -58,10 +58,15 @@ const promoteOwnerButton = document.getElementById("promoteOwnerButton");
 const promoteOwnerMessage = document.getElementById("promoteOwnerMessage");
 const vehicleActivityMessage = document.getElementById("vehicleActivityMessage");
 const vehicleActivityList = document.getElementById("vehicleActivityList");
+const ownerCarEditModal = document.getElementById("ownerCarEditModal");
+const ownerCarEditForm = document.getElementById("ownerCarEditForm");
+const ownerCarEditMessage = document.getElementById("ownerCarEditMessage");
+const saveOwnerCarEditButton = document.getElementById("saveOwnerCarEdit");
 let stopVehicleActivityListener = null;
 // Global user id for the signed‑in owner. Set by onAuthStateChanged.
 let ownerUid = null;
 let hasLoadedVehicleActivity = false;
+let editingOwnerCarId = null;
 
 function feeForPrice(price) {
   const amount = Number(price);
@@ -287,16 +292,94 @@ async function loadOwnerCars() {
       const title = document.createElement("h4");
       title.textContent = [car.year, car.manufacturer, car.model].filter(Boolean).join(" ");
       const price = typeof car.price === "number" ? "KSh " + car.price.toLocaleString() : "Price not set";
-      const details = document.createElement("p");
-      details.textContent = `${car.carType || ""} · ${normalizeVehicleStatus(car.status) || ""} · ${car.fuel || ""} · ${car.transmission || ""} · ${price}`;
-      card.append(title, details);
-      container.append(card);
+       const details = document.createElement("p");
+       details.textContent = `${car.carType || ""} · ${normalizeVehicleStatus(car.status) || ""} · ${car.fuel || ""} · ${car.transmission || ""} · ${price}`;
+       card.append(title, details);
+       const lifecycle = document.createElement("p");
+       const expiry = timestampMs(car.listingExpiresAt);
+       lifecycle.textContent = expiry !== null && expiry <= Date.now()
+         ? "EXPIRED — hidden from buyers until payment is verified"
+         : "Listing: " + (car.listingStatus || "legacy") + " · Payment: " + (car.paymentStatus || "not recorded");
+       card.appendChild(lifecycle);
+       if (car.listingStatus !== "sold" && car.listingStatus !== "suspended") {
+         const editButton = document.createElement("button");
+         editButton.type = "button";
+         editButton.className = "edit-button";
+         editButton.textContent = "Edit";
+         editButton.addEventListener("click", () => openOwnerCarEdit(car));
+         card.appendChild(editButton);
+       }
+       container.append(card);
     });
   } catch (error) {
     console.error("Could not load owner listings:", error);
     container.textContent = "Could not load your listings: " + (error.message || error.code);
   }
 }
+
+function openOwnerCarEdit(car) {
+  if (!ownerUid || car.addedBy !== ownerUid || !ownerCarEditModal || !ownerCarEditForm) return;
+  editingOwnerCarId = car.id;
+  document.getElementById("ownerEditManufacturer").value = car.manufacturer || "";
+  document.getElementById("ownerEditCarType").value = car.carType || "";
+  document.getElementById("ownerEditModel").value = car.model || "";
+  document.getElementById("ownerEditYear").value = car.year || "";
+  document.getElementById("ownerEditPrice").value = car.price ?? "";
+  document.getElementById("ownerEditStatus").value = normalizeVehicleStatus(car.status);
+  document.getElementById("ownerEditMileage").value = car.mileage ?? "";
+  document.getElementById("ownerEditFuel").value = car.fuel || "";
+  document.getElementById("ownerEditTransmission").value = car.transmission || "";
+  document.getElementById("ownerEditRelationship").value = car.vehicleRelationship || "";
+  document.getElementById("ownerEditAuthorization").checked = car.authorizationConfirmed === true;
+  document.getElementById("ownerEditDescription").value = car.description || "";
+  ownerCarEditMessage.textContent = "";
+  ownerCarEditModal.hidden = false;
+}
+
+function closeOwnerCarEdit() {
+  if (!ownerCarEditModal) return;
+  ownerCarEditModal.hidden = true;
+  editingOwnerCarId = null;
+  ownerCarEditForm?.reset();
+}
+
+document.getElementById("closeOwnerCarEdit")?.addEventListener("click", closeOwnerCarEdit);
+document.getElementById("cancelOwnerCarEdit")?.addEventListener("click", closeOwnerCarEdit);
+ownerCarEditModal?.addEventListener("click", (event) => {
+  if (event.target === ownerCarEditModal) closeOwnerCarEdit();
+});
+ownerCarEditForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!editingOwnerCarId || !ownerUid) return;
+  saveOwnerCarEditButton.disabled = true;
+  ownerCarEditMessage.textContent = "Saving vehicle changes...";
+  try {
+    const mileageValue = document.getElementById("ownerEditMileage").value.trim();
+    await updateDoc(doc(db, "cars", editingOwnerCarId), {
+      manufacturer: document.getElementById("ownerEditManufacturer").value.trim(),
+      carType: document.getElementById("ownerEditCarType").value,
+      model: document.getElementById("ownerEditModel").value.trim(),
+      year: Number(document.getElementById("ownerEditYear").value),
+      price: Number(document.getElementById("ownerEditPrice").value),
+      status: document.getElementById("ownerEditStatus").value,
+      mileage: mileageValue ? Number(mileageValue) : null,
+      fuel: document.getElementById("ownerEditFuel").value,
+      transmission: document.getElementById("ownerEditTransmission").value,
+      vehicleRelationship: document.getElementById("ownerEditRelationship").value,
+      authorizationConfirmed: document.getElementById("ownerEditAuthorization").checked,
+      description: document.getElementById("ownerEditDescription").value.trim(),
+      updatedAt: serverTimestamp()
+    });
+    closeOwnerCarEdit();
+    await loadOwnerCars();
+  } catch (error) {
+    console.error("Could not save owner vehicle edits:", error);
+    ownerCarEditMessage.textContent = "Could not save changes: " + (error.code || error.message);
+    ownerCarEditMessage.style.color = "#c62828";
+  } finally {
+    saveOwnerCarEditButton.disabled = false;
+  }
+});
 
 function showMessage(element, text, isError = false) {
   element.textContent = text;

@@ -283,6 +283,46 @@ service cloud.firestore {
           )
         )
         || (
+          isOwner()
+          && resource.data.addedBy == request.auth.uid
+          && (
+            !('listingStatus' in resource.data)
+            || resource.data.listingStatus != "sold"
+              && resource.data.listingStatus != "suspended"
+          )
+          && request.resource.data.diff(resource.data)
+            .affectedKeys().hasOnly([
+              'manufacturer', 'carType', 'model', 'year', 'price',
+              'status', 'mileage', 'fuel', 'transmission', 'description',
+              'vehicleRelationship', 'authorizationConfirmed', 'updatedAt'
+            ])
+          && request.resource.data.manufacturer is string
+          && request.resource.data.manufacturer.size() >= 1
+          && request.resource.data.manufacturer.size() <= 50
+          && request.resource.data.carType in ["sedan", "suv", "hatchback", "coupe", "convertible", "wagon", "pickup", "van", "minivan", "other"]
+          && request.resource.data.model is string
+          && request.resource.data.model.size() >= 1
+          && request.resource.data.model.size() <= 50
+          && request.resource.data.year is int
+          && request.resource.data.year >= 1990
+          && request.resource.data.year <= 2030
+          && request.resource.data.price is number
+          && request.resource.data.price > 0
+          && request.resource.data.status in ["Fresh Import", "Locally Used", "Brand New"]
+          && (
+            request.resource.data.mileage == null
+            || request.resource.data.mileage is int
+              && request.resource.data.mileage >= 0
+          )
+          && request.resource.data.fuel in ["petrol", "diesel", "hybrid", "electric", "plug_in_hybrid", "cng", "lpg"]
+          && request.resource.data.transmission in ["manual", "automatic", "cvt", "dct", "amt"]
+          && request.resource.data.description is string
+          && request.resource.data.description.size() <= 5000
+          && request.resource.data.vehicleRelationship in ["owner", "broker", "authorized_representative"]
+          && request.resource.data.authorizationConfirmed == true
+          && request.resource.data.updatedAt == request.time
+        )
+        || (
           isActiveSeller(request.auth.uid)
           && resource.data.addedBy == request.auth.uid
           && (

@@ -144,6 +144,75 @@
     </section>
   </main>
 
+  <div class="modal-overlay" id="ownerCarEditModal" role="dialog" aria-labelledby="ownerCarEditTitle" aria-modal="true" hidden>
+    <div class="modal-container">
+      <div class="modal-header">
+        <h2 id="ownerCarEditTitle">Edit Vehicle Listing</h2>
+        <button type="button" class="modal-close" id="closeOwnerCarEdit" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="ownerCarEditForm">
+          <label for="ownerEditManufacturer">Manufacturer</label>
+          <input id="ownerEditManufacturer" type="text" maxlength="50" required>
+          <label for="ownerEditCarType">Car type</label>
+          <select id="ownerEditCarType" required>
+            <option value="">Select car type</option>
+            <option value="suv">SUV</option><option value="sedan">Sedan</option>
+            <option value="hatchback">Hatchback</option><option value="wagon">Wagon</option>
+            <option value="van">Van</option><option value="pickup">Pickup</option>
+            <option value="coupe">Coupe</option><option value="convertible">Convertible</option>
+            <option value="minivan">Minivan</option><option value="other">Other</option>
+          </select>
+          <label for="ownerEditModel">Model</label>
+          <input id="ownerEditModel" type="text" maxlength="50" required>
+          <label for="ownerEditYear">Year</label>
+          <input id="ownerEditYear" type="number" min="1990" max="2030" required>
+          <label for="ownerEditPrice">Price (KES)</label>
+          <input id="ownerEditPrice" type="number" min="1" required>
+          <label for="ownerEditStatus">Vehicle status</label>
+          <select id="ownerEditStatus" required>
+            <option value="">Select status</option>
+            <option value="Fresh Import">Fresh Import</option>
+            <option value="Locally Used">Locally Used</option>
+            <option value="Brand New">Brand New</option>
+          </select>
+          <label for="ownerEditMileage">Mileage (km)</label>
+          <input id="ownerEditMileage" type="number" min="0">
+          <label for="ownerEditFuel">Fuel type</label>
+          <select id="ownerEditFuel" required>
+            <option value="">Select fuel type</option>
+            <option value="petrol">Petrol</option><option value="diesel">Diesel</option>
+            <option value="hybrid">Hybrid</option><option value="plug_in_hybrid">Plug-in Hybrid</option>
+            <option value="electric">Electric</option><option value="cng">CNG</option>
+            <option value="lpg">LPG</option>
+          </select>
+          <label for="ownerEditTransmission">Transmission</label>
+          <select id="ownerEditTransmission" required>
+            <option value="">Select transmission</option>
+            <option value="automatic">Automatic</option><option value="manual">Manual</option>
+            <option value="cvt">CVT</option><option value="dct">DCT</option><option value="amt">AMT</option>
+          </select>
+          <label for="ownerEditRelationship">Your relationship to this vehicle</label>
+          <select id="ownerEditRelationship" required>
+            <option value="">Choose your relationship</option>
+            <option value="owner">I am the vehicle owner</option>
+            <option value="broker">I am an independent sales representative acting for the owner</option>
+            <option value="authorized_representative">I am authorized to market it for the owner/dealership</option>
+          </select>
+          <label class="consent-label"><input id="ownerEditAuthorization" type="checkbox" required> I confirm I have permission to advertise this vehicle.</label>
+          <label for="ownerEditDescription">Vehicle description</label>
+          <textarea id="ownerEditDescription" rows="4" maxlength="5000"></textarea>
+          <p>Existing vehicle photos will be kept unchanged.</p>
+          <p id="ownerCarEditMessage" role="status" aria-live="polite"></p>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" id="cancelOwnerCarEdit">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="saveOwnerCarEdit">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="owner.js"></script>
   <script type="module" src="account-management.js"></script>
 </body>
