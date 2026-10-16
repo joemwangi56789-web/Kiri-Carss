@@ -145,6 +145,15 @@ function normalizeRole(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function displayVehicleStatus(status) {
+  const legacyStatuses = {
+    used: "Locally Used",
+    certified_preowned: "Locally Used",
+    new: "Brand New"
+  };
+  return Object.hasOwn(legacyStatuses, status) ? legacyStatuses[status] : status || "";
+}
+
 function listingFeeForPrice(price) {
   const amount = Number(price);
   if (!Number.isFinite(amount) || amount <= 0) return 0;
@@ -682,7 +691,7 @@ function renderCar(car) {
 
   const details = document.createElement("p");
   const price = typeof car.price === "number" ? "KSh " + car.price.toLocaleString() : "Price not set";
-  details.textContent = [car.carType, car.status, car.fuel, car.transmission, price].filter(Boolean).join(" · ");
+  details.textContent = [car.carType, displayVehicleStatus(car.status), car.fuel, car.transmission, price].filter(Boolean).join(" · ");
 
   const photoUrls = Array.isArray(car.images) ? car.images.map((item) => item?.url).filter(Boolean) : [];
   const firstPhoto = photoUrls[0] || car.imageUrl;
@@ -887,7 +896,7 @@ async function editCar(car) {
   document.getElementById("model").value = car.model || "";
   document.getElementById("year").value = car.year || "";
   document.getElementById("price").value = car.price || "";
-  document.getElementById("status").value = car.status || "";
+  document.getElementById("status").value = displayVehicleStatus(car.status);
   document.getElementById("mileage").value = car.mileage || "";
   document.getElementById("fuel").value = car.fuel || "";
   document.getElementById("transmission").value = car.transmission || "";
