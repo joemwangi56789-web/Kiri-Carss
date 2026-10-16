@@ -24,115 +24,78 @@
       <span>KIRI CARS</span>
     </a>
 
-    <nav class="main-nav">
+    <nav class="main-nav" aria-label="Main navigation">
       <a href="#home">Home</a>
       <a href="#cars">Browse Cars</a>
       <a href="#about">About Us</a>
       <a href="buyer.html?mode=buyer">Buyer Account / Messages</a>
       <a href="login.html">Dealer Login</a>
-      <a href="seller-register.html">Become a Seller</a>
+      <a class="nav-seller" href="seller-register.html">Become a Seller</a>
     </nav>
   </header>
 
   <main>
-    <section class=\"hero hero-section\" id=\"home\">
-
-
-    <section class="hero" id="home">
-      <div class="hero-background">
-        <div class="hero-bg-shape shape-1"></div>
-        <div class="hero-bg-shape shape-2"></div>
-        <div class="hero-bg-shape shape-3"></div>
-        <div class="hero-grid-overlay"></div>
-      </div>
-
+    <section class="hero hero-section" id="home">
       <div class="hero-content">
-        <p class="eyebrow">YOUR JOURNEY STARTS HERE</p>
-
-        <h1>Find the car that <span class="highlight">moves you.</span></h1>
+        <p class="eyebrow"><span class="hero-eyebrow-mark"></span> YOUR NEXT DRIVE STARTS HERE</p>
+        <h1>Find a car that feels like <span class="highlight">your next move.</span></h1>
 
         <p class="hero-description">
-          Discover quality vehicles from different manufacturers,
-          compare your options, and connect with a dealer through Kiri Cars.
+          Explore vehicles from Kenyan dealers, compare the details that matter,
+          and connect directly when you find the right one.
         </p>
-        <div class=\"hero-stats\" aria-label=\"Platform statistics\">\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"5000\">0</div>\n            <div class=\"stat-label\">Vehicles Listed</div>\n          </div>\n          <div class=\"stat-divider\"></div>\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"200\">0</div>\n            <div class=\"stat-label\">Trusted Dealers</div>\n          </div>\n          <div class=\"stat-divider\"></div>\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"50000\">0</div>\n            <div class=\"stat-label\">Happy Buyers</div>\n          </div>\n          <div class=\"stat-divider\"></div>\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"47\">0</div>\n            <div class=\"stat-label\">Car Brands</div>\n          </div>\n        </div>
-        <div class=\"hero-stats\" aria-label=\"Platform statistics\">\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"5000\">0</div>\n            <div class=\"stat-label\">Vehicles Listed</div>\n          </div>\n          <div class=\"stat-divider\"></div>\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"200\">0</div>\n            <div class=\"stat-label\">Trusted Dealers</div>\n          </div>\n          <div class=\"stat-divider\"></div>\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"50000\">0</div>\n            <div class=\"stat-label\">Happy Buyers</div>\n          </div>\n          <div class=\"stat-divider\"></div>\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"47\">0</div>\n            <div class=\"stat-label\">Car Brands</div>\n          </div>\n        </div>
-        </p>
-
         <div class="hero-actions">
           <a class="primary-link hero-cta-btn" href="#cars">
-            <span>Explore Vehicles</span>
+            <span>Browse vehicles</span>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <path d="M5 12h14M12 5l7 7-7 7"/>
             </svg>
           </a>
-          <a class="secondary-link hero-cta-btn" href="#about">Discover Kiri Cars</a>
+          <a class="secondary-link hero-cta-btn" href="seller-register.html">List your vehicle</a>
         </div>
 
         <div class="hero-trust">
           <div class="trust-item">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-            </svg>
-            <span>Verified Listings</span>
+            <span class="trust-check" aria-hidden="true">✓</span>
+            <span>Browse local listings</span>
           </div>
           <div class="trust-item">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <rect x="2" y="4" width="20" height="16" rx="2"/>
-              <path d="M6 8h12M12 4v16"/>
-            </svg>
-            <span>Direct Dealer Contact</span>
-          </div>
-          <div class="trust-item">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M12 6v6l4 2"/>
-            </svg>
-            <span>Real-time Updates</span>
+            <span class="trust-check" aria-hidden="true">✓</span>
+            <span>Contact sellers directly</span>
           </div>
         </div>
       </div>
 
-      <div class="hero-scroll-indicator" aria-hidden="true">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 5v14M19 12l-7 7-7-7"/>
-        </svg>
-      </div>
-    </section>
-
-    <!-- Trust & Stats Bar -->
-    <section class="trust-bar" aria-label="Platform trust indicators">
-      <div class="trust-bar-inner">
-        <div class="trust-stat">
-          <div class="trust-number" data-target="5000">0</div>
-          <div class="trust-label">Active Listings</div>
-        </div>
-        <div class="trust-divider"></div>
-        <div class="trust-stat">
-          <div class="trust-number" data-target="200">0</div>
-          <div class="trust-label">Verified Dealers</div>
-        </div>
-        <div class="trust-divider"></div>
-        <div class="trust-stat">
-          <div class="trust-number" data-target="50000">0</div>
-          <div class="trust-label">Monthly Visitors</div>
-        </div>
-        <div class="trust-divider"></div>
-        <div class="trust-stat">
-          <div class="trust-number" data-target="47">0</div>
-          <div class="trust-label">Car Brands</div>
+      <div class="hero-visual">
+        <img
+          src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&amp;fit=crop&amp;w=1200&amp;q=85"
+          alt="A polished sports car ready for the road"
+          fetchpriority="high"
+        >
+        <div class="hero-image-caption">
+          <span class="caption-icon" aria-hidden="true">↗</span>
+          <span><strong>Your next chapter</strong><small>is closer than you think.</small></span>
         </div>
       </div>
     </section>
 
     <section class="marketplace-section" id="cars">
       <div class="section-heading">
-        <p class="eyebrow">THE MARKETPLACE</p>
-        <h2>Find your next vehicle</h2>
-        <p>Search available listings and discover your next drive.</p>
+        <p class="eyebrow">MADE FOR THE WAY YOU DRIVE</p>
+        <h2>Your next car is out there.</h2>
+        <p>Explore the listings, narrow your search, and find the one that fits.</p>
       </div>
 
       <form id="filterForm" class="filter-panel">
+        <div class="filter-intro">
+          <span class="filter-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="10.8" cy="10.8" r="6.8"/>
+              <path d="m16 16 4.2 4.2"/>
+            </svg>
+          </span>
+          <span><strong>Find your fit</strong><small>Set your preferences to get started.</small></span>
+        </div>
         <div class="filter-field">
           <label for="searchInput">Search</label>
           <input
@@ -198,7 +161,10 @@
       </form>
 
       <div class="results-heading">
-        <h3>Available Vehicles</h3>
+        <div>
+          <p class="eyebrow">LISTINGS FOR YOUR SEARCH</p>
+          <h3>Available vehicles</h3>
+        </div>
         <p id="resultsCount" aria-live="polite">Loading vehicles...</p>
       </div>
 
@@ -216,35 +182,13 @@
 
       <div class="about-content">
         <div class="about-header">
-          <p class="eyebrow">ABOUT KIRI CARS</p>
-          <h2>A smarter way to <span class="highlight">discover vehicles.</span></h2>
+          <p class="eyebrow">A BETTER WAY TO GET MOVING</p>
+          <h2>Car shopping, made <span class="highlight">more straightforward.</span></h2>
           <p class="about-lead">
             Kiri Cars brings vehicle listings together in one convenient place.
-            Explore different makes, models, years and prices to find an option
-            that fits your needs.
+            Compare makes, models, years and prices, then connect with sellers
+            through private messages or WhatsApp.
           </p>
-        </div>
-
-        <div class="about-stats" aria-label="Platform statistics">
-          <div class="stat-item">
-            <div class="stat-number" data-target="5000">0</div>
-            <div class="stat-label">Vehicles Listed</div>
-          </div>
-          <div class="stat-divider"></div>
-          <div class="stat-item">
-            <div class="stat-number" data-target="200">0</div>
-            <div class="stat-label">Trusted Dealers</div>
-          </div>
-          <div class="stat-divider"></div>
-          <div class="stat-item">
-            <div class="stat-number" data-target="50000">0</div>
-            <div class="stat-label">Happy Buyers</div>
-          </div>
-          <div class="stat-divider"></div>
-          <div class="stat-item">
-            <div class="stat-number" data-target="47">0</div>
-            <div class="stat-label">Car Brands</div>
-          </div>
         </div>
 
         <div class="about-values">

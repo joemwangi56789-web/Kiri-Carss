@@ -462,53 +462,6 @@ maxPriceInput.addEventListener("input", applyFilters);
 
 loadCars();
 
-// ===== About Section Counter Animation =====
-function initAboutCounters() {
-  const statNumbers = document.querySelectorAll('.about-section .stat-number, .hero-section .stat-number');
-  if (statNumbers.length === 0) return;
-
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        const el = entry.target;
-        const target = parseInt(el.getAttribute('data-target'), 10);
-        if (!isNaN(target) && !el.classList.contains('counted')) {
-          el.classList.add('counted');
-          animateCounter(el, target);
-        }
-        observer.unobserve(el);
-      }
-    });
-  }, { threshold: 0.3, rootMargin: '0px 0px -50px 0px' });
-
-  statNumbers.forEach(el => observer.observe(el));
-}
-
-function animateCounter(element, target) {
-  const duration = 2000; // 2 seconds
-  const startTime = performance.now();
-  const startValue = 0;
-  
-  function updateCounter(currentTime) {
-    const elapsed = currentTime - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    
-    // Easing function (easeOutCubic)
-    const eased = 1 - Math.pow(1 - progress, 3);
-    const current = Math.floor(startValue + (target - startValue) * eased);
-    
-    element.textContent = current.toLocaleString('en-KE');
-    
-    if (progress < 1) {
-      requestAnimationFrame(updateCounter);
-    } else {
-      element.textContent = target.toLocaleString('en-KE');
-    }
-  }
-  
-  requestAnimationFrame(updateCounter);
-}
-
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initAboutCounters);
