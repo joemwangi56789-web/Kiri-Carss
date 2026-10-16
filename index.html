@@ -1,30 +1,110 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <title>Kiri Cars | Find Your Next Car in Kenya</title>
-
-  <meta
-    name="description"
-    content="Discover locally used, freshly imported and brand-new vehicles with Kiri Cars. Search vehicles by make, model, year, price and type."
-  >
-
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kiri Cars | Quality Cars for Sale in Kenya</title>
+  <meta name="description" content="Explore locally used, fresh-import and brand-new vehicles in Kenya. Compare car details, filter by price and model, and contact sellers directly through Kiri Cars.">
   <meta name="theme-color" content="#075de8">
-
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* Homepage-only repairs and responsive layout */
+    :root { --home-blue: #075de8; --home-navy: #082b59; --home-ink: #172b4d; }
+    body { background: #f6f9ff; color: var(--home-ink); }
+    .site-header { background: #fff; color: var(--home-ink); padding: 12px clamp(16px, 5vw, 72px); gap: 22px; }
+    .site-header .brand { color: var(--home-navy); flex-shrink: 0; }
+    .site-header .brand-mark { background: var(--home-blue); border-radius: 11px; }
+    .main-nav { justify-content: flex-end; gap: 10px 18px; }
+    .main-nav a { color: #243b5c; font-size: .9rem; }
+    .main-nav a:last-child { background: var(--home-blue); color: #fff; padding: 9px 13px; border-radius: 9px; }
+    .home-hero { position: relative; isolation: isolate; min-height: 570px; display: grid; align-items: center; padding: clamp(46px, 7vw, 90px) clamp(18px, 7vw, 100px); overflow: hidden; background: linear-gradient(105deg, rgba(5, 28, 62, .96) 0%, rgba(5, 57, 123, .88) 54%, rgba(7, 93, 232, .5) 100%), url('https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1900&q=85') center/cover no-repeat; }
+    .home-hero::after { content: ""; position: absolute; z-index: -1; width: 420px; height: 420px; right: -100px; bottom: -210px; border: 1px solid rgba(255,255,255,.18); border-radius: 50%; box-shadow: 0 0 0 45px rgba(255,255,255,.04), 0 0 0 90px rgba(255,255,255,.035); }
+    .home-hero-content { width: min(100%, 760px); }
+    .home-kicker { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 18px; padding: 7px 12px; border: 1px solid rgba(255,255,255,.3); border-radius: 999px; color: #e1edff; background: rgba(255,255,255,.08); font-size: .78rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .home-hero h1 { margin: 0 0 18px; color: #fff; max-width: 760px; font-size: clamp(2.55rem, 6vw, 5.2rem); line-height: 1.02; letter-spacing: -.04em; }
+    .home-hero h1 span { color: #8ec5ff; }
+    .home-hero .hero-description { max-width: 610px; margin: 0; color: #e1eaff; font-size: clamp(1rem, 1.8vw, 1.18rem); line-height: 1.75; }
+    .home-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+    .home-actions a { display: inline-flex; justify-content: center; align-items: center; gap: 9px; min-height: 48px; padding: 12px 19px; border-radius: 10px; font-weight: 800; text-decoration: none; transition: transform .18s ease, background .18s ease; }
+    .home-actions a:hover { transform: translateY(-2px); text-decoration: none; }
+    .home-primary { color: #fff; background: var(--home-blue); box-shadow: 0 8px 24px rgba(0,0,0,.2); }
+    .home-primary:hover { background: #2478f5; }
+    .home-secondary { color: #fff; border: 1px solid rgba(255,255,255,.65); background: rgba(255,255,255,.08); }
+    .home-benefits { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-top: 30px; color: #e5efff; font-size: .9rem; }
+    .home-benefits span::before { content: "✓"; display: inline-grid; place-items: center; width: 20px; height: 20px; margin-right: 7px; border-radius: 50%; color: #062d61; background: #a7d4ff; font-weight: 900; }
+    .home-shortcuts { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; width: min(1100px, calc(100% - 36px)); margin: -28px auto 0; position: relative; z-index: 2; }
+    .home-shortcut { padding: 20px; border: 1px solid #e2eaf6; border-radius: 15px; background: #fff; box-shadow: 0 12px 35px rgba(14,45,90,.09); text-decoration: none; }
+    .home-shortcut:hover { transform: translateY(-2px); text-decoration: none; }
+    .home-shortcut strong { display: block; margin-bottom: 4px; color: var(--home-navy); font-size: 1rem; }
+    .home-shortcut span { color: #60718a; font-size: .88rem; }
+    .marketplace-section, .about-section { padding: 76px clamp(18px, 6vw, 80px); }
+    .section-heading { max-width: 760px; margin: 0 auto 30px; text-align: center; }
+    .section-heading .eyebrow, .about-header .eyebrow { color: var(--home-blue); margin-bottom: 9px; }
+    .section-heading h2, .about-section h2 { color: var(--home-navy); letter-spacing: -.025em; }
+    .section-heading p:last-child { color: #64748b; }
+    .filter-panel { grid-template-columns: repeat(3, minmax(0,1fr)); border: 1px solid #e1e9f5; background: #fff; }
+    .filter-panel label { color: #263d5d; }
+    .filter-panel button { background: var(--home-blue); }
+    .filter-panel .reset-button { color: #21466f; background: #edf4ff; }
+    .results-heading h3 { color: var(--home-navy); }
+    .results-heading p { color: #64748b; }
+    .cars-grid { align-items: stretch; }
+    .vehicle-card { border-color: #e2eaf6; background: #fff; }
+    .vehicle-card h4 { color: var(--home-navy); }
+    .vehicle-card .vehicle-details, .vehicle-card p { color: #5f6f85; }
+    .vehicle-price { color: var(--home-blue); }
+    .vehicle-card > button { margin-top: 4px; }
+    .vehicle-card > button.secondary-mode { color: #174a88; background: #edf4ff; }
+    .about-section { background: #edf4ff; }
+    .about-content { max-width: 1100px; margin: 0 auto; }
+    .about-header { max-width: 760px; margin-bottom: 26px; }
+    .about-lead { color: #5b6f89; font-size: 1.05rem; }
+    .about-stats { display: none; }
+    .about-values { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; margin-top: 28px; }
+    .value-card { padding: 23px; border: 1px solid #dce7f6; border-radius: 14px; background: #fff; }
+    .value-icon { display: grid; place-items: center; width: 44px; height: 44px; margin-bottom: 14px; border-radius: 12px; color: var(--home-blue); background: #eaf2ff; }
+    .value-icon svg { width: 24px; height: 24px; }
+    .value-card h3 { color: var(--home-navy); }
+    .value-card p { margin-bottom: 0; color: #5f7088; }
+    .about-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
+    .about-cta a { text-decoration: none; }
+    .about-cta .primary-link { color: #fff; background: var(--home-blue); }
+    .about-cta .secondary-link { color: var(--home-blue); border-color: #9ab9e9; }
+    .site-footer { padding: 30px 18px; text-align: center; background: #082b59; }
+    .site-footer p { color: #d7e5fb; }
+    .footer-brand { justify-content: center; }
+    @media (max-width: 850px) {
+      .site-header { align-items: flex-start; flex-direction: column; gap: 12px; }
+      .main-nav { justify-content: flex-start; gap: 9px 14px; }
+      .home-hero { min-height: 510px; }
+      .filter-panel { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .home-shortcuts { grid-template-columns: 1fr; margin-top: 18px; }
+      .about-values { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 520px) {
+      .main-nav { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); width: 100%; gap: 8px; }
+      .main-nav a { padding: 7px 0; }
+      .main-nav a:last-child { text-align: center; }
+      .home-hero { min-height: 520px; padding: 48px 20px; background-position: 58% center; }
+      .home-hero h1 { font-size: clamp(2.45rem, 12vw, 3.6rem); }
+      .home-actions { flex-direction: column; align-items: stretch; }
+      .home-actions a { width: 100%; }
+      .home-benefits { display: grid; gap: 10px; }
+      .filter-panel { grid-template-columns: 1fr; padding: 17px; }
+      .marketplace-section, .about-section { padding: 54px 16px; }
+      .results-heading { align-items: flex-start; flex-direction: column; }
+      .vehicle-card > button { width: calc(100% - 36px); }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }
+  </style>
 </head>
-
 <body>
   <header class="site-header">
-    <a class="brand" href="index.html" aria-label="Kiri Cars home">
+    <a class="brand" href="#home" aria-label="Kiri Cars home">
       <span class="brand-mark">K</span>
       <span>KIRI CARS</span>
     </a>
-
-    <nav class="main-nav">
+    <nav class="main-nav" aria-label="Main navigation">
       <a href="#home">Home</a>
       <a href="#cars">Browse Cars</a>
       <a href="#about">About Us</a>
@@ -35,265 +115,126 @@
   </header>
 
   <main>
-    <section class=\"hero hero-section\" id=\"home\">
-
-
-    <section class="hero" id="home">
-      <div class="hero-background">
-        <div class="hero-bg-shape shape-1"></div>
-        <div class="hero-bg-shape shape-2"></div>
-        <div class="hero-bg-shape shape-3"></div>
-        <div class="hero-grid-overlay"></div>
-      </div>
-
-      <div class="hero-content">
-        <p class="eyebrow">YOUR JOURNEY STARTS HERE</p>
-
-        <h1>Find the car that <span class="highlight">moves you.</span></h1>
-
-        <p class="hero-description">
-          Discover quality vehicles from different manufacturers,
-          compare your options, and connect with a dealer through Kiri Cars.
-        </p>
-        <div class=\"hero-stats\" aria-label=\"Platform statistics\">\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"5000\">0</div>\n            <div class=\"stat-label\">Vehicles Listed</div>\n          </div>\n          <div class=\"stat-divider\"></div>\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"200\">0</div>\n            <div class=\"stat-label\">Trusted Dealers</div>\n          </div>\n          <div class=\"stat-divider\"></div>\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"50000\">0</div>\n            <div class=\"stat-label\">Happy Buyers</div>\n          </div>\n          <div class=\"stat-divider\"></div>\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"47\">0</div>\n            <div class=\"stat-label\">Car Brands</div>\n          </div>\n        </div>
-        <div class=\"hero-stats\" aria-label=\"Platform statistics\">\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"5000\">0</div>\n            <div class=\"stat-label\">Vehicles Listed</div>\n          </div>\n          <div class=\"stat-divider\"></div>\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"200\">0</div>\n            <div class=\"stat-label\">Trusted Dealers</div>\n          </div>\n          <div class=\"stat-divider\"></div>\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"50000\">0</div>\n            <div class=\"stat-label\">Happy Buyers</div>\n          </div>\n          <div class=\"stat-divider\"></div>\n          <div class=\"stat-item\">\n            <div class=\"stat-number\" data-target=\"47\">0</div>\n            <div class=\"stat-label\">Car Brands</div>\n          </div>\n        </div>
-        </p>
-
-        <div class="hero-actions">
-          <a class="primary-link hero-cta-btn" href="#cars">
-            <span>Explore Vehicles</span>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path d="M5 12h14M12 5l7 7-7 7"/>
-            </svg>
-          </a>
-          <a class="secondary-link hero-cta-btn" href="#about">Discover Kiri Cars</a>
+    <section class="home-hero" id="home">
+      <div class="home-hero-content">
+        <p class="home-kicker">Your next drive starts here</p>
+        <h1>Find a car that <span>moves you.</span></h1>
+        <p class="hero-description">Explore locally used, fresh-import and brand-new vehicles from sellers across Kenya. Compare the details, find a car that fits your budget, and contact the seller directly.</p>
+        <div class="home-actions">
+          <a class="home-primary" href="#cars">Browse available cars <span aria-hidden="true">→</span></a>
+          <a class="home-secondary" href="seller-register.html">List your vehicle</a>
         </div>
-
-        <div class="hero-trust">
-          <div class="trust-item">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-            </svg>
-            <span>Verified Listings</span>
-          </div>
-          <div class="trust-item">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <rect x="2" y="4" width="20" height="16" rx="2"/>
-              <path d="M6 8h12M12 4v16"/>
-            </svg>
-            <span>Direct Dealer Contact</span>
-          </div>
-          <div class="trust-item">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <circle cx="12" cy="12" r="10"/>
-              <path d="M12 6v6l4 2"/>
-            </svg>
-            <span>Real-time Updates</span>
-          </div>
+        <div class="home-benefits" aria-label="Marketplace benefits">
+          <span>Search by make, year and budget</span>
+          <span>Compare vehicle details</span>
+          <span>Contact sellers directly</span>
         </div>
-      </div>
-
-      <div class="hero-scroll-indicator" aria-hidden="true">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 5v14M19 12l-7 7-7-7"/>
-        </svg>
       </div>
     </section>
 
-    <!-- Trust & Stats Bar -->
-    <section class="trust-bar" aria-label="Platform trust indicators">
-      <div class="trust-bar-inner">
-        <div class="trust-stat">
-          <div class="trust-number" data-target="5000">0</div>
-          <div class="trust-label">Active Listings</div>
-        </div>
-        <div class="trust-divider"></div>
-        <div class="trust-stat">
-          <div class="trust-number" data-target="200">0</div>
-          <div class="trust-label">Verified Dealers</div>
-        </div>
-        <div class="trust-divider"></div>
-        <div class="trust-stat">
-          <div class="trust-number" data-target="50000">0</div>
-          <div class="trust-label">Monthly Visitors</div>
-        </div>
-        <div class="trust-divider"></div>
-        <div class="trust-stat">
-          <div class="trust-number" data-target="47">0</div>
-          <div class="trust-label">Car Brands</div>
-        </div>
-      </div>
+    <section class="home-shortcuts" aria-label="Quick ways to explore">
+      <a class="home-shortcut" href="#cars">
+        <strong>Find a car for your budget</strong>
+        <span>Use the price filters to narrow your options.</span>
+      </a>
+      <a class="home-shortcut" href="#cars">
+        <strong>Explore makes and models</strong>
+        <span>Search by manufacturer, model, type or year.</span>
+      </a>
+      <a class="home-shortcut" href="seller-register.html">
+        <strong>Are you a dealer or broker?</strong>
+        <span>Create a seller account and start onboarding.</span>
+      </a>
     </section>
 
     <section class="marketplace-section" id="cars">
       <div class="section-heading">
-        <p class="eyebrow">THE MARKETPLACE</p>
-        <h2>Find your next vehicle</h2>
-        <p>Search available listings and discover your next drive.</p>
+        <p class="eyebrow">THE KIRI CARS MARKETPLACE</p>
+        <h2>Explore available vehicles</h2>
+        <p>Filter listings to find vehicles that match what you need and what you want to spend.</p>
       </div>
 
       <form id="filterForm" class="filter-panel">
         <div class="filter-field">
-          <label for="searchInput">Search</label>
-          <input
-            id="searchInput"
-            type="search"
-            placeholder="Make or model (e.g., Toyota Harrier)"
-          >
+          <label for="searchInput">Search make or model</label>
+          <input id="searchInput" type="search" placeholder="e.g. Toyota Harrier">
         </div>
-
         <div class="filter-field">
           <label for="manufacturerFilter">Manufacturer</label>
-          <select id="manufacturerFilter">
-            <option value="">All manufacturers</option>
-          </select>
+          <select id="manufacturerFilter"><option value="">All manufacturers</option></select>
         </div>
-
         <div class="filter-field">
           <label for="typeFilter">Car type</label>
-          <select id="typeFilter">
-            <option value="">All types</option>
-          </select>
+          <select id="typeFilter"><option value="">All types</option></select>
         </div>
-
         <div class="filter-field">
-          <label for="yearFilter">Year</label>
-          <select id="yearFilter">
-            <option value="">All years</option>
-          </select>
+          <label for="yearFilter">Year of manufacture</label>
+          <select id="yearFilter"><option value="">All years</option></select>
         </div>
-
         <div class="filter-field">
-          <label for="statusFilter">Vehicle status</label>
+          <label for="statusFilter">Vehicle condition</label>
           <select id="statusFilter">
-            <option value="">All statuses</option>
+            <option value="">All conditions</option>
             <option value="Locally Used">Locally Used</option>
             <option value="Fresh Import">Fresh Import</option>
             <option value="Brand New">Brand New</option>
           </select>
         </div>
-
         <div class="filter-field">
           <label for="minPrice">Minimum price (KSh)</label>
-          <input
-            id="minPrice"
-            type="number"
-            min="0"
-            placeholder="Minimum"
-          >
+          <input id="minPrice" type="number" min="0" inputmode="numeric" placeholder="e.g. 500000">
         </div>
-
         <div class="filter-field">
           <label for="maxPrice">Maximum price (KSh)</label>
-          <input
-            id="maxPrice"
-            type="number"
-            min="0"
-            placeholder="Maximum"
-          >
+          <input id="maxPrice" type="number" min="0" inputmode="numeric" placeholder="e.g. 2500000">
         </div>
-
-        <button type="submit">Apply Filters</button>
-        <button type="reset" class="reset-button">Clear Filters</button>
+        <button type="submit">Apply filters</button>
+        <button type="reset" class="reset-button">Clear filters</button>
       </form>
 
       <div class="results-heading">
-        <h3>Available Vehicles</h3>
-        <p id="resultsCount" aria-live="polite">Loading vehicles...</p>
+        <h3>Vehicles for sale</h3>
+        <p id="resultsCount" aria-live="polite">Loading vehicles…</p>
       </div>
-
-      <div id="carsGrid" class="cars-grid">
-        <p>Loading vehicle listings...</p>
+      <div id="carsGrid" class="cars-grid" aria-live="polite">
+        <p>Loading vehicle listings…</p>
       </div>
     </section>
 
     <section class="about-section" id="about">
-      <div class="about-background">
-        <div class="about-bg-shape shape-1"></div>
-        <div class="about-bg-shape shape-2"></div>
-        <div class="about-bg-shape shape-3"></div>
-      </div>
-
       <div class="about-content">
         <div class="about-header">
           <p class="eyebrow">ABOUT KIRI CARS</p>
-          <h2>A smarter way to <span class="highlight">discover vehicles.</span></h2>
-          <p class="about-lead">
-            Kiri Cars brings vehicle listings together in one convenient place.
-            Explore different makes, models, years and prices to find an option
-            that fits your needs.
-          </p>
+          <h2>A simpler way to discover your next vehicle.</h2>
+          <p class="about-lead">Kiri Cars brings vehicle listings together in one convenient place, helping buyers explore different makes, models, years and prices while giving dealers and brokers a place to showcase their vehicles.</p>
         </div>
-
-        <div class="about-stats" aria-label="Platform statistics">
-          <div class="stat-item">
-            <div class="stat-number" data-target="5000">0</div>
-            <div class="stat-label">Vehicles Listed</div>
-          </div>
-          <div class="stat-divider"></div>
-          <div class="stat-item">
-            <div class="stat-number" data-target="200">0</div>
-            <div class="stat-label">Trusted Dealers</div>
-          </div>
-          <div class="stat-divider"></div>
-          <div class="stat-item">
-            <div class="stat-number" data-target="50000">0</div>
-            <div class="stat-label">Happy Buyers</div>
-          </div>
-          <div class="stat-divider"></div>
-          <div class="stat-item">
-            <div class="stat-number" data-target="47">0</div>
-            <div class="stat-label">Car Brands</div>
-          </div>
-        </div>
-
         <div class="about-values">
-          <article class="value-card" data-value="mission">
-            <div class="value-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-              </svg>
-            </div>
-            <h3>Our Mission</h3>
-            <p>Make vehicle discovery simpler by helping buyers explore available options in one trusted marketplace.</p>
+          <article class="value-card">
+            <div class="value-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+            <h3>Our mission</h3>
+            <p>Make vehicle discovery easier by helping buyers compare available options in one marketplace.</p>
           </article>
-
-          <article class="value-card" data-value="values">
-            <div class="value-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-              </svg>
-            </div>
-            <h3>Our Values</h3>
-            <p>Clear information, convenient access, and better connections between buyers and dealers.</p>
+          <article class="value-card">
+            <div class="value-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21.2l7.8-7.7 1.1-1.1a5.5 5.5 0 0 0-.1-7.8z"/></svg></div>
+            <h3>Our values</h3>
+            <p>Clear vehicle information, convenient access, and direct communication between buyers and sellers.</p>
           </article>
-
-          <article class="value-card" data-value="goal">
-            <div class="value-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M12 6v6l4 2"/>
-              </svg>
-            </div>
-            <h3>Our Goal</h3>
-            <p>Build Kenya's most useful vehicle marketplace that grows with the needs of car buyers and dealerships.</p>
+          <article class="value-card">
+            <div class="value-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+            <h3>Our goal</h3>
+            <p>Build a useful Kenyan vehicle marketplace that grows with the needs of buyers and dealerships.</p>
           </article>
         </div>
-
         <div class="about-cta">
-          <a href="#cars" class="primary-link about-cta-btn">Start Exploring Vehicles</a>
-          <a href="seller-register.html" class="secondary-link about-cta-btn">Become a Seller</a>
+          <a href="#cars" class="primary-link">Explore vehicles</a>
+          <a href="seller-register.html" class="secondary-link">Become a seller</a>
         </div>
       </div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <a class="brand footer-brand" href="#home">
-      <span class="brand-mark">K</span>
-      <span>KIRI CARS</span>
-    </a>
-
+    <a class="brand footer-brand" href="#home"><span class="brand-mark">K</span><span>KIRI CARS</span></a>
     <p>Find your next drive with Kiri Cars.</p>
     <p>&copy; <span id="currentYear"></span> Kiri Cars. All rights reserved.</p>
   </footer>
