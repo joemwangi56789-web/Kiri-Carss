@@ -469,4 +469,54 @@ statusFilter.addEventListener("change", applyFilters);
 minPriceInput.addEventListener("input", applyFilters);
 maxPriceInput.addEventListener("input", applyFilters);
 
+/* Animated counter for hero trust bar stats */
+function animateCounter(element) {
+  const target = Number(element.getAttribute("data-target"));
+  if (!Number.isFinite(target)) return;
+
+  const duration = 1200;
+  const start = performance.now();
+  const startValue = 0;
+
+  function update(now) {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+
+    // Ease-out cubic
+    const ease = 1 - Math.pow(1 - progress, 3);
+    const current = Math.floor(startValue + (target - startValue) * ease);
+
+    element.textContent = current.toLocaleString("en-KE");
+
+    if (progress < 1) {
+      requestAnimationFrame(update);
+    } else {
+      element.textContent = target.toLocaleString("en-KE");
+    }
+  }
+
+  requestAnimationFrame(update);
+}
+
+function initHeroCounters() {
+  const counters = document.querySelectorAll(".trust-number");
+  if (counters.length === 0) return;
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && !entry.target.dataset.animated) {
+          entry.target.dataset.animated = "true";
+          animateCounter(entry.target);
+        }
+      });
+    },
+    { threshold: 0.4, rootMargin: "0px 0px -80px 0px" }
+  );
+
+  counters.forEach((counter) => observer.observe(counter));
+}
+
+initHeroCounters();
+
 loadCars();
