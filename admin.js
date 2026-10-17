@@ -146,6 +146,14 @@ function normalizeRole(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function canPublishListings(role, profile, approvalStatus) {
+  return profile.active === true && (
+    role === "admin" ||
+    role === "owner" ||
+    (role === "dealer" && approvalStatus === "approved")
+  );
+}
+
 function normalizeVehicleStatus(status) {
   const legacyStatuses = {
     used: "Locally Used",
@@ -222,8 +230,7 @@ onAuthStateChanged(auth, async (user) => {
     currentRole = role;
     currentProfile = profile;
     currentApprovalStatus = approvalStatus;
-    currentCanPublish = role === "admin" || role === "owner" ||
-      (role === "dealer" && profile.active === true && approvalStatus === "approved");
+    currentCanPublish = canPublishListings(role, profile, approvalStatus);
     currentAdminName = profile.name || user.email || "Kiri Cars seller";
     currentWhatsApp = normalizeKenyanPhone(profile.whatsapp);
     const ownerDashboardLink = document.getElementById("ownerDashboardLink");
@@ -408,8 +415,7 @@ carForm.addEventListener("submit", async (event) => {
     currentApprovalStatus = String(
       latestProfile.approvalStatus || (currentRole === "admin" ? "approved" : "pending")
     ).trim().toLowerCase();
-    currentCanPublish = (currentRole === "admin" && latestProfile.active === true) ||
-      (currentRole === "dealer" && latestProfile.active === true && currentApprovalStatus === "approved");
+    currentCanPublish = canPublishListings(currentRole, latestProfile, currentApprovalStatus);
 
     if (currentRole === "dealer" && currentApprovalStatus === "approved" && latestProfile.active === true) {
       addCarButton.textContent = "Publish Vehicle";
@@ -437,7 +443,7 @@ carForm.addEventListener("submit", async (event) => {
         "Profile role: " + (currentProfile?.role),
         "Profile approvalStatus: " + (currentProfile?.approvalStatus),
         "Profile accountStatus: " + (currentProfile?.accountStatus),
-        "Expected for publish: role=dealer, active=true, approvalStatus=approved",
+        "Expected for publish: active=true and role=admin, owner, or approved dealer",
         "==============================="
       ].join("\n");
       console.error(diag);
@@ -1107,7 +1113,7 @@ async function checkProfileStatus() {
     const approvalStatus = String(profile.approvalStatus || (role === "admin" ? "approved" : "pending")).toLowerCase();
     const active = profile.active === true;
     const accountStatus = profile.accountStatus || "not_set";
-    const canPublish = (role === "admin" && active) || (role === "dealer" && active && approvalStatus === "approved");
+    const canPublish = canPublishListings(role, profile, approvalStatus);
     
     const lines = [
       "=== FIRESTORE PROFILE DIAGNOSTICS ===",
