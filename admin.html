@@ -4,20 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard | Kiri Cars</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=12">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
-<body>
+<body class="dealer-dashboard-page">
   <header class="dashboard-header">
     <div class="header-left">
       <button id="sidebarToggle" type="button" class="sidebar-toggle" aria-label="Open navigation menu" aria-expanded="false" aria-controls="sidebar">☰</button>
       <div class="header-brand">
+        <span class="dashboard-brand-mark" aria-hidden="true">KC</span>
         <h1>Kiri Cars</h1>
         <p>Showroom Admin Dashboard</p>
       </div>
     </div>
+    <div class="header-current-view" id="headerCurrentView">Home</div>
     <div class="header-right" style="display: flex; align-items: center; gap: 12px;">
-      <button id="themeToggle" type="button" class="theme-toggle" aria-label="Toggle light/dark mode" title="Toggle theme">☀️</button>
       <div class="profile-dropdown" id="profileDropdown">
         <button id="profileAvatarBtn" type="button" class="profile-avatar-btn" aria-label="User menu" aria-expanded="false" aria-haspopup="true" title="Your account">
           <span class="avatar-placeholder">👤</span>
@@ -157,6 +158,7 @@
     </nav>
     <div class="sidebar-footer">
       <a href="buyer.html?mode=inbox" class="sidebar-link"><span class="nav-icon">💬</span><span class="nav-text">Buyer Messages</span></a>
+      <a href="owner.html" class="sidebar-link" id="ownerDashboardLink" style="display: none;"><span class="nav-icon">⚙️</span><span class="nav-text">Owner Control Center</span></a>
       <a href="index.html" class="sidebar-link"><span class="nav-icon">🌐</span><span class="nav-text">Public Website</span></a>
     </div>
   </aside>
@@ -325,7 +327,7 @@
             placeholder="Describe the vehicle, features and condition"
           ></textarea>
 
-          <label for="carPhotos">Vehicle photos (required)</label>
+          <label for="carPhotos" id="carPhotosLabel">Vehicle photos (required)</label>
           <input
             id="carPhotos"
             type="file"
@@ -437,6 +439,6 @@
     </section>
   </main>
 
-  <script type="module" src="admin.js"></script>
+  <script type="module" src="admin.js?v=3"></script>
 </body>
 </html>

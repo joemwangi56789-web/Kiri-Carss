@@ -1071,20 +1071,6 @@ p {
   color: var(--white);
 }
 
-/* Theme toggle button in header */
-.theme-toggle {
-  background: var(--blue-dark) !important;
-  border: 2px solid var(--white) !important;
-  color: var(--white) !important;
-  padding: 8px 12px !important;
-  border-radius: 8px !important;
-  font-size: 1.2rem !important;
-  min-width: 44px !important;
-}
-.theme-toggle:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
-}
-
 /* Logout button in header */
 .logout-button {
   background: var(--blue-dark) !important;
@@ -3291,5 +3277,2611 @@ p {
 
   .overview-stat-action {
     font-size: 0.72rem;
+  }
+}
+
+/* ==========================================================================
+   Owner Control Center - Sidebar & Layout
+   ========================================================================== */
+
+.owner-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 260px;
+  height: 100vh;
+  background: var(--blue);
+  color: var(--white);
+  z-index: 110;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.owner-sidebar.open {
+  transform: translateX(0);
+}
+
+.sidebar-brand {
+  position: relative;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.sidebar-close {
+  display: none;
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--white);
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+.owner-sidebar-backdrop {
+  display: none;
+}
+
+.owner-sidebar-backdrop[hidden] {
+  display: none !important;
+}
+
+.sidebar-brand h2 {
+  margin: 0 0 4px;
+  font-size: 1.25rem;
+}
+
+.sidebar-brand p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.7);
+}
+
+.sidebar-nav {
+  padding: 24px 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.nav-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.75);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.nav-item:hover {
+  background: rgba(255,255,255,0.08);
+  color: var(--white);
+}
+
+.nav-item.active {
+  background: rgba(255,255,255,0.15);
+  color: var(--white);
+  border-left: 3px solid var(--blue-accent);
+}
+
+.nav-item.active .nav-icon {
+  color: var(--blue-accent);
+}
+
+.nav-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  font-size: 1.4rem;
+  line-height: 1;
+  text-align: center;
+}
+
+.hamburger {
+  display: flex;
+  width: 22px;
+  height: 16px;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.hamburger .bar {
+  display: block;
+  width: 100%;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+.sidebar-footer {
+  padding: 20px 24px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.owner-main {
+  margin-left: 0;
+  transition: margin-left 0.25s ease;
+}
+
+.owner-sidebar.open ~ .owner-main,
+.owner-main.sidebar-open {
+  margin-left: 260px;
+}
+
+/* ==========================================================================
+   Owner Control Center - Topbar
+   ========================================================================== */
+
+.owner-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  background: var(--blue);
+  color: var(--white);
+  box-shadow: var(--shadow);
+  position: sticky;
+  top: 0;
+  z-index: 105;
+  flex-wrap: wrap;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 260px;
+}
+
+.topbar-title h1 {
+  margin: 0 0 4px;
+  font-size: 1.25rem;
+}
+
+.topbar-title p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.8);
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.search-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 240px;
+}
+
+.search-bar input {
+  width: 100%;
+  padding: 10px 14px;
+  padding-right: 34px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.1);
+  color: var(--white);
+  font-size: 0.9rem;
+}
+
+.search-bar input::placeholder {
+  color: rgba(255,255,255,0.5);
+}
+
+.search-bar input:focus {
+  outline: none;
+  border-color: var(--blue-accent);
+  background: rgba(255,255,255,0.15);
+}
+
+.btn-icon {
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255,255,255,0.1);
+  color: var(--white);
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-icon:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+.position-relative {
+  position: relative;
+}
+
+.badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  background: var(--accent-red);
+  color: var(--white);
+  border-radius: 50%;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Profile dropdown */
+.profile-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.profile-btn {
+  padding: 8px;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--blue-accent);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 110%;
+  right: 0;
+  width: 220px;
+  background: var(--white);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+  padding: 12px 0;
+  z-index: 111;
+}
+
+.dropdown-menu.hidden {
+  display: none;
+}
+
+.dropdown-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dropdown-name {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.dropdown-email {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.dropdown-divider {
+  margin: 8px 0;
+  border: none;
+  border-top: 1px solid var(--border-color);
+}
+
+.dropdown-item {
+  width: 100%;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.dropdown-item:hover {
+  background: var(--hover-bg);
+}
+
+.dropdown-item.text-danger {
+  color: var(--accent-red);
+}
+
+.dropdown-item.text-danger:hover {
+  background: #fdecea;
+}
+
+/* ==========================================================================
+   Owner Control Center - Stats Cards
+   ========================================================================== */
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  padding: 20px 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.stat-card {
+  background: var(--white);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: var(--card-shadow);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--card-shadow-hover);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--bg-tertiary);
+  color: var(--blue-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+}
+
+.stat-trend {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.stat-trend.up {
+  color: var(--success-color);
+}
+
+.stat-trend.down {
+  color: var(--accent-red);
+}
+
+.stat-trend.neutral {
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   Owner Control Center - Panels
+   ========================================================================== */
+
+.owner-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px 24px 60px;
+}
+
+.owner-panel {
+  animation: panelFadeIn 0.25s ease;
+}
+
+@keyframes panelFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.panel-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.panel-header.with-controls {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.panel-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.panel-header p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.panel-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.quick-action-btn {
+  width: 100%;
+  padding: 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  text-align: left;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quick-action-btn:hover {
+  background: var(--hover-bg);
+  border-color: var(--blue-dark);
+}
+
+/* ==========================================================================
+   Owner Control Center - Search & Filters
+   ========================================================================== */
+
+.account-search,
+.seller-search,
+.vehicle-search,
+.audit-search {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+  align-items: end;
+}
+
+.account-search input,
+.seller-search input,
+.vehicle-search input,
+.audit-search input {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  font-size: 0.9rem;
+}
+
+.account-search select,
+.seller-search select,
+.vehicle-search select,
+.audit-search select {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--white);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   Owner Control Center - Account Lists
+   ========================================================================== */
+
+.account-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.account-item,
+.admin-list-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  background: var(--white);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.account-item:hover,
+.admin-list-item:hover {
+  border-color: var(--blue-dark);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.account-item strong,
+.admin-list-item strong {
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.account-item p,
+.admin-list-item p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.account-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  border-radius: 6px;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: var(--hover-bg);
+}
+
+.btn-outline.text-danger {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+}
+
+.btn-outline.text-danger:hover:not(:disabled) {
+  background: #fdecea;
+  border-color: var(--accent-red);
+}
+
+.btn-full {
+  width: 100%;
+}
+
+.pagination-info {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 16px 0;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+.pagination-btn {
+  padding: 8px 16px;
+  font-size: 0.85rem;
+}
+
+#accountsPageIndicator {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   Owner Control Center - Seller Review Actions
+   ========================================================================== */
+
+.seller-review-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.seller-verification-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.seller-verification-checklist label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.seller-verification-checklist input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--blue-dark);
+}
+
+.seller-verification-checklist p {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin: 8px 0 0;
+  font-style: italic;
+}
+
+/* ==========================================================================
+   Owner Control Center - Revenue Dashboard
+   ========================================================================== */
+
+.revenue-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.revenue-stat {
+  background: var(--white);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.revenue-stat h4 {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.revenue-stat .value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+}
+
+.revenue-stat .sub {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   Owner Control Center - Toast Notifications
+   ========================================================================== */
+
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  background: var(--white);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--blue-dark);
+  border-radius: 10px;
+  padding: 12px 16px;
+  box-shadow: var(--card-shadow);
+  min-width: 300px;
+  max-width: 450px;
+  animation: toastSlideIn 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+@keyframes toastSlideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.toast.toast-error {
+  border-left-color: var(--accent-red);
+}
+
+.toast.toast-success {
+  border-left-color: var(--success-color);
+}
+
+.toast.toast-warning {
+  border-left-color: #f59e0b;
+}
+
+.toast-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.toast-message {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.toast-title {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 2px;
+  line-height: 1;
+}
+
+.toast-close:hover {
+  color: var(--text-primary);
+}
+
+/* ==========================================================================
+   Owner Control Center - Confirmation Dialog
+   ========================================================================== */
+
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.dialog-overlay.hidden {
+  display: none;
+}
+
+.dialog-container {
+  background: var(--white);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+  width: 100%;
+  max-width: 480px;
+  animation: dialogSlideIn 0.25s ease;
+}
+
+@keyframes dialogSlideIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dialog-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.dialog-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 4px;
+  line-height: 1;
+}
+
+.dialog-close:hover {
+  color: var(--text-primary);
+}
+
+.dialog-body {
+  padding: 20px;
+}
+
+.dialog-body p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+/* ==========================================================================
+   Owner Control Center - Detail View Overlay
+   ========================================================================== */
+
+.detail-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.3);
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.detail-overlay.hidden {
+  display: none;
+}
+
+.dialog-overlay[hidden],
+.detail-overlay[hidden] {
+  display: none !important;
+}
+
+.detail-panel {
+  background: var(--white);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+  width: 100%;
+  max-width: 600px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  animation: dialogSlideIn 0.25s ease;
+}
+
+.detail-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  z-index: 1;
+}
+
+.detail-close:hover {
+  color: var(--text-primary);
+}
+
+.detail-content {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ==========================================================================
+   Owner Control Center - Settings
+   ========================================================================== */
+
+.danger-zone {
+  background: #fdf7f7;
+  border: 1px solid #fed7d7;
+}
+
+.danger-zone h3 {
+  color: var(--accent-red);
+}
+
+/* ==========================================================================
+   Owner Control Center - Mobile Responsive
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .owner-main.sidebar-open {
+    margin-left: 0;
+  }
+  
+  .topbar-left {
+    min-width: auto;
+  }
+  
+  .search-bar {
+    min-width: 180px;
+  }
+  
+  .topbar-right {
+    gap: 8px;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+    padding: 16px 20px;
+  }
+  
+  .owner-content {
+    padding: 16px 20px 60px;
+  }
+  
+  .panel-header.with-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .panel-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+  
+  .panel-actions .btn {
+    flex: 1;
+  }
+  
+  .account-search,
+  .seller-search,
+  .vehicle-search,
+  .audit-search {
+    grid-template-columns: 1fr;
+  }
+  
+  .dialog-container {
+    margin: 16px;
+    max-width: calc(100% - 32px);
+  }
+  
+  .detail-panel {
+    margin: 16px;
+    max-width: calc(100% - 32px);
+    max-height: 90vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .owner-topbar {
+    padding: 12px 16px;
+  }
+  
+  .topbar-title h1 {
+    font-size: 1.1rem;
+  }
+  
+  .search-bar {
+    min-width: 140px;
+  }
+  
+  .stats-grid {
+    padding: 12px 16px;
+  }
+  
+  .stat-card {
+    padding: 16px;
+  }
+  
+  .stat-value {
+    font-size: 1.5rem;
+  }
+  
+  .owner-content {
+    padding: 12px 16px 60px;
+  }
+  
+  .account-item,
+  .admin-list-item {
+    padding: 12px;
+  }
+  
+  .dialog-container {
+    max-width: calc(100% - 32px);
+  }
+  
+  .dialog-actions {
+    flex-direction: column-reverse;
+  }
+  
+  .dialog-actions .btn {
+    width: 100%;
+  }
+}
+
+/* Shared dark technical dashboard skin */
+body.owner-dashboard-page,
+body.dealer-dashboard-page {
+  --blue: #121722;
+  --blue-dark: #0a0c11;
+  --blue-light: #1b2434;
+  --blue-accent: #7599ee;
+  --bg-primary: #090b10;
+  --bg-secondary: #10131a;
+  --bg-tertiary: #171c26;
+  --text-primary: #e4e9f3;
+  --text-secondary: #a4adbd;
+  --text-muted: #737e91;
+  --border-color: #252b37;
+  --input-bg: #10141c;
+  --input-border: #303a4b;
+  --input-focus: #789df4;
+  --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+  --hover-bg: #1a2130;
+  --accent-bg: #141d31;
+  --accent-text: #a9c1ff;
+  --accent-border: #344b7b;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  background-image:
+    linear-gradient(rgba(100, 130, 190, 0.075) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(100, 130, 190, 0.075) 1px, transparent 1px);
+  background-size: 48px 48px;
+  background-attachment: fixed;
+}
+
+html[data-theme="light"] body.dealer-dashboard-page {
+  --bg-primary: #f2f5fa;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e9eef6;
+  --text-primary: #172033;
+  --text-secondary: #536078;
+  --text-muted: #738099;
+  --border-color: #d7deea;
+  --input-bg: #ffffff;
+  --input-border: #c4cedd;
+  --card-shadow: 0 8px 24px rgba(25, 40, 68, 0.08);
+  --hover-bg: #e6ecf5;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  background-image:
+    linear-gradient(rgba(68, 95, 148, 0.075) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(68, 95, 148, 0.075) 1px, transparent 1px);
+}
+
+body.owner-dashboard-page h1,
+body.owner-dashboard-page h2,
+body.owner-dashboard-page h3,
+body.owner-dashboard-page h4,
+body.dealer-dashboard-page h1,
+body.dealer-dashboard-page h2,
+body.dealer-dashboard-page h3,
+body.dealer-dashboard-page h4,
+body.owner-dashboard-page .nav-label,
+body.dealer-dashboard-page .nav-text,
+body.owner-dashboard-page .header-current-view,
+body.dealer-dashboard-page .header-current-view {
+  font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  letter-spacing: 0;
+}
+
+body.owner-dashboard-page a,
+body.dealer-dashboard-page a {
+  color: #91adf5;
+}
+
+body.owner-dashboard-page .owner-topbar,
+body.dealer-dashboard-page .dashboard-header {
+  position: sticky;
+  top: 0;
+  z-index: 105;
+  height: 64px;
+  min-height: 64px;
+  padding: 0 24px;
+  color: var(--text-primary);
+  background: rgba(12, 14, 20, 0.97);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: none;
+}
+
+body.owner-dashboard-page .owner-topbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 16px;
+}
+
+body.owner-dashboard-page .topbar-left {
+  min-width: 0;
+}
+
+body.owner-dashboard-page .owner-topbar-brand,
+body.dealer-dashboard-page .header-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-primary);
+  font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dashboard-brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  color: #a9c1ff;
+  background: #151b28;
+  border: 1px solid #627fca;
+  border-radius: 50%;
+  font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  font-size: 0.64rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+body.owner-dashboard-page .topbar-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+body.owner-dashboard-page .header-current-view,
+body.dealer-dashboard-page .header-current-view {
+  justify-self: center;
+  color: #8daaf4;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+body.owner-dashboard-page .topbar-right {
+  justify-self: end;
+}
+
+body.dealer-dashboard-page .dashboard-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 16px;
+}
+
+body.dealer-dashboard-page .header-left,
+body.dealer-dashboard-page .header-right {
+  min-width: 0;
+}
+
+body.dealer-dashboard-page .header-left {
+  justify-content: flex-start;
+}
+
+body.dealer-dashboard-page .header-right {
+  justify-content: flex-end;
+}
+
+body.dealer-dashboard-page .header-brand p {
+  display: none;
+}
+
+body.dealer-dashboard-page .header-brand h1 {
+  color: var(--text-primary);
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+body.owner-dashboard-page .btn-icon,
+body.dealer-dashboard-page .sidebar-toggle,
+body.dealer-dashboard-page .profile-avatar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: #91adf5;
+  background: #171d2a !important;
+  border: 1px solid #2a3446 !important;
+  border-radius: 4px !important;
+}
+
+body.owner-dashboard-page .btn-icon:hover,
+body.dealer-dashboard-page .sidebar-toggle:hover,
+body.dealer-dashboard-page .profile-avatar-btn:hover {
+  color: #c1d1ff;
+  background: #202a3d !important;
+}
+
+body.dealer-dashboard-page .profile-avatar-btn {
+  border-radius: 50% !important;
+}
+
+body.owner-dashboard-page .owner-sidebar {
+  top: 64px;
+  left: 0;
+  width: 225px;
+  height: calc(100vh - 64px);
+  background: rgba(12, 14, 20, 0.98);
+  border-right: 1px solid var(--border-color);
+  transform: translateX(0);
+}
+
+body.owner-dashboard-page .owner-main,
+body.owner-dashboard-page .owner-main.sidebar-open {
+  margin-left: 225px;
+  transition: margin-left 0.25s ease;
+}
+
+body.dealer-dashboard-page .sidebar {
+  top: 64px;
+  width: 64px;
+  height: calc(100vh - 64px);
+  background: rgba(12, 14, 20, 0.98);
+  border-right: 1px solid var(--border-color);
+}
+
+body.dealer-dashboard-page .sidebar.expanded {
+  width: 225px;
+}
+
+body.owner-dashboard-page .sidebar-nav,
+body.dealer-dashboard-page .sidebar-nav {
+  padding-top: 16px;
+}
+
+body.owner-dashboard-page .nav-item,
+body.dealer-dashboard-page .nav-item,
+body.dealer-dashboard-page .sidebar-link {
+  min-height: 48px;
+  color: #b9c1cf;
+  border-left-color: transparent;
+  border-radius: 0;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+
+body.owner-dashboard-page .nav-item:hover,
+body.dealer-dashboard-page .nav-item:hover,
+body.dealer-dashboard-page .sidebar-link:hover {
+  color: #e4eaff;
+  background: #151b28;
+  border-left-color: #617fc9;
+}
+
+body.owner-dashboard-page .nav-item.active,
+body.dealer-dashboard-page .nav-item.active {
+  color: #f4f6fc;
+  background: #4269c2;
+  border-left-color: #92b0ff;
+}
+
+body.owner-dashboard-page .nav-icon,
+body.dealer-dashboard-page .nav-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+body.owner-dashboard-page .sidebar-footer,
+body.dealer-dashboard-page .sidebar-footer {
+  border-top: 1px solid var(--border-color);
+}
+
+body.dealer-dashboard-page .nav-section-title {
+  color: #758198;
+  font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+}
+
+body.owner-dashboard-page .owner-content,
+body.dealer-dashboard-page .dashboard-container {
+  max-width: none;
+  min-height: calc(100vh - 64px);
+  padding: 32px clamp(20px, 3vw, 48px) 60px;
+  background: transparent;
+}
+
+body.dealer-dashboard-page .dashboard-container {
+  margin-left: 225px;
+  transition: margin-left 0.3s ease;
+}
+
+body.dealer-dashboard-page .sidebar:not(.expanded) ~ .dashboard-container {
+  margin-left: 64px;
+}
+
+body.owner-dashboard-page .owner-panel,
+body.dealer-dashboard-page .content-section.active {
+  animation: panelFadeIn 0.2s ease-out;
+}
+
+body.owner-dashboard-page .dashboard-card,
+body.owner-dashboard-page .stat-card,
+body.owner-dashboard-page .revenue-stat,
+body.dealer-dashboard-page .welcome-card,
+body.dealer-dashboard-page .dashboard-card,
+body.dealer-dashboard-page .overview-stat,
+body.dealer-dashboard-page .vehicle-card {
+  color: var(--text-primary);
+  background: rgba(16, 19, 26, 0.94);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+body.owner-dashboard-page .stat-card,
+body.owner-dashboard-page .revenue-stat {
+  background: rgba(16, 19, 26, 0.94);
+}
+
+body.owner-dashboard-page .account-stat,
+body.dealer-dashboard-page .overview-stat {
+  color: var(--text-primary);
+  background: #111621;
+  border-color: #2a3446;
+  border-radius: 4px;
+}
+
+body.owner-dashboard-page .account-stat strong,
+body.owner-dashboard-page .stat-value,
+body.owner-dashboard-page .revenue-stat .value,
+body.dealer-dashboard-page .overview-stat strong {
+  color: #92adf3;
+}
+
+body.owner-dashboard-page .account-stat span,
+body.owner-dashboard-page .panel-header p,
+body.dealer-dashboard-page .welcome-card p,
+body.dealer-dashboard-page .overview-stat-label {
+  color: var(--text-secondary);
+}
+
+body.owner-dashboard-page .admin-list-item,
+body.owner-dashboard-page .account-item,
+body.owner-dashboard-page .seller-verification-checklist,
+body.dealer-dashboard-page .admin-list-item {
+  color: var(--text-primary);
+  background: #11151d;
+  border-color: var(--border-color);
+  border-radius: 4px;
+}
+
+body.owner-dashboard-page .account-item p,
+body.owner-dashboard-page .admin-list-item p,
+body.dealer-dashboard-page .admin-list-item p {
+  color: var(--text-secondary);
+}
+
+body.owner-dashboard-page input,
+body.owner-dashboard-page select,
+body.owner-dashboard-page textarea,
+body.dealer-dashboard-page input,
+body.dealer-dashboard-page select,
+body.dealer-dashboard-page textarea {
+  color: var(--text-primary);
+  background: var(--input-bg);
+  border-color: var(--input-border);
+  border-radius: 4px;
+}
+
+body.owner-dashboard-page button.btn-primary,
+body.dealer-dashboard-page button.btn-primary,
+body.dealer-dashboard-page .overview-action-primary {
+  color: #fff;
+  background: #4269c2;
+  border-color: #587bd0;
+  border-radius: 4px;
+}
+
+body.owner-dashboard-page button.btn-secondary,
+body.owner-dashboard-page button.btn-outline,
+body.dealer-dashboard-page button.btn-secondary,
+body.dealer-dashboard-page button.btn-outline,
+body.dealer-dashboard-page .overview-action-secondary {
+  color: var(--text-primary);
+  background: #171c26;
+  border-color: #30394a;
+  border-radius: 4px;
+}
+
+body.owner-dashboard-page .quick-action-btn {
+  color: var(--text-primary);
+  background: #11151d;
+  border-color: var(--border-color);
+  border-radius: 4px;
+}
+
+body.owner-dashboard-page .dialog-container,
+body.owner-dashboard-page .detail-panel,
+body.dealer-dashboard-page .modal-container,
+body.owner-dashboard-page .dropdown-menu,
+body.dealer-dashboard-page .profile-dropdown-menu {
+  color: var(--text-primary);
+  background: #11151d;
+  border-color: var(--border-color);
+  border-radius: 4px;
+}
+
+body.owner-dashboard-page .dialog-header,
+body.owner-dashboard-page .dialog-actions,
+body.owner-dashboard-page .dropdown-header,
+body.dealer-dashboard-page .modal-header {
+  border-color: var(--border-color);
+}
+
+body.owner-dashboard-page .dialog-body p,
+body.owner-dashboard-page .dropdown-name,
+body.owner-dashboard-page .dropdown-item,
+body.dealer-dashboard-page .profile-dropdown-item {
+  color: var(--text-primary);
+}
+
+body.owner-dashboard-page .dropdown-item:hover,
+body.dealer-dashboard-page .profile-dropdown-item:hover {
+  background: #1c2432;
+}
+
+@media (min-width: 769px) {
+  body.owner-dashboard-page .owner-sidebar {
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 768px) {
+  body.owner-dashboard-page .owner-sidebar {
+    top: 0;
+    width: min(280px, 86vw);
+    height: 100vh;
+    z-index: 120;
+    transform: translateX(-100%);
+  }
+
+  body.owner-dashboard-page .owner-sidebar.open {
+    transform: translateX(0);
+  }
+
+  body.owner-dashboard-page .owner-main,
+  body.owner-dashboard-page .owner-main.sidebar-open {
+    margin-left: 0;
+  }
+
+  body.owner-dashboard-page .owner-sidebar-backdrop:not([hidden]) {
+    z-index: 119;
+  }
+
+  body.owner-dashboard-page .sidebar-close {
+    display: flex;
+  }
+
+  body.dealer-dashboard-page .dashboard-container,
+  body.dealer-dashboard-page .sidebar:not(.expanded) ~ .dashboard-container {
+    margin-left: 0;
+  }
+
+  body.dealer-dashboard-page .sidebar {
+    top: 64px;
+    height: calc(100vh - 64px);
+    z-index: 120;
+  }
+
+  body.dealer-dashboard-page .sidebar.expanded {
+    width: min(280px, 86vw);
+  }
+
+  body.dealer-dashboard-page .dashboard-header {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    padding: 0 12px;
+  }
+
+  body.dealer-dashboard-page .header-current-view {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 560px) {
+  body.owner-dashboard-page .owner-topbar {
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+    padding: 0 12px;
+  }
+
+  body.owner-dashboard-page .topbar-right {
+    gap: 6px;
+  }
+
+  body.owner-dashboard-page .search-bar {
+    min-width: 0;
+    width: 36px;
+  }
+
+  body.owner-dashboard-page .search-bar input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+
+  body.dealer-dashboard-page .header-right {
+    gap: 6px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  #ownerMain.sidebar-open {
+    margin-left: 0;
+  }
+
+  .owner-sidebar-backdrop:not([hidden]) {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 109;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: rgba(0, 0, 0, 0.35);
+  }
+
+  .sidebar-close {
+    display: flex;
+  }
+}
+/* ==========================================================================
+   Owner Control Center - Sidebar & Layout
+   ========================================================================== */
+
+.owner-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 260px;
+  height: 100vh;
+  background: var(--blue);
+  color: var(--white);
+  z-index: 110;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.owner-sidebar.open {
+  transform: translateX(0);
+}
+
+.sidebar-brand {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.sidebar-brand h2 {
+  margin: 0 0 4px;
+  font-size: 1.25rem;
+}
+
+.sidebar-brand p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.7);
+}
+
+.sidebar-nav {
+  padding: 24px 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.nav-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.75);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.nav-item:hover {
+  background: rgba(255,255,255,0.08);
+  color: var(--white);
+}
+
+.nav-item.active {
+  background: rgba(255,255,255,0.15);
+  color: var(--white);
+  border-left: 3px solid var(--blue-accent);
+}
+
+.nav-item.active .nav-icon {
+  color: var(--blue-accent);
+}
+
+.nav-icon {
+  font-size: 1.2rem;
+  width: 24px;
+  text-align: center;
+}
+
+.owner-sidebar .nav-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.sidebar-footer {
+  padding: 20px 24px;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.owner-main {
+  margin-left: 0;
+  transition: margin-left 0.25s ease;
+}
+
+.owner-sidebar.open ~ .owner-main,
+.owner-main.sidebar-open {
+  margin-left: 260px;
+}
+/* ==========================================================================
+   Owner Control Center - Topbar
+   ========================================================================== */
+
+.owner-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  background: var(--blue);
+  color: var(--white);
+  box-shadow: var(--shadow);
+  position: sticky;
+  top: 0;
+  z-index: 105;
+  flex-wrap: wrap;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 260px;
+}
+
+.topbar-title h1 {
+  margin: 0 0 4px;
+  font-size: 1.25rem;
+}
+
+.topbar-title p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.8);
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.search-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 240px;
+}
+
+.search-bar input {
+  width: 100%;
+  padding: 10px 14px;
+  padding-right: 34px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.1);
+  color: var(--white);
+  font-size: 0.9rem;
+}
+
+.search-bar input::placeholder {
+  color: rgba(255,255,255,0.5);
+}
+
+.search-bar input:focus {
+  outline: none;
+  border-color: var(--blue-accent);
+  background: rgba(255,255,255,0.15);
+}
+
+.btn-icon {
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255,255,255,0.1);
+  color: var(--white);
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-icon:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+.position-relative {
+  position: relative;
+}
+
+.badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  background: var(--accent-red);
+  color: var(--white);
+  border-radius: 50%;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Profile dropdown */
+.profile-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.profile-btn {
+  padding: 8px;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--blue-accent);
+  color: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 110%;
+  right: 0;
+  width: 220px;
+  background: var(--white);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+  padding: 12px 0;
+  z-index: 111;
+}
+
+.dropdown-menu.hidden {
+  display: none;
+}
+
+.dropdown-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dropdown-name {
+  margin: 0 0 4px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.dropdown-email {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.dropdown-divider {
+  margin: 8px 0;
+  border: none;
+  border-top: 1px solid var(--border-color);
+}
+
+.dropdown-item {
+  width: 100%;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.dropdown-item:hover {
+  background: var(--hover-bg);
+}
+
+.dropdown-item.text-danger {
+  color: var(--accent-red);
+}
+
+.dropdown-item.text-danger:hover {
+  background: #fdecea;
+}
+/* ==========================================================================
+   Owner Control Center - Stats Cards
+   ========================================================================== */
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  padding: 20px 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.stat-card {
+  background: var(--white);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: var(--card-shadow);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--card-shadow-hover);
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--bg-tertiary);
+  color: var(--blue-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+}
+
+.stat-trend {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.stat-trend.up {
+  color: var(--success-color);
+}
+
+.stat-trend.down {
+  color: var(--accent-red);
+}
+
+.stat-trend.neutral {
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   Owner Control Center - Panels
+   ========================================================================== */
+
+.owner-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px 24px 60px;
+}
+
+.owner-panel {
+  animation: panelFadeIn 0.25s ease;
+}
+
+@keyframes panelFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.panel-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.panel-header.with-controls {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.panel-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.panel-header p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.panel-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.quick-action-btn {
+  width: 100%;
+  padding: 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  text-align: left;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quick-action-btn:hover {
+  background: var(--hover-bg);
+  border-color: var(--blue-dark);
+}
+/* ==========================================================================
+   Owner Control Center - Search & Filters
+   ========================================================================== */
+
+.account-search,
+.seller-search,
+.vehicle-search,
+.audit-search {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+  align-items: end;
+}
+
+.account-search input,
+.seller-search input,
+.vehicle-search input,
+.audit-search input {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  font-size: 0.9rem;
+}
+
+.account-search select,
+.seller-search select,
+.vehicle-search select,
+.audit-search select {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--white);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   Owner Control Center - Account Lists
+   ========================================================================== */
+
+.account-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.account-item,
+.admin-list-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  background: var(--white);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.account-item:hover,
+.admin-list-item:hover {
+  border-color: var(--blue-dark);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.account-item strong,
+.admin-list-item strong {
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.account-item p,
+.admin-list-item p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.account-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  border-radius: 6px;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.btn-outline:hover:not(:disabled) {
+  background: var(--hover-bg);
+}
+
+.btn-outline.text-danger {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+}
+
+.btn-outline.text-danger:hover:not(:disabled) {
+  background: #fdecea;
+  border-color: var(--accent-red);
+}
+
+.btn-full {
+  width: 100%;
+}
+
+.pagination-info {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 16px 0;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+.pagination-btn {
+  padding: 8px 16px;
+  font-size: 0.85rem;
+}
+
+#accountsPageIndicator {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   Owner Control Center - Seller Review Actions
+   ========================================================================== */
+
+.seller-review-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.seller-verification-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.seller-verification-checklist label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.seller-verification-checklist input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--blue-dark);
+}
+
+.seller-verification-checklist p {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin: 8px 0 0;
+  font-style: italic;
+}
+/* ==========================================================================
+   Owner Control Center - Revenue Dashboard
+   ========================================================================== */
+
+.revenue-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.revenue-stat {
+  background: var(--white);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.revenue-stat h4 {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.revenue-stat .value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+}
+
+.revenue-stat .sub {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* ==========================================================================
+   Owner Control Center - Toast Notifications
+   ========================================================================== */
+
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  background: var(--white);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--blue-dark);
+  border-radius: 10px;
+  padding: 12px 16px;
+  box-shadow: var(--card-shadow);
+  min-width: 300px;
+  max-width: 450px;
+  animation: toastSlideIn 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+@keyframes toastSlideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.toast.toast-error {
+  border-left-color: var(--accent-red);
+}
+
+.toast.toast-success {
+  border-left-color: var(--success-color);
+}
+
+.toast.toast-warning {
+  border-left-color: #f59e0b;
+}
+
+.toast-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.toast-message {
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.toast-title {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 2px;
+  line-height: 1;
+}
+
+.toast-close:hover {
+  color: var(--text-primary);
+}
+
+/* ==========================================================================
+   Owner Control Center - Confirmation Dialog
+   ========================================================================== */
+
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.dialog-overlay.hidden {
+  display: none;
+}
+
+.dialog-container {
+  background: var(--white);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+  width: 100%;
+  max-width: 480px;
+  animation: dialogSlideIn 0.25s ease;
+}
+
+@keyframes dialogSlideIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dialog-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.dialog-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 4px;
+  line-height: 1;
+}
+
+.dialog-close:hover {
+  color: var(--text-primary);
+}
+
+.dialog-body {
+  padding: 20px;
+}
+
+.dialog-body p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-color);
+}
+/* ==========================================================================
+   Owner Control Center - Detail View Overlay
+   ========================================================================== */
+
+.detail-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.3);
+  z-index: 210;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.detail-overlay.hidden {
+  display: none;
+}
+
+.detail-panel {
+  background: var(--white);
+  border-radius: 12px;
+  box-shadow: var(--card-shadow);
+  width: 100%;
+  max-width: 600px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  animation: dialogSlideIn 0.25s ease;
+}
+
+.detail-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+  z-index: 1;
+}
+
+.detail-close:hover {
+  color: var(--text-primary);
+}
+
+.detail-content {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ==========================================================================
+   Owner Control Center - Settings
+   ========================================================================== */
+
+.danger-zone {
+  background: #fdf7f7;
+  border: 1px solid #fed7d7;
+}
+
+.danger-zone h3 {
+  color: var(--accent-red);
+}
+
+/* ==========================================================================
+   Owner Control Center - Mobile Responsive
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .owner-main.sidebar-open {
+    margin-left: 0;
+  }
+  
+  .topbar-left {
+    min-width: auto;
+  }
+  
+  .search-bar {
+    min-width: 180px;
+  }
+  
+  .topbar-right {
+    gap: 8px;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+    padding: 16px 20px;
+  }
+  
+  .owner-content {
+    padding: 16px 20px 60px;
+  }
+  
+  .panel-header.with-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .panel-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+  
+  .panel-actions .btn {
+    flex: 1;
+  }
+  
+  .account-search,
+  .seller-search,
+  .vehicle-search,
+  .audit-search {
+    grid-template-columns: 1fr;
+  }
+  
+  .dialog-container {
+    margin: 16px;
+    max-width: calc(100% - 32px);
+  }
+  
+  .detail-panel {
+    margin: 16px;
+    max-width: calc(100% - 32px);
+    max-height: 90vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .owner-topbar {
+    padding: 12px 16px;
+  }
+  
+  .topbar-title h1 {
+    font-size: 1.1rem;
+  }
+  
+  .search-bar {
+    min-width: 140px;
+  }
+  
+  .stats-grid {
+    padding: 12px 16px;
+  }
+  
+  .stat-card {
+    padding: 16px;
+  }
+  
+  .stat-value {
+    font-size: 1.5rem;
+  }
+  
+  .owner-content {
+    padding: 12px 16px 60px;
+  }
+  
+  .account-item,
+  .admin-list-item {
+    padding: 12px;
+  }
+  
+  .dialog-container {
+    max-width: calc(100% - 32px);
+  }
+  
+  .dialog-actions {
+    flex-direction: column-reverse;
+  }
+  
+  .dialog-actions .btn {
+    width: 100%;
   }
 }

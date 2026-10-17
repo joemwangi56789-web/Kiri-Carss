@@ -3,217 +3,471 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Owner Dashboard | Kiri Cars</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Owner Control Center | Kiri Cars</title>
+  <link rel="stylesheet" href="style.css?v=10">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
-<body>
-  <header class="dashboard-header owner-header">
-    <div><h1>Kiri Cars</h1><p>Owner Control Centre</p></div>
-    <button id="logoutButton" type="button">Sign Out</button>
-  </header>
-
-  <main class="dashboard-container owner-dashboard">
-    <section class="welcome-card owner-welcome">
-      <div>
-        <p class="eyebrow">OWNER WORKSPACE</p>
-        <h2>Welcome, Owner</h2>
-        <p>Manage marketplace activity, seller approvals, accounts and vehicle listings from one organized workspace.</p>
-        <p id="ownerMessage" role="status" aria-live="polite">Loading your account...</p>
-      </div>
-      <a class="dashboard-link" href="index.html">View Public Website</a>
-    </section>
-
-    <nav class="owner-navigation" aria-label="Owner dashboard sections">
-      <button type="button" class="owner-nav-button active" data-owner-panel="overview" aria-selected="true">Overview</button>
-      <button type="button" class="owner-nav-button" data-owner-panel="accounts" aria-selected="false">Account Management</button>
-      <button type="button" class="owner-nav-button" data-owner-panel="sellers" aria-selected="false">Seller Approvals</button>
-      <button type="button" class="owner-nav-button" data-owner-panel="vehicles" aria-selected="false">Vehicle Listings</button>
-      <button type="button" class="owner-nav-button" data-owner-panel="my-cars" aria-selected="false">My Listings</button>
-      <button type="button" class="owner-nav-button" data-owner-panel="payments" aria-selected="false">Listing Payments</button>
+<body class="owner-dashboard-page">
+  <!-- Sidebar navigation -->
+  <aside class="owner-sidebar" id="ownerSidebar">
+    <div class="sidebar-brand">
+      <h2>Kiri Cars</h2>
+      <p>Owner Control Center</p>
+      <button type="button" class="sidebar-close" id="closeSidebar" aria-label="Close navigation">×</button>
+    </div>
+    <nav class="sidebar-nav" aria-label="Owner dashboard sections">
+      <button type="button" class="nav-item active" data-panel="overview" aria-selected="true">
+        <span class="nav-icon">📊</span><span class="nav-label">Overview</span>
+      </button>
+      <button type="button" class="nav-item" data-panel="accounts" aria-selected="false">
+        <span class="nav-icon">👥</span><span class="nav-label">Account Management</span>
+      </button>
+      <button type="button" class="nav-item" data-panel="sellers" aria-selected="false">
+        <span class="nav-icon">🏪</span><span class="nav-label">Seller Approvals</span>
+      </button>
+      <button type="button" class="nav-item" data-panel="vehicles" aria-selected="false">
+        <span class="nav-icon">🚗</span><span class="nav-label">Vehicle Listings</span>
+      </button>
+      <button type="button" class="nav-item" data-panel="my-cars" aria-selected="false">
+        <span class="nav-icon">🏠</span><span class="nav-label">My Listings</span>
+      </button>
+      <button type="button" class="nav-item" data-panel="payments" aria-selected="false">
+        <span class="nav-icon">💳</span><span class="nav-label">Listing Payments</span>
+      </button>
+      <button type="button" class="nav-item" data-panel="revenue" aria-selected="false">
+        <span class="nav-icon">💰</span><span class="nav-label">Revenue Dashboard</span>
+      </button>
+      <button type="button" class="nav-item" data-panel="audit-log" aria-selected="false">
+        <span class="nav-icon">📋</span><span class="nav-label">Audit Log</span>
+      </button>
+      <button type="button" class="nav-item" data-panel="moderation" aria-selected="false">
+        <span class="nav-icon">⚠️</span><span class="nav-label">Listing Moderation</span>
+      </button>
+      <button type="button" class="nav-item" data-panel="settings" aria-selected="false">
+        <span class="nav-icon">⚙️</span><span class="nav-label">Owner Settings</span>
+      </button>
     </nav>
+    <div class="sidebar-footer">
+      <button type="button" class="btn btn-outline btn-full" id="sidebarLogout">Sign Out</button>
+    </div>
+  </aside>
+  <button type="button" class="owner-sidebar-backdrop" id="ownerSidebarBackdrop" aria-label="Close navigation" hidden></button>
 
-    <section id="owner-panel-overview" class="owner-panel">
-      <div class="owner-section-heading"><h2>Marketplace Overview</h2><p>Your key account totals and the latest registrations.</p></div>
-      <section class="dashboard-card account-statistics">
-        <h2>Account Statistics</h2>
-        <div class="account-stat-grid">
-          <article class="account-stat"><span>Total buyers</span><strong id="totalBuyerAccounts">—</strong></article>
-          <article class="account-stat"><span>Total dealer accounts</span><strong id="totalDealerAccounts">—</strong></article>
-          <article class="account-stat"><span>Active dealers</span><strong id="activeDealerAccounts">—</strong></article>
-          <article class="account-stat"><span>Inactive dealers</span><strong id="inactiveDealerAccounts">—</strong></article>
+  <!-- Main content area -->
+  <div class="owner-main" id="ownerMain">
+    <header class="owner-topbar">
+      <div class="topbar-left">
+        <button type="button" class="btn btn-icon" id="toggleSidebar" aria-label="Toggle sidebar" aria-controls="ownerSidebar" aria-expanded="false">
+          <span class="hamburger"><span class="bar"></span><span class="bar"></span><span class="bar"></span></span>
+        </button>
+        <div class="owner-topbar-brand" aria-label="Kiri Cars">
+          <span class="dashboard-brand-mark" aria-hidden="true">KC</span>
+          <span>Kiri Cars</span>
         </div>
-        <button id="refreshAccountsButton" type="button">Refresh Account Statistics</button>
-        <p id="accountStatsMessage" role="status" aria-live="polite"></p>
-        <h3>Recent Registrations</h3>
-        <p class="account-muted">The 10 most recent buyer and dealer accounts, where registration dates are available.</p>
-        <div id="recentAccountsList"></div>
-      </section>
-      <section class="dashboard-card overview-quick-links">
-        <h3>Quick Actions</h3>
-        <button type="button" data-open-owner-panel="accounts">Manage account access</button>
-        <button type="button" data-open-owner-panel="sellers">Review seller applications</button>
-        <button type="button" data-open-owner-panel="vehicles">Manage vehicle listings</button>
-      </section>
-    </section>
+        <div class="topbar-title">
+          <h1 id="pageTitle">Marketplace Overview</h1>
+          <p id="pageSubtitle">Your key account totals and the latest registrations.</p>
+        </div>
+      </div>
+      <div class="header-current-view" id="ownerHeaderCurrentView" aria-hidden="true">Home</div>
+      <div class="topbar-right">
+        <div class="search-bar">
+          <input type="search" id="globalSearch" placeholder="Search accounts, sellers, vehicles..." autocomplete="off">
+          <button type="button" class="btn btn-icon" id="clearSearch" aria-label="Clear search" hidden>✕</button>
+        </div>
+        <div class="topbar-actions">
+          <button type="button" class="btn btn-icon position-relative" id="notificationBtn" aria-label="Notifications">
+            <span>𔔨</span>
+            <span class="badge" id="notificationBadge">0</span>
+          </button>
+          <div class="profile-dropdown" id="profileDropdown">
+            <button type="button" class="btn btn-icon profile-btn" id="profileBtn" aria-label="Owner profile" aria-haspopup="true">
+              <span class="avatar" id="ownerAvatar">O</span>
+            </button>
+            <div class="dropdown-menu" id="dropdownMenu" hidden>
+              <div class="dropdown-header">
+                <p class="dropdown-name" id="dropdownName">Owner</p>
+                <p class="dropdown-email" id="dropdownEmail">owner@kiri.cars</p>
+              </div>
+              <hr class="dropdown-divider">
+              <button type="button" class="dropdown-item" id="dropdownViewProfile">View Profile</button>
+              <button type="button" class="dropdown-item" id="dropdownSettings">Settings</button>
+              <hr class="dropdown-divider">
+              <button type="button" class="dropdown-item text-danger" id="dropdownSignOut">Sign Out</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
 
-    <section id="owner-panel-accounts" class="owner-panel" hidden>
-      <div class="owner-section-heading"><h2>Account Management</h2><p>View team accounts and control access. Your owner account is protected.</p></div>
-      <section class="dashboard-card">
-        <h3>Account Access Management</h3>
-        <p>Temporarily suspend or reactivate buyer, administrator, and dealer access. These controls do not delete Firebase Authentication accounts.</p>
-        <div class="account-management-actions">
-          <button id="loadBuyerAccountsButton" type="button">Load Buyer Accounts</button>
-          <button id="loadAdminsButtonTop" type="button">Load Admin &amp; Dealer Accounts</button>
+    <!-- Stats cards row -->
+    <div class="stats-grid" id="statsGrid"></div>
+
+    <!-- Panel container -->
+    <main class="owner-content" id="ownerContent">
+      <!-- Overview Panel -->
+      <section id="owner-panel-overview" class="owner-panel active">
+        <div class="panel-header">
+          <h2>Marketplace Overview</h2>
+          <p>Your key account totals and the latest registrations.</p>
+        </div>
+        <section class="dashboard-card account-statistics">
+          <h2>Account Statistics</h2>
+          <div class="account-stat-grid">
+            <article class="account-stat"><span>Total buyers</span><strong id="totalBuyerAccounts">—</strong></article>
+            <article class="account-stat"><span>Total dealer accounts</span><strong id="totalDealerAccounts">—</strong></article>
+            <article class="account-stat"><span>Active dealers</span><strong id="activeDealerAccounts">—</strong></article>
+            <article class="account-stat"><span>Inactive dealers</span><strong id="inactiveDealerAccounts">—</strong></article>
+          </div>
+          <button id="refreshAccountsButton" type="button">Refresh Account Statistics</button>
+          <p id="accountStatsMessage" role="status" aria-live="polite"></p>
+          <h3>Recent Registrations</h3>
+          <p class="account-muted">The 10 most recent buyer and dealer accounts.</p>
+          <div id="recentAccountsList"></div>
+        </section>
+        <section class="dashboard-card overview-quick-links">
+          <h3>Quick Actions</h3>
+          <button type="button" class="quick-action-btn" data-panel="accounts">Manage account access</button>
+          <button type="button" class="quick-action-btn" data-panel="sellers">Review seller applications</button>
+          <button type="button" class="quick-action-btn" data-panel="vehicles">Manage vehicle listings</button>
+          <button type="button" class="quick-action-btn" data-panel="payments">Review listing payments</button>
+        </section>
+      </section>
+
+      <!-- Accounts Panel -->
+      <section id="owner-panel-accounts" class="owner-panel" hidden>
+        <div class="panel-header with-controls">
+          <h2>Account Management</h2>
+          <p>View team accounts and control access. Your owner account is protected.</p>
+          <div class="panel-actions">
+            <button type="button" class="btn btn-primary" id="loadBuyerAccountsButton">Load Buyer Accounts</button>
+            <button type="button" class="btn btn-primary" id="loadAdminsButtonTop">Load Admin &amp; Dealer Accounts</button>
+          </div>
         </div>
         <p id="accountManagementMessage" role="status" aria-live="polite"></p>
-        <h3>Buyer Accounts</h3><div id="buyerAccountsList"></div>
-        <h3>Administrator &amp; Dealer Accounts</h3><div id="managedAdminsList"></div>
+        <div class="account-search">
+          <input type="search" id="accountSearch" placeholder="Filter accounts by name or email...">
+          <select id="accountTypeFilter">
+            <option value="all">All account types</option>
+            <option value="buyer">Buyers</option>
+            <option value="dealer">Dealers</option>
+            <option value="admin">Administrators</option>
+            <option value="owner">Owners</option>
+          </select>
+          <select id="accountStatusFilter">
+            <option value="all">All statuses</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive / Suspended</option>
+          </select>
+          <button type="button" class="btn btn-secondary" id="clearAccountFilters">Clear filters</button>
+        </div>
+        <h3>Buyer Accounts</h3>
+        <div id="buyerAccountsList" class="account-list"></div>
+        <h3>Administrator &amp; Dealer Accounts</h3>
+        <div id="managedAdminsList" class="account-list"></div>
+        <div id="adminsList" class="account-list"></div>
+        <p id="paginatedAccountsInfo" class="pagination-info" hidden></p>
+        <div class="pagination-controls" id="accountsPagination" hidden>
+          <button type="button" class="btn btn-secondary pagination-btn" id="accountsPrevPage">Prev</button>
+          <span id="accountsPageIndicator"></span>
+          <button type="button" class="btn btn-secondary pagination-btn" id="accountsNextPage">Next</button>
+        </div>
+        <section class="dashboard-card">
+          <h3>Grant Owner Access</h3>
+          <p>Promote a registered Kiri Cars account to owner. Owners can manage accounts, seller approvals, listings and payments.</p>
+          <form id="promoteOwnerForm">
+            <label for="promoteOwnerEmail">Registered account email</label>
+            <input id="promoteOwnerEmail" type="email" autocomplete="email" required>
+            <button id="promoteOwnerButton" type="submit" class="btn btn-primary">Grant Owner Access</button>
+          </form>
+          <p id="promoteOwnerMessage" role="status" aria-live="polite"></p>
+        </section>
       </section>
-      <section class="dashboard-card">
-        <h3>Administrator &amp; Dealer Directory</h3>
-        <p>View account roles and WhatsApp contact details.</p>
-        <button id="loadAdminsButton" type="button">Load Admin &amp; Dealer Accounts</button>
-        <div id="adminsList"></div>
-      </section>
-      <section class="dashboard-card">
-        <h3>Grant Owner Access</h3>
-        <p>Promote a registered Kiri Cars account to owner. Owners can manage accounts, seller approvals, listings and payments.</p>
-        <form id="promoteOwnerForm">
-          <label for="promoteOwnerEmail">Registered account email</label>
-          <input id="promoteOwnerEmail" type="email" autocomplete="email" required>
-          <button id="promoteOwnerButton" type="submit">Grant Owner Access</button>
-        </form>
-        <p id="promoteOwnerMessage" role="status" aria-live="polite"></p>
-      </section>
-    </section>
 
-    <section id="owner-panel-sellers" class="owner-panel" hidden>
-      <div class="owner-section-heading"><h2>Seller Applications &amp; Approvals</h2><p>Review showroom representatives and independent sales representatives before allowing them to publish vehicles.</p></div>
-      <section class="dashboard-card">
-        <h3>Pending and Existing Seller Applications</h3>
-        <p>Approval means an account passed your review; it is not a guarantee of every vehicle or transaction.</p>
-        <button id="loadSellerApplicationsButton" type="button">Refresh Seller Applications</button>
+      <!-- Seller Approvals Panel -->
+      <section id="owner-panel-sellers" class="owner-panel" hidden>
+        <div class="panel-header with-controls">
+          <h2>Seller Applications &amp; Approvals</h2>
+          <p>Review showroom representatives and independent sales representatives before allowing them to publish vehicles.</p>
+          <div class="panel-actions">
+            <button type="button" class="btn btn-primary" id="loadSellerApplicationsButton">Refresh Seller Applications</button>
+          </div>
+        </div>
         <p id="sellerApplicationsMessage" role="status" aria-live="polite"></p>
-        <div id="sellerApplicationsList"></div>
+        <div class="seller-search">
+          <input type="search" id="sellerSearch" placeholder="Filter sellers by name, email, or business...">
+          <select id="sellerStatusFilter">
+            <option value="all">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="suspended">Suspended</option>
+          </select>
+          <button type="button" class="btn btn-secondary" id="clearSellerFilters">Clear filters</button>
+        </div>
+        <section class="dashboard-card">
+          <h3>Pending and Existing Seller Applications</h3>
+          <p>Approval means an account passed your review; it is not a guarantee of every vehicle or transaction.</p>
+          <div id="sellerApplicationsList"></div>
+        </section>
+        <section class="dashboard-card">
+          <h3>Seller Registration</h3>
+          <p>Showroom representatives and independent sales representatives register their own accounts. Share this page with sellers who want to apply.</p>
+          <a class="dashboard-link" href="seller-register.html">Open Seller Registration Page</a>
+        </section>
       </section>
-      <section class="dashboard-card">
-        <h3>Seller Registration</h3>
-        <p>Showroom representatives and independent sales representatives register their own accounts. Share this page with sellers who want to apply.</p>
-        <a class="dashboard-link" href="seller-register.html">Open Seller Registration Page</a>
-      </section>
-    </section>
 
-    <section id="owner-panel-vehicles" class="owner-panel" hidden>
-      <div class="owner-section-heading"><h2>Vehicle Listings</h2><p>Review marketplace inventory and maintain public listing privacy.</p></div>
-      <section class="dashboard-card">
-        <h3>Marketplace Inventory</h3>
+      <!-- Vehicle Listings Panel -->
+      <section id="owner-panel-vehicles" class="owner-panel" hidden>
+        <div class="panel-header with-controls">
+          <h2>Vehicle Listings</h2>
+          <p>Review marketplace inventory and maintain public listing privacy.</p>
+          <div class="panel-actions">
+            <button type="button" class="btn btn-primary" id="refreshButton">Refresh Dashboard Data</button>
+          </div>
+        </div>
+        <div class="vehicle-search">
+          <input type="search" id="vehicleSearch" placeholder="Filter vehicles by make, model, or seller...">
+          <select id="vehicleStatusFilter">
+            <option value="all">All statuses</option>
+            <option value="active">Active</option>
+            <option value="pending_payment">Pending Payment</option>
+            <option value="suspended">Suspended</option>
+            <option value="sold">Sold</option>
+          </select>
+          <button type="button" class="btn btn-secondary" id="clearVehicleFilters">Clear filters</button>
+        </div>
         <p id="carCount">Loading vehicle count...</p>
-        <button id="refreshButton" type="button">Refresh Dashboard Data</button>
         <p>Seller categories are kept on internal account profiles, not on public vehicle records.</p>
-        <button id="removePublicSellerCategoriesButton" type="button">Remove Seller Categories from Existing Public Listings</button>
+        <button id="removePublicSellerCategoriesButton" type="button" class="btn btn-secondary">Remove Seller Categories from Existing Public Listings</button>
         <p id="publicSellerCategoriesMessage" role="status" aria-live="polite"></p>
         <hr>
         <h3>Recover Drafts Affected by the Approval Bug</h3>
         <p>Publish only complete drafts owned by dealers who are currently active and approved. Drafts from pending, rejected, or suspended sellers remain private. Matching public listings are skipped.</p>
-        <button id="recoverApprovedDraftsButton" type="button">Recover Eligible Dealer Drafts</button>
+        <button id="recoverApprovedDraftsButton" type="button" class="btn btn-primary">Recover Eligible Drafts</button>
         <p id="recoverApprovedDraftsMessage" role="status" aria-live="polite"></p>
-        <a class="dashboard-link" href="index.html">View Public Vehicle Listings</a>
       </section>
-      <section class="dashboard-card">
-        <h3>New Dealer Listings</h3>
-        <p id="vehicleActivityMessage" role="status" aria-live="polite">Waiting for listing activity...</p>
-        <div id="vehicleActivityList"></div>
-      </section>
-    </section>
 
-    <section id="owner-panel-my-cars" class="owner-panel" hidden>
-      <div class="owner-section-heading"><h2>My Vehicle Listings</h2><p>Listings added by your owner account.</p></div>
-      <section class="dashboard-card">
-        <div id="myOwnerCars" class="cars-grid"></div>
+      <!-- My Listings Panel -->
+      <section id="owner-panel-my-cars" class="owner-panel" hidden>
+        <div class="panel-header">
+          <h2>My Listings</h2>
+          <p>Vehicles you have added as the owner.</p>
+        </div>
+        <section class="dashboard-card">
+          <h3>Your Vehicle Listings</h3>
+          <div id="myOwnerCars">Loading your listings…</div>
+        </section>
       </section>
-    </section>
 
-    <section id="owner-panel-payments" class="owner-panel" hidden>
-      <div class="owner-section-heading"><h2>Listing Payments &amp; Renewals</h2><p>Approve an eligible free-trial listing or verify the M-Pesa payment yourself before publishing. Do not mark a payment paid until you have checked the actual M-Pesa confirmation.</p></div>
-      <section class="dashboard-card">
-        <button id="loadListingPaymentsButton" type="button">Refresh Payment Queue</button>
+      <!-- Listing Payments Panel -->
+      <section id="owner-panel-payments" class="owner-panel" hidden>
+        <div class="panel-header with-controls">
+          <h2>Listing Payments</h2>
+          <p>Review pending listing payments, renewals, and expired listings.</p>
+          <div class="panel-actions">
+            <button type="button" class="btn btn-primary" id="loadListingPaymentsButton">Refresh Payment Queue</button>
+          </div>
+        </div>
         <p id="listingPaymentsMessage" role="status" aria-live="polite"></p>
         <div id="listingPaymentsList"></div>
       </section>
-    </section>
-  </main>
 
-  <div class="modal-overlay" id="ownerCarEditModal" role="dialog" aria-labelledby="ownerCarEditTitle" aria-modal="true" hidden>
-    <div class="modal-container">
-      <div class="modal-header">
-        <h2 id="ownerCarEditTitle">Edit Vehicle Listing</h2>
-        <button type="button" class="modal-close" id="closeOwnerCarEdit" aria-label="Close">✕</button>
-      </div>
-      <div class="modal-body">
-        <form id="ownerCarEditForm">
-          <label for="ownerEditManufacturer">Manufacturer</label>
-          <input id="ownerEditManufacturer" type="text" maxlength="50" required>
-          <label for="ownerEditCarType">Car type</label>
-          <select id="ownerEditCarType" required>
-            <option value="">Select car type</option>
-            <option value="suv">SUV</option><option value="sedan">Sedan</option>
-            <option value="hatchback">Hatchback</option><option value="wagon">Wagon</option>
-            <option value="van">Van</option><option value="pickup">Pickup</option>
-            <option value="coupe">Coupe</option><option value="convertible">Convertible</option>
-            <option value="minivan">Minivan</option><option value="other">Other</option>
-          </select>
-          <label for="ownerEditModel">Model</label>
-          <input id="ownerEditModel" type="text" maxlength="50" required>
-          <label for="ownerEditYear">Year</label>
-          <input id="ownerEditYear" type="number" min="1990" max="2030" required>
-          <label for="ownerEditPrice">Price (KES)</label>
-          <input id="ownerEditPrice" type="number" min="1" required>
-          <label for="ownerEditStatus">Vehicle status</label>
-          <select id="ownerEditStatus" required>
-            <option value="">Select status</option>
-            <option value="Fresh Import">Fresh Import</option>
-            <option value="Locally Used">Locally Used</option>
-            <option value="Brand New">Brand New</option>
-          </select>
-          <label for="ownerEditMileage">Mileage (km)</label>
-          <input id="ownerEditMileage" type="number" min="0">
-          <label for="ownerEditFuel">Fuel type</label>
-          <select id="ownerEditFuel" required>
-            <option value="">Select fuel type</option>
-            <option value="petrol">Petrol</option><option value="diesel">Diesel</option>
-            <option value="hybrid">Hybrid</option><option value="plug_in_hybrid">Plug-in Hybrid</option>
-            <option value="electric">Electric</option><option value="cng">CNG</option>
-            <option value="lpg">LPG</option>
-          </select>
-          <label for="ownerEditTransmission">Transmission</label>
-          <select id="ownerEditTransmission" required>
-            <option value="">Select transmission</option>
-            <option value="automatic">Automatic</option><option value="manual">Manual</option>
-            <option value="cvt">CVT</option><option value="dct">DCT</option><option value="amt">AMT</option>
-          </select>
-          <label for="ownerEditRelationship">Your relationship to this vehicle</label>
-          <select id="ownerEditRelationship" required>
-            <option value="">Choose your relationship</option>
-            <option value="owner">I am the vehicle owner</option>
-            <option value="broker">I am an independent sales representative acting for the owner</option>
-            <option value="authorized_representative">I am authorized to market it for the owner/dealership</option>
-          </select>
-          <label class="consent-label"><input id="ownerEditAuthorization" type="checkbox" required> I confirm I have permission to advertise this vehicle.</label>
-          <label for="ownerEditDescription">Vehicle description</label>
-          <textarea id="ownerEditDescription" rows="4" maxlength="5000"></textarea>
-          <p>Existing vehicle photos will be kept unchanged.</p>
-          <p id="ownerCarEditMessage" role="status" aria-live="polite"></p>
-          <div class="modal-actions">
-            <button type="button" class="btn btn-secondary" id="cancelOwnerCarEdit">Cancel</button>
-            <button type="submit" class="btn btn-primary" id="saveOwnerCarEdit">Save Changes</button>
+      <!-- Revenue Dashboard Panel -->
+      <section id="owner-panel-revenue" class="owner-panel" hidden>
+        <div class="panel-header with-controls">
+          <h2>Revenue Dashboard</h2>
+          <p>Listing fees collected, pending payments, and overdue listings.</p>
+          <div class="panel-actions">
+            <button type="button" class="btn btn-primary" id="loadRevenueButton">Refresh Revenue Data</button>
+            <button type="button" class="btn btn-secondary" id="exportRevenueButton">Export to CSV</button>
           </div>
-        </form>
+        </div>
+        <div class="revenue-stats" id="revenueStats"></div>
+        <section class="dashboard-card">
+          <h3>Pending &amp; Overdue Payments</h3>
+          <div id="revenueQueueList"></div>
+        </section>
+        <section class="dashboard-card">
+          <h3>Revenue by Seller</h3>
+          <div id="revenueBySellerList"></div>
+        </section>
+      </section>
+
+      <!-- Audit Log Panel -->
+      <section id="owner-panel-audit-log" class="owner-panel" hidden>
+        <div class="panel-header with-controls">
+          <h2>Audit Log</h2>
+          <p>Immutable record of owner actions: approvals, suspensions, promotions, payment verifications.</p>
+          <div class="panel-actions">
+            <button type="button" class="btn btn-primary" id="loadAuditLogButton">Refresh Audit Log</button>
+            <button type="button" class="btn btn-secondary" id="exportAuditLogButton">Export to CSV</button>
+          </div>
+        </div>
+        <div class="audit-search">
+          <input type="search" id="auditSearch" placeholder="Filter by action, actor, or target...">
+          <select id="auditActionFilter">
+            <option value="all">All actions</option>
+            <option value="seller_approved">Seller Approved</option>
+            <option value="seller_rejected">Seller Rejected</option>
+            <option value="seller_suspended">Seller Suspended</option>
+            <option value="owner_promoted">Owner Promoted</option>
+            <option value="account_suspended">Account Suspended</option>
+            <option value="account_reactivated">Account Reactivated</option>
+            <option value="payment_verified">Payment Verified</option>
+            <option value="listing_edited">Listing Edited</option>
+          </select>
+          <button type="button" class="btn btn-secondary" id="clearAuditFilters">Clear filters</button>
+        </div>
+        <div id="auditLogList"></div>
+      </section>
+
+      <!-- Listing Moderation Panel -->
+      <section id="owner-panel-moderation" class="owner-panel" hidden>
+        <div class="panel-header with-controls">
+          <h2>Listing Moderation</h2>
+          <p>Review flagged or reported vehicle listings that need owner attention.</p>
+          <div class="panel-actions">
+            <button type="button" class="btn btn-primary" id="loadModerationButton">Refresh Moderation Queue</button>
+          </div>
+        </div>
+        <p id="moderationMessage" role="status" aria-live="polite"></p>
+        <div id="moderationList"></div>
+      </section>
+
+      <!-- Owner Settings Panel -->
+      <section id="owner-panel-settings" class="owner-panel" hidden>
+        <div class="panel-header">
+          <h2>Owner Settings</h2>
+          <p>Manage your owner profile, password, and active sessions.</p>
+        </div>
+        <section class="dashboard-card">
+          <h3>Profile</h3>
+          <p id="settingsProfileInfo">Loading profile…</p>
+          <form id="settingsProfileForm" hidden>
+            <label for="settingsOwnerName">Display name</label>
+            <input type="text" id="settingsOwnerName" maxlength="100">
+            <label for="settingsOwnerEmail">Email</label>
+            <input type="email" id="settingsOwnerEmail">
+            <button type="submit" class="btn btn-primary">Update Profile</button>
+          </form>
+          <p id="settingsProfileMessage" role="status" aria-live="polite"></p>
+        </section>
+        <section class="dashboard-card">
+          <h3>Change Password</h3>
+          <form id="settingsPasswordForm">
+            <input type="text" id="settingsUsername" hidden autocomplete="username" value="">
+            <label for="settingsCurrentPassword">Current password</label>
+            <input type="password" id="settingsCurrentPassword" required autocomplete="current-password">
+            <label for="settingsNewPassword">New password</label>
+            <input type="password" id="settingsNewPassword" required minlength="6" autocomplete="new-password">
+            <label for="settingsConfirmPassword">Confirm new password</label>
+            <input type="password" id="settingsConfirmPassword" required minlength="6" autocomplete="new-password">
+            <button type="submit" class="btn btn-primary">Change Password</button>
+          </form>
+          <p id="settingsPasswordMessage" role="status" aria-live="polite"></p>
+        </section>
+        <section class="dashboard-card danger-zone">
+          <h3>Danger Zone</h3>
+          <p>These actions cannot be undone.</p>
+          <button type="button" class="btn btn-outline text-danger" id="settingsSignOutAll">Sign Out of All Sessions</button>
+          <p id="settingsDangerMessage" role="status" aria-live="polite"></p>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <!-- Toast notifications -->
+  <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Confirmation dialog -->
+  <div class="dialog-overlay" id="dialogOverlay" hidden>
+    <div class="dialog-container">
+      <div class="dialog-header">
+        <h3 id="dialogTitle">Confirm Action</h3>
+        <button type="button" class="dialog-close" id="dialogClose" aria-label="Close dialog">✕</button>
+      </div>
+      <div class="dialog-body">
+        <p id="dialogMessage">Are you sure you want to proceed?</p>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" id="dialogCancel">Cancel</button>
+        <button type="button" class="btn btn-primary" id="dialogConfirm">Confirm</button>
       </div>
     </div>
   </div>
 
-  <script type="module" src="owner.js"></script>
-  <script type="module" src="account-management.js"></script>
+  <!-- Account / vehicle detail view -->
+  <div class="detail-overlay" id="detailOverlay" hidden>
+    <div class="detail-panel">
+      <button type="button" class="detail-close" id="closeDetail" aria-label="Close details">✕</button>
+      <div class="detail-content" id="detailContent"></div>
+    </div>
+  </div>
+
+  <!-- Edit Listing Modal -->
+  <div class="dialog-overlay" id="ownerCarEditModal" hidden>
+    <div class="dialog-container" style="max-width: 560px;">
+      <div class="dialog-header">
+        <h3 id="ownerEditModalTitle">Edit Vehicle Listing</h3>
+        <button type="button" class="dialog-close" id="closeOwnerCarEdit" aria-label="Close edit">✕</button>
+      </div>
+      <div class="dialog-body">
+        <form id="ownerCarEditForm" novalidate>
+          <div style="display:grid; gap: 12px;">
+            <label style="display:block; font-size:0.85rem; color:var(--text-secondary);">Manufacturer</label>
+            <input type="text" id="ownerEditManufacturer" required style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px; font:inherit;">
+
+            <label style="display:block; font-size:0.85rem; color:var(--text-secondary);">Car Type</label>
+            <input type="text" id="ownerEditCarType" required style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px; font:inherit;">
+
+            <label style="display:block; font-size:0.85rem; color:var(--text-secondary);">Model</label>
+            <input type="text" id="ownerEditModel" required style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px; font:inherit;">
+
+            <label style="display:block; font-size:0.85rem; color:var(--text-secondary);">Year</label>
+            <input type="number" id="ownerEditYear" required min="1900" max="2099" style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px; font:inherit;">
+
+            <label style="display:block; font-size:0.85rem; color:var(--text-secondary);">Price (KES)</label>
+            <input type="number" id="ownerEditPrice" required min="0" style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px; font:inherit;">
+
+            <label style="display:block; font-size:0.85rem; color:var(--text-secondary);">Status</label>
+            <select id="ownerEditStatus" style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px; font:inherit;">
+              <option value="active">Active</option>
+              <option value="pending_payment">Pending Payment</option>
+              <option value="suspended">Suspended</option>
+              <option value="sold">Sold</option>
+            </select>
+
+            <label style="display:block; font-size:0.85rem; color:var(--text-secondary);">Mileage (km)</label>
+            <input type="number" id="ownerEditMileage" min="0" style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px; font:inherit;">
+
+            <label style="display:block; font-size:0.85rem; color:var(--text-secondary);">Fuel Type</label>
+            <input type="text" id="ownerEditFuel" style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px; font:inherit;">
+
+            <label style="display:block; font-size:0.85rem; color:var(--text-secondary);">Transmission</label>
+            <input type="text" id="ownerEditTransmission" style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px; font:inherit;">
+
+            <label style="display:block; font-size:0.85rem; color:var(--text-secondary);">Relationship</label>
+            <input type="text" id="ownerEditRelationship" style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px; font:inherit;">
+
+            <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; color:var(--text-secondary);">
+              <input type="checkbox" id="ownerEditAuthorization"> Authorization Confirmed
+            </label>
+
+            <label style="display:block; font-size:0.85rem; color:var(--text-secondary);">Description</label>
+            <textarea id="ownerEditDescription" rows="3" style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px; font:inherit;"></textarea>
+
+            <p id="ownerCarEditMessage" style="margin:8px 0 0; font-size:0.85rem; color:var(--text-secondary);"></p>
+          </div>
+        </form>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-secondary" id="cancelOwnerCarEdit">Cancel</button>
+        <button type="submit" form="ownerCarEditForm" class="btn btn-primary" id="saveOwnerCarEdit">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="owner.js?v=7"></script>
 </body>
 </html>

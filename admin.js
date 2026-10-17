@@ -36,7 +36,6 @@ const listingFilterSummary = document.getElementById("listingFilterSummary");
 const whatsappForm = document.getElementById("whatsappForm");
 const adminWhatsAppInput = document.getElementById("adminWhatsApp");
 const whatsappMessage = document.getElementById("whatsappMessage");
-const themeToggle = document.getElementById("themeToggle");
 const profileAvatarBtn = document.getElementById("profileAvatarBtn");
 const profileAvatarImg = document.getElementById("profileAvatarImg");
 const profileDropdown = document.getElementById("profileDropdown");
@@ -199,25 +198,21 @@ onAuthStateChanged(auth, async (user) => {
     const role = normalizeRole(profile.role);
     const approvalStatus = String(profile.approvalStatus || (role === "admin" ? "approved" : "pending")).toLowerCase();
 
-    if (role === "owner") {
-      window.location.replace("owner.html");
-      return;
-    }
-
     // A suspended account must not regain dashboard access by signing in again.
     // Pending dealers remain able to prepare private drafts unless explicitly suspended.
     const isSuspended = profile.accountStatus === "suspended";
     const inactiveAdmin = role === "admin" && profile.active !== true;
+    const inactiveOwner = role === "owner" && profile.active !== true;
     const inactiveNonPendingDealer =
       role === "dealer" && profile.active !== true && approvalStatus !== "pending";
 
-    if (isSuspended || inactiveAdmin || inactiveNonPendingDealer) {
+    if (isSuspended || inactiveAdmin || inactiveOwner || inactiveNonPendingDealer) {
       await signOut(auth);
       goToLogin();
       return;
     }
 
-    if (role !== "admin" && role !== "dealer") {
+    if (role !== "admin" && role !== "dealer" && role !== "owner") {
       await signOut(auth);
       goToLogin();
       return;
@@ -227,10 +222,12 @@ onAuthStateChanged(auth, async (user) => {
     currentRole = role;
     currentProfile = profile;
     currentApprovalStatus = approvalStatus;
-    currentCanPublish = role === "admin" ||
+    currentCanPublish = role === "admin" || role === "owner" ||
       (role === "dealer" && profile.active === true && approvalStatus === "approved");
     currentAdminName = profile.name || user.email || "Kiri Cars seller";
     currentWhatsApp = normalizeKenyanPhone(profile.whatsapp);
+    const ownerDashboardLink = document.getElementById("ownerDashboardLink");
+    if (ownerDashboardLink) ownerDashboardLink.style.display = role === "owner" ? "flex" : "none";
     if (currentWhatsApp) adminWhatsAppInput.value = currentWhatsApp;
 
     // Load profile avatar if exists
@@ -277,6 +274,7 @@ function readNumber(id) {
 }
  
 const carPhotosInput = document.getElementById("carPhotos");
+const carPhotosLabel = document.getElementById("carPhotosLabel");
 const photoPreview = document.getElementById("photoPreview");
 const uploadProgress = document.getElementById("uploadProgress");
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
@@ -950,6 +948,7 @@ async function editCar(car) {
 
   // Make photos optional in edit mode (they can keep existing ones)
   carPhotosInput.required = false;
+  if (carPhotosLabel) carPhotosLabel.textContent = "Vehicle photos (optional; select new photos to replace existing)";
 }
 
 function cancelEdit() {
@@ -966,6 +965,7 @@ function cancelEdit() {
   formMessage.textContent = "";
   addCarButton.textContent = "Add Vehicle";
   carPhotosInput.required = true;
+  if (carPhotosLabel) carPhotosLabel.textContent = "Vehicle photos (required)";
 
   // Hide cancel button
   if (cancelEditButton) cancelEditButton.style.display = "none";
@@ -976,7 +976,9 @@ async function updateCar(carId, source, carData, newImages) {
   const carRef = doc(db, collectionName, carId);
   
   // Combine existing images with new ones (new images first)
-  const allImages = [...newImages, ...existingImageUrls.map(url => ({ url, publicId: "" }))];
+  const allImages = newImages.length
+    ? newImages
+    : existingImageUrls.map(url => ({ url, publicId: "" }));
   
   const updateData = {
     ...carData,
@@ -1266,6 +1268,18 @@ function setMobileSidebarOpen(isOpen) {
 }
 
 function showSection(sectionId) {
+  const sectionTitles = {
+    dashboard: "Home",
+    "add-vehicle": "Add Vehicle",
+    "my-listings": "My Listings",
+    whatsapp: "WhatsApp Contact",
+    diagnostics: "Account Diagnostics",
+    "seller-directory": "Seller Directory",
+    "danger-zone": "Account Settings"
+  };
+  const currentView = document.getElementById("headerCurrentView");
+  if (currentView) currentView.textContent = sectionTitles[sectionId] || "Home";
+
   // Update nav items
   navItems.forEach(item => {
     item.classList.toggle("active", item.dataset.section === sectionId);
@@ -1358,30 +1372,7 @@ if (window.innerWidth <= 768) {
   sidebarToggle.setAttribute("aria-label", "Collapse navigation menu");
 }
 
-// Theme toggle functionality
-function initTheme() {
-  const savedTheme = localStorage.getItem("theme") || "light";
-  document.documentElement.setAttribute("data-theme", savedTheme);
-  updateThemeIcon(savedTheme);
-}
-
-function updateThemeIcon(theme) {
-  if (themeToggle) {
-    themeToggle.textContent = theme === "dark" ? "🌙" : "☀️";
-    themeToggle.setAttribute("aria-label", theme === "dark" ? "Switch to light mode" : "Switch to dark mode");
-  }
-}
-
-themeToggle?.addEventListener("click", () => {
-  const currentTheme = document.documentElement.getAttribute("data-theme") || "light";
-  const newTheme = currentTheme === "dark" ? "light" : "dark";
-  document.documentElement.setAttribute("data-theme", newTheme);
-  localStorage.setItem("theme", newTheme);
-  updateThemeIcon(newTheme);
-});
-
-// Initialize theme on page load
-initTheme();
+document.documentElement.setAttribute("data-theme", "dark");
 
 // Profile avatar functions
 function loadProfileAvatar(profile, user) {
@@ -1666,7 +1657,6 @@ editProfileForm?.addEventListener("submit", async (e) => {
 
 // Debug: Verify DOM elements are found
 console.log("Admin script loaded", {
-  themeToggle: !!themeToggle,
   sidebarToggle: !!sidebarToggle,
   profileAvatarBtn: !!profileAvatarBtn,
   profileDropdown: !!profileDropdown,
