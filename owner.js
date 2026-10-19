@@ -679,13 +679,45 @@ function renderSellerActionButton(seller) {
     `;
   }
   if (status === 'approved') {
-    return `<button class="btn btn-sm btn-outline text-danger" onclick="suspendSeller('${seller.id}', '${escapeHtml(seller.name || '')}')">Suspend</button>`;
+    const phone = normalizeKenyanPhone(seller.whatsapp);
+    const notifyButton = phone
+      ? `<button class="btn btn-sm btn-outline" onclick="notifySellerWhatsApp('${seller.id}')">Notify on WhatsApp</button>`
+      : '<span class="account-muted">No valid WhatsApp number saved</span>';
+    return `
+      ${notifyButton}
+      <button class="btn btn-sm btn-outline text-danger" onclick="suspendSeller('${seller.id}', '${escapeHtml(seller.name || '')}')">Suspend</button>
+    `;
   }
   if (status === 'suspended') {
     return `<button class="btn btn-sm btn-outline" onclick="reactivateSeller('${seller.id}', '${escapeHtml(seller.name || '')}')">Reactivate</button>`;
   }
   return `<button class="btn btn-sm btn-outline" onclick="approveSeller('${seller.id}', '${escapeHtml(seller.name || '')}')">Approve</button>`;
 }
+
+window.notifySellerWhatsApp = (id) => {
+  const seller = allSellersCache.find((item) => item.id === id);
+  if (!seller) {
+    showToast('Could not find this seller. Refresh Seller Applications and try again.', 'error');
+    return;
+  }
+
+  const phone = normalizeKenyanPhone(seller.whatsapp);
+  if (!phone) {
+    showToast('This seller does not have a valid Kenyan WhatsApp number saved.', 'error');
+    return;
+  }
+
+  const dealerName = String(seller.name || 'there').trim();
+  const message = `Hello ${dealerName}, 🎉
+
+Your Kiri Cars dealer account has been approved. You can now sign in at https://kiricars.co.ke and start listing your vehicles.
+
+Welcome to Kiri Cars — helping connect Kenyan car sellers with serious buyers. 🚗`;
+  const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+
+  // Open WhatsApp only after the owner clicks. The owner must press Send in WhatsApp.
+  window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+};
 
 window.approveSeller = async (id, name) => {
   showDialog('Approve Seller', `Approve "${name}" as a verified seller? They will be able to publish vehicle listings.`, async () => {
