@@ -157,9 +157,14 @@ service cloud.firestore {
         && request.resource.data.name is string
         && request.resource.data.name.size() >= 2
         && request.resource.data.name.size() <= 80
-        && request.resource.data.phone is string
-        && request.resource.data.phone.size() >= 10
-        && request.resource.data.phone.size() <= 15
+        && (
+          !('phone' in request.resource.data)
+          || (
+            request.resource.data.phone is string
+            && request.resource.data.phone.size() >= 10
+            && request.resource.data.phone.size() <= 15
+          )
+        )
         && (
           !('termsAccepted' in request.resource.data)
           || (
