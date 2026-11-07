@@ -15,6 +15,8 @@ const businessNameGroup = document.getElementById("businessNameGroup");
 const businessNameInput = document.getElementById("businessName");
 const button = document.getElementById("sellerRegisterButton");
 const message = document.getElementById("sellerRegisterMessage");
+const sellerTermsAccepted = document.getElementById("sellerTermsAccepted");
+const TERMS_VERSION = "2026-11-07";
 
 function showMessage(text, isError = false) {
   message.textContent = text;
@@ -45,6 +47,10 @@ form.addEventListener("submit", async (event) => {
   const password = document.getElementById("sellerPassword").value;
   const confirmPassword = document.getElementById("sellerPasswordConfirm").value;
 
+  if (!sellerTermsAccepted?.checked) {
+    showMessage("Please accept the Terms of Use and Community Guidelines before registering.", true);
+    return;
+  }
   if (!whatsapp) {
     showMessage("Enter a valid Kenyan mobile number, e.g. 0712345678 or 254712345678.", true);
     return;
@@ -81,6 +87,9 @@ form.addEventListener("submit", async (event) => {
       sellerType: type,
       businessName: type === "dealership" ? businessName : "",
       whatsapp,
+      termsAccepted: true,
+      termsVersion: TERMS_VERSION,
+      termsAcceptedAt: serverTimestamp(),
       createdAt: serverTimestamp(),
       createdBy: createdUser.uid
     });
