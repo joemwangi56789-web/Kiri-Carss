@@ -560,5 +560,53 @@ service cloud.firestore {
         allow update, delete: if false;
       }
     }
+ 
+    // Kiri Stories: public reading and author-owned publishing.
+    match /stories/{storyId} {
+      allow read: if resource.data.status == "published" || isOwner()
+        || (signedIn() && resource.data.authorId == request.auth.uid);
+      allow create: if signedIn()
+        && isActiveParticipant(request.auth.uid)
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.authorName is string
+        && request.resource.data.authorName.size() >= 2
+        && request.resource.data.authorName.size() <= 100
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 4
+        && request.resource.data.title.size() <= 140
+        && request.resource.data.category in ["Automotive", "Education", "Experiences", "Creativity", "Entertainment", "Other"]
+        && request.resource.data.excerpt is string
+        && request.resource.data.excerpt.size() <= 300
+        && request.resource.data.blocks is list
+        && request.resource.data.blocks.size() >= 1
+        && request.resource.data.blocks.size() <= 80
+        && request.resource.data.status == "published"
+        && request.resource.data.authorDeclaration == true
+        && request.resource.data.termsVersion == "2026-11-07"
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && (
+          (exists(/databases/$(database)/documents/buyers/$(request.auth.uid))
+            && get(/databases/$(database)/documents/buyers/$(request.auth.uid)).data.termsAccepted == true
+            && get(/databases/$(database)/documents/buyers/$(request.auth.uid)).data.termsVersion == "2026-11-07")
+          || (exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+            && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.termsAccepted == true
+            && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.termsVersion == "2026-11-07")
+        );
+      allow update: if isOwner()
+        || (signedIn() && resource.data.authorId == request.auth.uid
+          && resource.data.status == "published"
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["title", "category", "excerpt", "blocks", "updatedAt"])
+          && request.resource.data.title is string
+          && request.resource.data.title.size() >= 4
+          && request.resource.data.title.size() <= 140
+          && request.resource.data.blocks is list
+          && request.resource.data.blocks.size() >= 1
+          && request.resource.data.blocks.size() <= 80
+          && request.resource.data.updatedAt == request.time);
+      allow delete: if isOwner() || (signedIn() && resource.data.authorId == request.auth.uid);
+    }
+
   }
 }
