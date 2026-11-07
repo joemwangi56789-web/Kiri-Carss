@@ -828,6 +828,10 @@ deleteBuyerAccountButton?.addEventListener("click", async () => {
 });
 
 buyerGoogleAuthButton.addEventListener("click", async () => {
+  if (!buyerTermsAccepted?.checked) {
+    setMessage(buyerAuthMessage, "Please accept the Terms of Use and Community Guidelines before continuing with Google.", true);
+    return;
+  }
   const provider = new GoogleAuthProvider();
   buyerGoogleAuthButton.disabled = true;
   buyerGoogleAuthText.textContent = "Signing in...";
@@ -838,10 +842,6 @@ buyerGoogleAuthButton.addEventListener("click", async () => {
     const user = result.user;
 
     // Check if buyer profile exists, if not create it
-    if (!buyerTermsAccepted?.checked) {
-      setMessage(buyerAuthMessage, "Please accept the Terms of Use and Community Guidelines before continuing with Google.", true);
-      return;
-    }
     const buyerRef = doc(db, "buyers", user.uid);
     const buyerSnap = await getDoc(buyerRef);
 
