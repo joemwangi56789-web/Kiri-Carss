@@ -62,7 +62,7 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly([
             'name', 'email', 'role', 'active', 'approvalStatus',
             'verificationStatus', 'sellerType', 'businessName',
-            'whatsapp', 'createdAt', 'createdBy'
+            'whatsapp', 'termsAccepted', 'termsVersion', 'termsAcceptedAt', 'createdAt', 'createdBy'
           ])
           && request.resource.data.keys().hasAll([
             'name', 'email', 'role', 'active', 'approvalStatus',
@@ -83,6 +83,9 @@ service cloud.firestore {
           && request.resource.data.whatsapp is string
           && request.resource.data.whatsapp.size() >= 10
           && request.resource.data.whatsapp.size() <= 15
+          && request.resource.data.termsAccepted == true
+          && request.resource.data.termsVersion == '2026-11-07'
+          && request.resource.data.termsAcceptedAt == request.time
           && request.resource.data.createdBy == request.auth.uid
           && request.resource.data.createdAt == request.time
         );
@@ -116,7 +119,7 @@ service cloud.firestore {
         && request.auth.uid == userId
         && request.resource.data.keys().hasOnly([
           'name', 'email', 'role', 'phone', 'active', 'createdAt',
-          'authProvider'
+          'authProvider', 'termsAccepted', 'termsVersion', 'termsAcceptedAt'
         ])
         && request.resource.data.keys().hasAll([
           'name', 'email', 'role', 'createdAt'
@@ -142,18 +145,34 @@ service cloud.firestore {
           !('authProvider' in request.resource.data)
           || request.resource.data.authProvider == "google"
         )
+        && request.resource.data.termsAccepted == true
+        && request.resource.data.termsVersion == '2026-11-07'
+        && request.resource.data.termsAcceptedAt == request.time
         && request.resource.data.createdAt == request.time;
 
       allow update: if signedIn()
         && (isOwner() || request.auth.uid == userId)
         && request.resource.data.diff(resource.data)
-          .affectedKeys().hasOnly(['name', 'phone', 'active'])
+          .affectedKeys().hasOnly(['name', 'phone', 'active', 'termsAccepted', 'termsVersion', 'termsAcceptedAt'])
         && request.resource.data.name is string
         && request.resource.data.name.size() >= 2
         && request.resource.data.name.size() <= 80
-        && request.resource.data.phone is string
-        && request.resource.data.phone.size() >= 10
-        && request.resource.data.phone.size() <= 15;
+        && (
+          !('phone' in request.resource.data)
+          || (
+            request.resource.data.phone is string
+            && request.resource.data.phone.size() >= 10
+            && request.resource.data.phone.size() <= 15
+          )
+        )
+        && (
+          !('termsAccepted' in request.resource.data)
+          || (
+            request.resource.data.termsAccepted == true
+            && request.resource.data.termsVersion == '2026-11-07'
+            && request.resource.data.termsAcceptedAt == request.time
+          )
+        );
 
       allow delete: if isOwner()
         || (signedIn() && request.auth.uid == userId);
@@ -541,5 +560,87 @@ service cloud.firestore {
         allow update, delete: if false;
       }
     }
+ 
+    // Kiri Stories: public reading and author-owned publishing.
+    match /stories/{storyId} {
+      allow read: if resource.data.status == "published" || isOwner()
+        || (signedIn() && resource.data.authorId == request.auth.uid);
+      allow create: if signedIn()
+        && isActiveParticipant(request.auth.uid)
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.authorName is string
+        && request.resource.data.authorName.size() >= 2
+        && request.resource.data.authorName.size() <= 100
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 4
+        && request.resource.data.title.size() <= 140
+        && request.resource.data.category in ["Automotive", "Education", "Experiences", "Creativity", "Entertainment", "Other"]
+        && request.resource.data.excerpt is string
+        && request.resource.data.excerpt.size() <= 300
+        && request.resource.data.blocks is list
+        && request.resource.data.blocks.size() >= 1
+        && request.resource.data.blocks.size() <= 80
+        && request.resource.data.status == "published"
+        && request.resource.data.authorDeclaration == true
+        && request.resource.data.termsVersion == "2026-11-07"
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && (
+          (exists(/databases/$(database)/documents/buyers/$(request.auth.uid))
+            && get(/databases/$(database)/documents/buyers/$(request.auth.uid)).data.termsAccepted == true
+            && get(/databases/$(database)/documents/buyers/$(request.auth.uid)).data.termsVersion == "2026-11-07")
+          || (exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+            && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.termsAccepted == true
+            && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.termsVersion == "2026-11-07")
+        );
+      allow update: if isOwner()
+        || (signedIn() && resource.data.authorId == request.auth.uid
+          && resource.data.status == "published"
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["title", "category", "excerpt", "blocks", "updatedAt"])
+          && request.resource.data.title is string
+          && request.resource.data.title.size() >= 4
+          && request.resource.data.title.size() <= 140
+          && request.resource.data.blocks is list
+          && request.resource.data.blocks.size() >= 1
+          && request.resource.data.blocks.size() <= 80
+          && request.resource.data.updatedAt == request.time);
+      allow delete: if isOwner() || (signedIn() && resource.data.authorId == request.auth.uid);
+    }
+
+    // Community reports: private to the reporter and the owner/moderation team.
+    match /storyReports/{reportId} {
+      allow create: if signedIn()
+        && isActiveParticipant(request.auth.uid)
+        && request.resource.data.reporterId == request.auth.uid
+        && request.resource.data.storyId is string
+        && exists(/databases/$(database)/documents/stories/$(request.resource.data.storyId))
+        && get(/databases/$(database)/documents/stories/$(request.resource.data.storyId)).data.status == "published"
+        && get(/databases/$(database)/documents/stories/$(request.resource.data.storyId)).data.authorId != request.auth.uid
+        && request.resource.data.reason is string
+        && request.resource.data.reason.size() >= 2
+        && request.resource.data.reason.size() <= 100
+        && request.resource.data.details is string
+        && request.resource.data.details.size() <= 1000
+        && request.resource.data.status == "open"
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.keys().hasOnly([
+          "storyId", "storyTitle", "storyAuthorId", "reporterId",
+          "reason", "details", "status", "createdAt"
+        ]);
+      allow read: if isOwner()
+        || (signedIn() && resource.data.reporterId == request.auth.uid);
+      allow update: if isOwner()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["status", "moderationNote", "reviewedAt", "reviewedBy", "actionTaken"])
+        && request.resource.data.status in ["open", "reviewed", "dismissed", "action_taken"]
+        && request.resource.data.reviewedBy == request.auth.uid
+        && request.resource.data.reviewedAt == request.time
+        && request.resource.data.moderationNote is string
+        && request.resource.data.moderationNote.size() <= 1000
+        && request.resource.data.actionTaken in ["none", "story_hidden", "author_warned", "account_suspended", "account_banned"];
+      allow delete: if isOwner();
+    }
+
   }
 }
