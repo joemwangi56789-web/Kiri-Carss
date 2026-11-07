@@ -62,7 +62,7 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly([
             'name', 'email', 'role', 'active', 'approvalStatus',
             'verificationStatus', 'sellerType', 'businessName',
-            'whatsapp', 'createdAt', 'createdBy'
+            'whatsapp', 'termsAccepted', 'termsVersion', 'termsAcceptedAt', 'createdAt', 'createdBy'
           ])
           && request.resource.data.keys().hasAll([
             'name', 'email', 'role', 'active', 'approvalStatus',
@@ -83,6 +83,9 @@ service cloud.firestore {
           && request.resource.data.whatsapp is string
           && request.resource.data.whatsapp.size() >= 10
           && request.resource.data.whatsapp.size() <= 15
+          && request.resource.data.termsAccepted == true
+          && request.resource.data.termsVersion == '2026-11-07'
+          && request.resource.data.termsAcceptedAt == request.time
           && request.resource.data.createdBy == request.auth.uid
           && request.resource.data.createdAt == request.time
         );
@@ -116,7 +119,7 @@ service cloud.firestore {
         && request.auth.uid == userId
         && request.resource.data.keys().hasOnly([
           'name', 'email', 'role', 'phone', 'active', 'createdAt',
-          'authProvider'
+          'authProvider', 'termsAccepted', 'termsVersion', 'termsAcceptedAt'
         ])
         && request.resource.data.keys().hasAll([
           'name', 'email', 'role', 'createdAt'
@@ -142,18 +145,29 @@ service cloud.firestore {
           !('authProvider' in request.resource.data)
           || request.resource.data.authProvider == "google"
         )
+        && request.resource.data.termsAccepted == true
+        && request.resource.data.termsVersion == '2026-11-07'
+        && request.resource.data.termsAcceptedAt == request.time
         && request.resource.data.createdAt == request.time;
 
       allow update: if signedIn()
         && (isOwner() || request.auth.uid == userId)
         && request.resource.data.diff(resource.data)
-          .affectedKeys().hasOnly(['name', 'phone', 'active'])
+          .affectedKeys().hasOnly(['name', 'phone', 'active', 'termsAccepted', 'termsVersion', 'termsAcceptedAt'])
         && request.resource.data.name is string
         && request.resource.data.name.size() >= 2
         && request.resource.data.name.size() <= 80
         && request.resource.data.phone is string
         && request.resource.data.phone.size() >= 10
-        && request.resource.data.phone.size() <= 15;
+        && request.resource.data.phone.size() <= 15
+        && (
+          !('termsAccepted' in request.resource.data)
+          || (
+            request.resource.data.termsAccepted == true
+            && request.resource.data.termsVersion == '2026-11-07'
+            && request.resource.data.termsAcceptedAt == request.time
+          )
+        );
 
       allow delete: if isOwner()
         || (signedIn() && request.auth.uid == userId);
