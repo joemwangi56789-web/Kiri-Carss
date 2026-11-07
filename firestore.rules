@@ -608,5 +608,39 @@ service cloud.firestore {
       allow delete: if isOwner() || (signedIn() && resource.data.authorId == request.auth.uid);
     }
 
+    // Community reports: private to the reporter and the owner/moderation team.
+    match /storyReports/{reportId} {
+      allow create: if signedIn()
+        && isActiveParticipant(request.auth.uid)
+        && request.resource.data.reporterId == request.auth.uid
+        && request.resource.data.storyId is string
+        && exists(/databases/$(database)/documents/stories/$(request.resource.data.storyId))
+        && get(/databases/$(database)/documents/stories/$(request.resource.data.storyId)).data.status == "published"
+        && get(/databases/$(database)/documents/stories/$(request.resource.data.storyId)).data.authorId != request.auth.uid
+        && request.resource.data.reason is string
+        && request.resource.data.reason.size() >= 2
+        && request.resource.data.reason.size() <= 100
+        && request.resource.data.details is string
+        && request.resource.data.details.size() <= 1000
+        && request.resource.data.status == "open"
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.keys().hasOnly([
+          "storyId", "storyTitle", "storyAuthorId", "reporterId",
+          "reason", "details", "status", "createdAt"
+        ]);
+      allow read: if isOwner()
+        || (signedIn() && resource.data.reporterId == request.auth.uid);
+      allow update: if isOwner()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["status", "moderationNote", "reviewedAt", "reviewedBy", "actionTaken"])
+        && request.resource.data.status in ["open", "reviewed", "dismissed", "action_taken"]
+        && request.resource.data.reviewedBy == request.auth.uid
+        && request.resource.data.reviewedAt == request.time
+        && request.resource.data.moderationNote is string
+        && request.resource.data.moderationNote.size() <= 1000
+        && request.resource.data.actionTaken in ["none", "story_hidden", "author_warned", "account_suspended", "account_banned"];
+      allow delete: if isOwner();
+    }
+
   }
 }
