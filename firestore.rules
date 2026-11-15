@@ -257,7 +257,7 @@ service cloud.firestore {
             && request.resource.data.listingFee > 0
             && request.resource.data.paymentId is string
             && existsAfter(/databases/$(database)/documents/listingPayments/$(request.resource.data.paymentId))
-            && getAfter(/databases/$(database)/documents/listingPayments/$(request.resource.data.paymentId)).data.listingId is string
+            && getAfter(/databases/$(database)/documents/listingPayments/$(request.resource.data.paymentId)).data.listingId == carId
             && getAfter(/databases/$(database)/documents/listingPayments/$(request.resource.data.paymentId)).data.sellerId == request.auth.uid
             && getAfter(/databases/$(database)/documents/listingPayments/$(request.resource.data.paymentId)).data.amount == request.resource.data.listingFee
             && !('listingExpiresAt' in request.resource.data)
