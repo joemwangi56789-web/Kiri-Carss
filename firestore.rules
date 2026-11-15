@@ -431,12 +431,12 @@ service cloud.firestore {
         && request.resource.data.listingStatus == "draft"
         && request.resource.data.paymentStatus == "not_due";
 
-      // Pending dealers can read their own drafts
-      allow read: if isPendingDealer(request.auth.uid)
+      // Pending dealers can prepare drafts; approved active sellers can retrieve and publish them.
+      allow read: if (isPendingDealer(request.auth.uid) || isActiveSeller(request.auth.uid))
         && resource.data.addedBy == request.auth.uid;
 
-      // Pending dealers can update their own drafts
-      allow update: if isPendingDealer(request.auth.uid)
+      // Owners of drafts may update them while pending or after approval.
+      allow update: if (isPendingDealer(request.auth.uid) || isActiveSeller(request.auth.uid))
         && resource.data.addedBy == request.auth.uid
         && request.resource.data.diff(resource.data)
           .affectedKeys().hasOnly([
@@ -449,8 +449,8 @@ service cloud.firestore {
           ])
         && request.resource.data.listingStatus == "draft";
 
-      // Pending dealers can delete their own drafts
-      allow delete: if isPendingDealer(request.auth.uid)
+      // Draft owners may delete their own drafts before or after seller approval.
+      allow delete: if (isPendingDealer(request.auth.uid) || isActiveSeller(request.auth.uid))
         && resource.data.addedBy == request.auth.uid;
     }
 
