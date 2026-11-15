@@ -959,14 +959,22 @@ async function loadListingPayments() {
       title.textContent = 'Payment #' + p.id.slice(0, 8);
       const details = document.createElement('p');
       details.textContent = 'Listing: ' + (p.listingId || 'N/A') + ' · Seller: ' + (p.sellerId || 'N/A');
-      const amount = document.createElement('p');
-      amount.textContent = formatMoney(p.amount) + ' · ' + (p.paymentMethod || 'Payment pending');
+      const amount = document.createElement('input');
+      amount.type = 'number'; amount.min = '1'; amount.step = '1';
+      amount.value = String(Number(p.amount) || 0); amount.placeholder = 'Amount received (KSh)';
+      const method = document.createElement('select');
+      ['M-Pesa', 'Bank transfer', 'Cash', 'Other'].forEach(value => {
+        const option = document.createElement('option'); option.value = value; option.textContent = value; method.appendChild(option);
+      });
+      const reference = document.createElement('input');
+      reference.type = 'text'; reference.maxLength = 100;
+      reference.placeholder = 'Transaction reference or payment note'; reference.required = true;
       const action = document.createElement('button');
       action.type = 'button';
       action.className = 'btn btn-sm btn-primary';
       action.textContent = 'Verify payment and publish';
-      action.addEventListener('click', () => window.verifyPayment(p.id));
-      item.append(title, details, amount, action);
+      action.addEventListener('click', () => window.verifyPayment(p.id, amount.value, method.value, reference.value));
+      item.append(title, details, amount, method, reference, action);
       list.appendChild(item);
     });
     msg.textContent = payments.length + ' pending payment(s) require review.';
@@ -977,7 +985,14 @@ async function loadListingPayments() {
   }
 }
 
-window.verifyPayment = async (paymentId) => {
+window.verifyPayment = async (paymentId, amountValue, methodValue, referenceValue) => {
+  const verifiedAmount = Number(amountValue);
+  const verifiedMethod = String(methodValue || '').trim();
+  const verifiedReference = String(referenceValue || '').trim();
+  if (!Number.isFinite(verifiedAmount) || verifiedAmount <= 0 || !verifiedMethod || !verifiedReference || verifiedReference.length > 100) {
+    showToast('Enter the amount received, payment method and a reference or note (maximum 100 characters).', 'warning');
+    return;
+  }
   showDialog('Verify payment and publish listing',
     'Confirm that the full payment has been received. The linked vehicle will become visible for 60 days.',
     async () => {
@@ -993,20 +1008,24 @@ window.verifyPayment = async (paymentId) => {
           const carSnap = await transaction.get(carRef);
           if (!carSnap.exists()) throw new Error('The linked vehicle could not be found.');
           if (carSnap.data().addedBy !== payment.sellerId) throw new Error('Seller and vehicle do not match.');
-          const reference = String(payment.reference || payment.id || paymentId);
+          const reference = verifiedReference;
           transaction.update(carRef, {
             listingStatus: 'active',
             paymentStatus: 'paid',
             listingExpiresAt: Timestamp.fromMillis(Date.now() + 60 * 24 * 60 * 60 * 1000),
             paymentReference: reference,
-            paymentMethod: payment.paymentMethod || 'website',
-            paymentAmount: Number(payment.amount) || 0,
-            paymentNote: payment.note || '',
+            paymentMethod: verifiedMethod,
+            paymentAmount: verifiedAmount,
+            paymentNote: verifiedReference,
             paymentVerifiedBy: ownerUid,
             paidAt: serverTimestamp()
           });
           transaction.update(paymentRef, {
             status: 'verified',
+            amount: verifiedAmount,
+            paymentMethod: verifiedMethod,
+            reference: verifiedReference,
+            note: verifiedReference,
             verifiedAt: serverTimestamp(),
             verifiedBy: ownerUid
           });
@@ -1056,7 +1075,7 @@ async function loadExpiredListings() {
         const option = document.createElement('option'); option.value = value; option.textContent = value; method.appendChild(option);
       });
       const reference = document.createElement('input');
-      reference.type = 'text'; reference.maxLength = 120;
+      reference.type = 'text'; reference.maxLength = 100;
       reference.placeholder = 'Transaction reference or payment note'; reference.required = true;
       const renew = document.createElement('button');
       renew.type = 'button'; renew.className = 'btn btn-sm btn-primary'; renew.textContent = 'Record payment & renew 60 days';
