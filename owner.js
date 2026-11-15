@@ -1007,7 +1007,11 @@ window.verifyPayment = async (paymentId, amountValue, methodValue, referenceValu
           const carRef = doc(db, 'cars', payment.listingId);
           const carSnap = await transaction.get(carRef);
           if (!carSnap.exists()) throw new Error('The linked vehicle could not be found.');
-          if (carSnap.data().addedBy !== payment.sellerId) throw new Error('Seller and vehicle do not match.');
+          const linkedCar = carSnap.data();
+          if (linkedCar.addedBy !== payment.sellerId) throw new Error('Seller and vehicle do not match.');
+          if (['sold', 'suspended'].includes(linkedCar.listingStatus)) {
+            throw new Error('Sold or suspended listings cannot be published through payment verification.');
+          }
           const reference = verifiedReference;
           transaction.update(carRef, {
             listingStatus: 'active',
