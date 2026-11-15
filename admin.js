@@ -849,6 +849,7 @@ async function publishDraft(car, button) {
     delete published.listingExpiresAt;
     delete published.freeTrialApprovedAt;
     delete published.paymentId;
+    delete published.updatedAt;
 
     const fee = listingFeeForPrice(published.price);
     if (!Number.isFinite(fee) || fee <= 0) {
