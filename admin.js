@@ -250,8 +250,8 @@ onAuthStateChanged(auth, async (user) => {
       setText(document.getElementById("listingPermissionNotice"), "Listing creation is disabled while your account is " + approvalStatus + ".", true);
       carForm.querySelectorAll("input, select, textarea, button").forEach((element) => { element.disabled = true; });
     } else if (role === "dealer") {
-      setText(adminMessage, "Your seller account is approved. New vehicles go live immediately for a 60-day free trial; no vehicle-by-vehicle approval is needed.");
-      setText(document.getElementById("listingPermissionNotice"), "Confirm your permission to advertise each vehicle. Approved dealers' listings go live immediately for 60 days, then stay private until Kiri Cars verifies the listing fee.");
+      setText(adminMessage, "Your seller account is approved. You can publish vehicles without individual listing approval. Your account has one 30-day free listing window.");
+      setText(document.getElementById("listingPermissionNotice"), "Confirm your permission to advertise each vehicle. Your account-level free window lasts 30 days from your first listing. Each free listing stays active for 60 days; later listings require payment verification.");
       addCarButton.textContent = "Publish Vehicle";
     } else {
       setText(adminMessage, "Signed in as " + currentAdminName);
