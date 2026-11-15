@@ -837,21 +837,82 @@ async function publishDraft(car, button) {
 
   button.disabled = true;
   try {
+    // Drafts are private while an application is pending. Publishing after approval
+    // must use the same account-level entitlement and payment flow as a new listing.
+    const existingCarsSnapshot = currentRole === "dealer"
+      ? await getDocs(query(collection(db, "cars"), where("addedBy", "==", currentUid)))
+      : null;
+    const hasPreviousListings = Boolean(existingCarsSnapshot && !existingCarsSnapshot.empty);
     const published = { ...car };
     delete published.id;
     delete published._source;
     delete published.listingExpiresAt;
     delete published.freeTrialApprovedAt;
-    const isDealerTrial = currentRole === "dealer";
-    published.listingStatus = isDealerTrial ? "active" : "pending_payment";
-    published.paymentStatus = isDealerTrial ? "free_trial" : "pending";
-    published.listingFee = isDealerTrial ? 0 : listingFeeForPrice(published.price);
-    if (isDealerTrial) {
-      published.listingExpiresAt = Timestamp.fromDate(new Date(Date.now() + FREE_TRIAL_LISTING_MS));
-      published.freeTrialApprovedAt = serverTimestamp();
+    delete published.paymentId;
+
+    const fee = listingFeeForPrice(published.price);
+    if (!Number.isFinite(fee) || fee <= 0) {
+      throw new Error("A valid listing fee could not be calculated for this vehicle.");
     }
-    await addDoc(collection(db, "cars"), published);
+
+    const carRef = doc(collection(db, "cars"));
+    const paymentRef = doc(collection(db, "listingPayments"));
+    await runTransaction(db, async (transaction) => {
+      const profileRef = doc(db, "admins", currentUid);
+      const profileSnap = await transaction.get(profileRef);
+      if (!profileSnap.exists()) throw new Error("Seller profile could not be verified.");
+      const latest = profileSnap.data();
+      if (latest.active !== true || latest.accountStatus === "suspended" ||
+          normalizeRole(latest.role) !== currentRole ||
+          (currentRole === "dealer" && latest.approvalStatus !== "approved")) {
+        throw new Error("Your seller account is not currently approved to publish vehicles.");
+      }
+
+      const now = Date.now();
+      let windowEnd = timestampMillis(latest.freeListingWindowEndsAt);
+      let isFreeListing = false;
+      if (currentRole === "dealer" && !hasPreviousListings &&
+          !latest.freeListingWindowStartedAt && !latest.freeListingWindowEndsAt) {
+        windowEnd = now + 60 * 24 * 60 * 60 * 1000;
+        transaction.update(profileRef, {
+          freeListingWindowStartedAt: serverTimestamp(),
+          freeListingWindowEndsAt: Timestamp.fromMillis(windowEnd)
+        });
+        isFreeListing = true;
+      } else if (currentRole === "dealer" && windowEnd !== null && windowEnd > now) {
+        isFreeListing = true;
+      }
+
+      if (isFreeListing) {
+        published.listingStatus = "active";
+        published.paymentStatus = "free_trial";
+        published.listingFee = 0;
+        published.listingExpiresAt = Timestamp.fromMillis(now + FREE_TRIAL_LISTING_MS);
+        published.freeTrialApprovedAt = serverTimestamp();
+        transaction.set(carRef, published);
+      } else {
+        published.listingStatus = "pending_payment";
+        published.paymentStatus = "pending";
+        published.listingFee = fee;
+        published.paymentId = paymentRef.id;
+        transaction.set(carRef, published);
+        transaction.set(paymentRef, {
+          paymentId: paymentRef.id,
+          listingId: carRef.id,
+          sellerId: currentUid,
+          amount: fee,
+          status: "pending",
+          paymentMethod: "awaiting_payment",
+          createdAt: serverTimestamp()
+        });
+      }
+    });
+
     await deleteDoc(doc(db, "dealerDrafts", car.id));
+    setText(formMessage, "Draft published successfully. " +
+      (published.paymentStatus === "free_trial"
+        ? "Your 60-day account free window applies; this listing remains active for 75 days."
+        : "It remains hidden until Kiri Cars verifies payment."));
     await loadMyCars();
   } catch (error) {
     console.error("Publish draft failed:", error);
