@@ -493,6 +493,14 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /auditLog/{logId} {
+      allow read: if isOwner();
+      allow create: if isOwner()
+        && request.resource.data.actorId == request.auth.uid
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+
     match /conversations/{conversationId} {
       allow read: if signedIn()
         && isActiveParticipant(request.auth.uid)
