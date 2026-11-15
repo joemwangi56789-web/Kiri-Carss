@@ -472,6 +472,8 @@ service cloud.firestore {
             'status', 'paymentMethod', 'createdAt'
           ])
           && request.resource.data.paymentId == paymentId
+          && request.resource.data.listingId is string
+          && request.resource.data.listingId.size() > 0
           && request.resource.data.sellerId == request.auth.uid
           && request.resource.data.status == "pending"
           && request.resource.data.amount is number
