@@ -79,7 +79,7 @@ const overviewCountElements = {
 };
 
 const EXPIRING_SOON_MS = 7 * 24 * 60 * 60 * 1000;
-const FREE_TRIAL_LISTING_MS = 60 * 24 * 60 * 60 * 1000;
+const FREE_TRIAL_LISTING_MS = 75 * 24 * 60 * 60 * 1000;
 
 function timestampMillis(value) {
   if (typeof value?.toMillis === "function") return value.toMillis();
@@ -250,8 +250,8 @@ onAuthStateChanged(auth, async (user) => {
       setText(document.getElementById("listingPermissionNotice"), "Listing creation is disabled while your account is " + approvalStatus + ".", true);
       carForm.querySelectorAll("input, select, textarea, button").forEach((element) => { element.disabled = true; });
     } else if (role === "dealer") {
-      setText(adminMessage, "Your seller account is approved. You can publish vehicles without individual listing approval. Your account has one 30-day free listing window.");
-      setText(document.getElementById("listingPermissionNotice"), "Confirm your permission to advertise each vehicle. Your account-level free window lasts 30 days from your first listing. Each free listing stays active for 60 days; later listings require payment verification.");
+      setText(adminMessage, "Your seller account is approved. You can publish vehicles without individual listing approval. Your account has one 60-day free listing window.");
+      setText(document.getElementById("listingPermissionNotice"), "Confirm your permission to advertise each vehicle. Your account-level free window lasts 60 days from your first listing. Each free listing stays active for 75 days; later listings require payment verification.");
       addCarButton.textContent = "Publish Vehicle";
     } else {
       setText(adminMessage, "Signed in as " + currentAdminName);
@@ -520,7 +520,7 @@ carForm.addEventListener("submit", async (event) => {
       await loadMyCars();
     } else {
       // CREATE MODE: save pending-account drafts privately; approved dealers receive
-      // one 30-day account-level free window, while each free listing lasts 60 days.
+      // one 60-day account-level free window, while each free listing lasts 75 days.
       const fee = listingFeeForPrice(readNumber("price"));
       let isFreeListing = false;
       const carRef = doc(collection(db, "cars"));
@@ -561,7 +561,7 @@ carForm.addEventListener("submit", async (event) => {
           const now = Date.now();
           let windowEnd = timestampMillis(latest.freeListingWindowEndsAt);
           if (currentRole === "dealer" && !hasPreviousListings && !latest.freeListingWindowStartedAt && !latest.freeListingWindowEndsAt) {
-            windowEnd = now + 30 * 24 * 60 * 60 * 1000;
+            windowEnd = now + 60 * 24 * 60 * 60 * 1000;
             transaction.update(profileRef, {
               freeListingWindowStartedAt: serverTimestamp(),
               freeListingWindowEndsAt: Timestamp.fromMillis(windowEnd)
@@ -600,7 +600,7 @@ carForm.addEventListener("submit", async (event) => {
       setText(formMessage, listingIsDraft
         ? "Draft saved privately. It will not appear to buyers until your seller account is approved."
         : isFreeListing
-          ? "Vehicle published. Your account-level 30-day free window applies; this listing will remain active for 60 days."
+          ? "Vehicle published. Your account-level 60-day free window applies; this listing will remain active for 75 days."
           : "Listing submitted with " + images.length + (images.length === 1 ? " photo. " : " photos. ") +
             "Estimated listing fee: KSh " + fee.toLocaleString("en-KE") +
             ". It remains hidden until Kiri Cars verifies payment.");
