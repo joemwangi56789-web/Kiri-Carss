@@ -1031,6 +1031,7 @@ async function loadExpiredListings() {
     const now = Date.now();
     const expired = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(car => {
       if (['sold', 'suspended'].includes(car.listingStatus)) return false;
+      if (car.listingStatus === 'pending_payment' && !car.paymentId) return true;
       const expiry = car.listingExpiresAt && typeof car.listingExpiresAt.toMillis === 'function'
         ? car.listingExpiresAt.toMillis() : null;
       return expiry !== null && expiry <= now;
@@ -1046,7 +1047,7 @@ async function loadExpiredListings() {
       const title = document.createElement('strong');
       title.textContent = [car.year, car.manufacturer, car.model].filter(Boolean).join(' ');
       const info = document.createElement('p');
-      info.textContent = 'Seller: ' + (car.sellerName || car.addedBy) + ' · Expired: ' + formatDate(car.listingExpiresAt);
+      info.textContent = 'Seller: ' + (car.sellerName || car.addedBy) + ' · Status: ' + (car.listingStatus || 'legacy') + ' · Expiry: ' + formatDate(car.listingExpiresAt);
       const amount = document.createElement('input');
       amount.type = 'number'; amount.min = '1'; amount.step = '1';
       amount.placeholder = 'Amount received (KSh)'; amount.required = true;
@@ -1063,7 +1064,7 @@ async function loadExpiredListings() {
       card.append(title, info, amount, method, reference, renew);
       list.appendChild(card);
     });
-    msg.textContent = expired.length + ' expired listing(s) found.';
+    msg.textContent = expired.length + ' hidden or expired listing(s) found.';
   } catch (e) {
     list.textContent = 'Could not load expired listings: ' + (e.message || e.code);
     msg.textContent = 'Expired listings could not be loaded.';
