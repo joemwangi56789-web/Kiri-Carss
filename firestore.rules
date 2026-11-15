@@ -93,6 +93,21 @@ service cloud.firestore {
         || (
           signedIn()
           && request.auth.uid == userId
+          && resource.data.role == "dealer"
+          && resource.data.active == true
+          && resource.data.approvalStatus == "approved"
+          && !('freeListingWindowStartedAt' in resource.data)
+          && !('freeListingWindowEndsAt' in resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['freeListingWindowStartedAt', 'freeListingWindowEndsAt'])
+          && request.resource.data.freeListingWindowStartedAt == request.time
+          && request.resource.data.freeListingWindowEndsAt is timestamp
+          && request.resource.data.freeListingWindowEndsAt > request.time
+          && request.resource.data.freeListingWindowEndsAt <= request.time + duration.value(30, 'd')
+        )
+        || (
+          signedIn()
+          && request.auth.uid == userId
           && request.resource.data.diff(resource.data)
             .affectedKeys().hasOnly(['name', 'whatsapp', 'updatedAt'])
           && request.resource.data.name is string
@@ -170,7 +185,7 @@ service cloud.firestore {
           'images', 'imageUrl',
           'addedBy', 'sellerWhatsApp', 'sellerName',
           'listingStatus', 'paymentStatus', 'listingFee',
-          'createdAt', 'listingExpiresAt', 'freeTrialApprovedAt'
+          'createdAt', 'listingExpiresAt', 'freeTrialApprovedAt', 'paymentId'
         ])
         && request.resource.data.keys().hasAll([
           'manufacturer', 'carType', 'model', 'year', 'price',
@@ -227,14 +242,24 @@ service cloud.firestore {
             && request.resource.data.listingExpiresAt is timestamp
             && request.resource.data.listingExpiresAt > request.time
             && request.resource.data.freeTrialApprovedAt == request.time
-            && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == "dealer"
-            && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.approvalStatus == "approved"
+            && request.resource.data.listingExpiresAt <= request.time + duration.value(60, 'd')
+            && getAfter(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == "dealer"
+            && getAfter(/databases/$(database)/documents/admins/$(request.auth.uid)).data.approvalStatus == "approved"
+            && getAfter(/databases/$(database)/documents/admins/$(request.auth.uid)).data.freeListingWindowStartedAt is timestamp
+            && getAfter(/databases/$(database)/documents/admins/$(request.auth.uid)).data.freeListingWindowEndsAt is timestamp
+            && getAfter(/databases/$(database)/documents/admins/$(request.auth.uid)).data.freeListingWindowEndsAt > request.time
+            && !('paymentId' in request.resource.data)
           )
           || (
             request.resource.data.listingStatus == "pending_payment"
             && request.resource.data.paymentStatus == "pending"
             && request.resource.data.listingFee is number
-            && request.resource.data.listingFee >= 0
+            && request.resource.data.listingFee > 0
+            && request.resource.data.paymentId is string
+            && existsAfter(/databases/$(database)/documents/listingPayments/$(request.resource.data.paymentId))
+            && getAfter(/databases/$(database)/documents/listingPayments/$(request.resource.data.paymentId)).data.listingId == request.resource.__name__.id
+            && getAfter(/databases/$(database)/documents/listingPayments/$(request.resource.data.paymentId)).data.sellerId == request.auth.uid
+            && getAfter(/databases/$(database)/documents/listingPayments/$(request.resource.data.paymentId)).data.amount == request.resource.data.listingFee
             && !('listingExpiresAt' in request.resource.data)
             && !('freeTrialApprovedAt' in request.resource.data)
           )
@@ -264,6 +289,7 @@ service cloud.firestore {
             .affectedKeys().hasOnly([
               'listingStatus', 'paymentStatus', 'listingFee',
               'listingExpiresAt', 'paymentReference', 'paymentVerifiedBy',
+              'paymentMethod', 'paymentAmount', 'paymentNote',
               'paidAt', 'renewedAt'
             ])
           && request.resource.data.listingStatus == "active"
@@ -426,6 +452,45 @@ service cloud.firestore {
       // Pending dealers can delete their own drafts
       allow delete: if isPendingDealer(request.auth.uid)
         && resource.data.addedBy == request.auth.uid;
+    }
+
+    match /listingPayments/{paymentId} {
+      // Owners can review every payment; sellers can see only their own records.
+      allow read: if isOwner()
+        || (signedIn() && resource.data.sellerId == request.auth.uid);
+
+      // A seller's payment request must be created atomically with its hidden vehicle.
+      allow create: if isOwner()
+        || (
+          isActiveSeller(request.auth.uid)
+          && request.resource.data.keys().hasOnly([
+            'paymentId', 'listingId', 'sellerId', 'amount',
+            'status', 'paymentMethod', 'createdAt'
+          ])
+          && request.resource.data.keys().hasAll([
+            'paymentId', 'listingId', 'sellerId', 'amount',
+            'status', 'paymentMethod', 'createdAt'
+          ])
+          && request.resource.data.paymentId == paymentId
+          && request.resource.data.sellerId == request.auth.uid
+          && request.resource.data.status == "pending"
+          && request.resource.data.amount is number
+          && request.resource.data.amount > 0
+          && request.resource.data.createdAt == request.time
+          && existsAfter(/databases/$(database)/documents/cars/$(request.resource.data.listingId))
+          && getAfter(/databases/$(database)/documents/cars/$(request.resource.data.listingId)).data.addedBy == request.auth.uid
+          && getAfter(/databases/$(database)/documents/cars/$(request.resource.data.listingId)).data.paymentId == paymentId
+          && getAfter(/databases/$(database)/documents/cars/$(request.resource.data.listingId)).data.listingStatus == "pending_payment"
+        );
+
+      allow update: if isOwner()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'verifiedAt', 'verifiedBy'])
+        && request.resource.data.status in ["verified", "rejected"]
+        && request.resource.data.verifiedBy == request.auth.uid
+        && request.resource.data.verifiedAt == request.time;
+
+      allow delete: if false;
     }
 
     match /conversations/{conversationId} {
