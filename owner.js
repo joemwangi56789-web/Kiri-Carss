@@ -994,7 +994,7 @@ window.verifyPayment = async (paymentId, amountValue, methodValue, referenceValu
     return;
   }
   showDialog('Verify payment and publish listing',
-    'Confirm that the full payment has been received. The linked vehicle will become visible for 60 days.',
+    'Confirm that the full payment has been received. The linked vehicle will become visible for 75 days.',
     async () => {
       try {
         await runTransaction(db, async transaction => {
@@ -1016,7 +1016,7 @@ window.verifyPayment = async (paymentId, amountValue, methodValue, referenceValu
           transaction.update(carRef, {
             listingStatus: 'active',
             paymentStatus: 'paid',
-            listingExpiresAt: Timestamp.fromMillis(Date.now() + 60 * 24 * 60 * 60 * 1000),
+            listingExpiresAt: Timestamp.fromMillis(Date.now() + 75 * 24 * 60 * 60 * 1000),
             paymentReference: reference,
             paymentMethod: verifiedMethod,
             paymentAmount: verifiedAmount,
@@ -1035,7 +1035,7 @@ window.verifyPayment = async (paymentId, amountValue, methodValue, referenceValu
           });
         });
         await writeAuditLog('payment_verified', 'listingPayment', paymentId, paymentId);
-        showToast('Payment verified and vehicle published for 60 days.', 'success');
+        showToast('Payment verified and vehicle published for 75 days.', 'success');
         await Promise.all([loadListingPayments(), loadExpiredListings()]);
       } catch (e) {
         showToast('Could not verify payment: ' + (e.message || e.code), 'error');
@@ -1082,7 +1082,7 @@ async function loadExpiredListings() {
       reference.type = 'text'; reference.maxLength = 100;
       reference.placeholder = 'Transaction reference or payment note'; reference.required = true;
       const renew = document.createElement('button');
-      renew.type = 'button'; renew.className = 'btn btn-sm btn-primary'; renew.textContent = 'Record payment & renew 60 days';
+      renew.type = 'button'; renew.className = 'btn btn-sm btn-primary'; renew.textContent = 'Record payment & renew 75 days';
       renew.addEventListener('click', () => manualRenewListing(car.id, amount, method, reference, renew));
       card.append(title, info, amount, method, reference, renew);
       list.appendChild(card);
@@ -1114,7 +1114,7 @@ async function manualRenewListing(listingId, amountInput, methodSelect, referenc
       transaction.update(carRef, {
         listingStatus: 'active',
         paymentStatus: 'paid',
-        listingExpiresAt: Timestamp.fromMillis(Date.now() + 60 * 24 * 60 * 60 * 1000),
+        listingExpiresAt: Timestamp.fromMillis(Date.now() + 75 * 24 * 60 * 60 * 1000),
         paymentReference: reference,
         paymentMethod: methodSelect.value,
         paymentAmount: amount,
@@ -1139,9 +1139,9 @@ async function manualRenewListing(listingId, amountInput, methodSelect, referenc
       });
     });
     await writeAuditLog('listing_manually_renewed', 'car', listingId, reference, {
-      amount, paymentMethod: methodSelect.value, reference, durationDays: 60
+      amount, paymentMethod: methodSelect.value, reference, durationDays: 75
     });
-    showToast('Listing renewed and published for 60 days.', 'success');
+    showToast('Listing renewed and published for 75 days.', 'success');
     await loadExpiredListings();
     await loadListingPayments();
   } catch (e) {
