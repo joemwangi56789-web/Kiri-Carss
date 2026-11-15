@@ -1129,7 +1129,6 @@ async function manualRenewListing(listingId, amountInput, methodSelect, referenc
 $('loadListingPaymentsButton')?.addEventListener('click', async () => {
   await Promise.all([loadListingPayments(), loadExpiredListings()]);
 });
-$('loadListingPaymentsButton')?.addEventListener('click', loadListingPayments);
 $('loadAdminsButtonTop')?.addEventListener('click', loadAdminsPage);
 // ============================================================================
 // Revenue Dashboard
