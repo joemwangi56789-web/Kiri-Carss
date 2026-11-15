@@ -103,7 +103,7 @@ service cloud.firestore {
           && request.resource.data.freeListingWindowStartedAt == request.time
           && request.resource.data.freeListingWindowEndsAt is timestamp
           && request.resource.data.freeListingWindowEndsAt > request.time
-          && request.resource.data.freeListingWindowEndsAt <= request.time + duration.value(30, 'd')
+          && request.resource.data.freeListingWindowEndsAt <= request.time + duration.value(60, 'd')
         )
         || (
           signedIn()
@@ -242,7 +242,7 @@ service cloud.firestore {
             && request.resource.data.listingExpiresAt is timestamp
             && request.resource.data.listingExpiresAt > request.time
             && request.resource.data.freeTrialApprovedAt == request.time
-            && request.resource.data.listingExpiresAt <= request.time + duration.value(60, 'd')
+            && request.resource.data.listingExpiresAt <= request.time + duration.value(75, 'd')
             && getAfter(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == "dealer"
             && getAfter(/databases/$(database)/documents/admins/$(request.auth.uid)).data.approvalStatus == "approved"
             && getAfter(/databases/$(database)/documents/admins/$(request.auth.uid)).data.freeListingWindowStartedAt is timestamp
