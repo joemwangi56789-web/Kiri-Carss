@@ -280,8 +280,15 @@ service cloud.firestore {
           && request.resource.data.paymentStatus == "free_trial"
           && request.resource.data.listingFee == 0
           && request.resource.data.listingExpiresAt is timestamp
+          && request.resource.data.listingExpiresAt > request.time
+          && request.resource.data.listingExpiresAt <= request.time + duration.value(75, 'd')
           && request.resource.data.freeTrialApprovedAt == request.time
           && request.resource.data.paymentVerifiedBy == request.auth.uid
+          && (
+            !('listingStatus' in resource.data)
+            || resource.data.listingStatus != "sold"
+              && resource.data.listingStatus != "suspended"
+          )
         )
         || (
           isOwner()
@@ -298,6 +305,12 @@ service cloud.firestore {
           && request.resource.data.listingFee >= 0
           && request.resource.data.listingExpiresAt is timestamp
           && request.resource.data.listingExpiresAt > request.time
+          && request.resource.data.listingExpiresAt <= request.time + duration.value(75, 'd')
+          && (
+            !('listingStatus' in resource.data)
+            || resource.data.listingStatus != "sold"
+              && resource.data.listingStatus != "suspended"
+          )
           && request.resource.data.paymentReference is string
           && request.resource.data.paymentReference.size() > 0
           && request.resource.data.paymentReference.size() <= 100
@@ -490,7 +503,18 @@ service cloud.firestore {
           .hasOnly(['status', 'verifiedAt', 'verifiedBy', 'amount', 'paymentMethod', 'reference', 'note'])
         && request.resource.data.status in ["verified", "rejected"]
         && request.resource.data.verifiedBy == request.auth.uid
-        && request.resource.data.verifiedAt == request.time;
+        && request.resource.data.verifiedAt == request.time
+        && (
+          request.resource.data.status == "rejected"
+          || (
+            resource.data.listingId is string
+            && existsAfter(/databases/$(database)/documents/cars/$(resource.data.listingId))
+            && getAfter(/databases/$(database)/documents/cars/$(resource.data.listingId)).data.addedBy == resource.data.sellerId
+            && getAfter(/databases/$(database)/documents/cars/$(resource.data.listingId)).data.listingStatus == "active"
+            && getAfter(/databases/$(database)/documents/cars/$(resource.data.listingId)).data.paymentStatus == "paid"
+            && getAfter(/databases/$(database)/documents/cars/$(resource.data.listingId)).data.paymentVerifiedBy == request.auth.uid
+          )
+        );
 
       allow delete: if false;
     }
