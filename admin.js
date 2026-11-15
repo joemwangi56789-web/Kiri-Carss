@@ -542,6 +542,12 @@ carForm.addEventListener("submit", async (event) => {
       if (listingIsDraft) {
         await addDoc(collection(db, "dealerDrafts"), car);
       } else {
+        // Older dealers may already have used the original free-listing allowance.
+        // Do not silently grant them a second free window during this migration.
+        const existingCarsSnapshot = currentRole === "dealer"
+          ? await getDocs(query(collection(db, "cars"), where("addedBy", "==", currentUid)))
+          : null;
+        const hasPreviousListings = Boolean(existingCarsSnapshot && !existingCarsSnapshot.empty);
         await runTransaction(db, async (transaction) => {
           const profileRef = doc(db, "admins", currentUid);
           const profileSnap = await transaction.get(profileRef);
@@ -554,7 +560,7 @@ carForm.addEventListener("submit", async (event) => {
 
           const now = Date.now();
           let windowEnd = timestampMillis(latest.freeListingWindowEndsAt);
-          if (currentRole === "dealer" && !latest.freeListingWindowStartedAt && !latest.freeListingWindowEndsAt) {
+          if (currentRole === "dealer" && !hasPreviousListings && !latest.freeListingWindowStartedAt && !latest.freeListingWindowEndsAt) {
             windowEnd = now + 30 * 24 * 60 * 60 * 1000;
             transaction.update(profileRef, {
               freeListingWindowStartedAt: serverTimestamp(),
