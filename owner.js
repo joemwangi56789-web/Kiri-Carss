@@ -683,7 +683,8 @@ function renderSellerActionButton(seller) {
     const notifyButton = phone
       ? `<button class="btn btn-sm btn-outline" onclick="notifySellerWhatsApp('${seller.id}')">Notify on WhatsApp</button>`
       : '<span class="account-muted">No valid WhatsApp number saved</span>';
-    const needsEligibilityReview = seller.freeListingEligible === undefined &&
+    const needsEligibilityReview = (seller.freeListingEligible === undefined ||
+      seller.freeListingEligibilityNeedsManualReview === true) &&
       !seller.freeListingWindowStartedAt && !seller.freeListingWindowEndsAt;
     const eligibilityButton = needsEligibilityReview
       ? `<button class="btn btn-sm btn-outline" onclick="reviewFreeListingEligibility('${seller.id}', '${escapeHtml(seller.name || '')}')">Review free-window eligibility</button>`
@@ -727,7 +728,7 @@ Welcome to Kiri Cars — helping connect Kenyan car sellers with serious buyers.
 
 window.reviewFreeListingEligibility = async (id, name) => {
   showDialog('Review free-window eligibility',
-    `Check whether "${name}" has any existing vehicle listings or listing-payment history before granting a one-time free window.`,
+    `Check current vehicle listings and payment history for "${name}". Older sold listings that were already deleted may not appear. Grant eligibility only if you have independently confirmed this seller has never used a free listing allowance.`,
     async () => {
       try {
         const [carsSnap, paymentsSnap] = await Promise.all([
@@ -743,6 +744,7 @@ window.reviewFreeListingEligibility = async (id, name) => {
         const eligible = carsSnap.empty && paymentsSnap.empty;
         await updateDoc(doc(db, 'admins', id), {
           freeListingEligible: eligible,
+          freeListingEligibilityNeedsManualReview: false,
           freeListingEligibilityReviewedAt: serverTimestamp(),
           freeListingEligibilityReviewedBy: ownerUid
         });
