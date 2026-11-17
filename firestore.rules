@@ -182,13 +182,27 @@ service cloud.firestore {
         && data.paymentVerifiedBy == request.auth.uid;
     }
 
-    function validOwnerPaidActivation(data) {
+    function hasVerifiedLinkedPayment(data, carId, sellerId) {
+      let payment = getAfter(/databases/$(database)/documents/listingPayments/$(data.paymentId)).data;
+      return data.paymentId is string
+        && existsAfter(/databases/$(database)/documents/listingPayments/$(data.paymentId))
+        && payment.paymentId == data.paymentId
+        && payment.listingId == carId
+        && payment.sellerId == sellerId
+        && payment.status == "verified"
+        && payment.amount == data.paymentAmount
+        && payment.paymentMethod == data.paymentMethod
+        && payment.reference == data.paymentReference
+        && payment.verifiedBy == request.auth.uid;
+    }
+
+    function validOwnerPaidActivation(data, carId, sellerId) {
       let changed = data.diff(resource.data).affectedKeys();
       return changed.hasOnly([
           'listingStatus', 'paymentStatus', 'listingFee',
           'listingExpiresAt', 'paymentReference', 'paymentVerifiedBy',
           'paymentMethod', 'paymentAmount', 'paymentNote',
-          'paidAt', 'renewedAt'
+          'paidAt', 'renewedAt', 'paymentId'
         ])
         && data.listingStatus == "active"
         && data.paymentStatus == "paid"
@@ -200,9 +214,13 @@ service cloud.firestore {
         && data.paymentReference is string
         && data.paymentReference.size() > 0
         && data.paymentReference.size() <= 100
+        && data.paymentAmount is number
+        && data.paymentAmount > 0
+        && data.paymentMethod is string
         && data.paymentVerifiedBy == request.auth.uid
         && data.paidAt == request.time
-        && (!('renewedAt' in data) || data.renewedAt == request.time);
+        && (!('renewedAt' in data) || data.renewedAt == request.time)
+        && hasVerifiedLinkedPayment(data, carId, sellerId);
     }
 
     function validOwnerVehicleEdit(data) {
@@ -379,7 +397,7 @@ service cloud.firestore {
             isOwner()
             && (
               validOwnerFreeActivation(request.resource.data)
-              || validOwnerPaidActivation(request.resource.data)
+              || validOwnerPaidActivation(request.resource.data, carId, ('addedBy' in resource.data) ? resource.data.addedBy : '')
               || (
                 resource.data.addedBy == request.auth.uid
                 && validOwnerVehicleEdit(request.resource.data)
