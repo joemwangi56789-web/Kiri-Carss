@@ -100,6 +100,38 @@ test("pending dealer cannot publish a public vehicle", async () => {
   })));
 });
 
+test("pending dealer can save a private draft and access it after owner approval", async () => {
+  await seed("admins", "pending-draft-dealer", {
+    name: "Pending Draft Dealer",
+    email: "draft@example.test",
+    role: "dealer",
+    active: false,
+    approvalStatus: "pending"
+  });
+  await seed("admins", "owner-1", { role: "owner", active: true });
+  const dealerDb = testEnv.authenticatedContext("pending-draft-dealer", {
+    email: "draft@example.test"
+  }).firestore();
+  const draftRef = doc(dealerDb, "dealerDrafts", "private-draft");
+
+  await assertSucceeds(setDoc(draftRef, carData("pending-draft-dealer", {
+    listingStatus: "draft",
+    paymentStatus: "not_due",
+    listingFee: 0
+  })));
+
+  const otherDb = testEnv.authenticatedContext("other-user").firestore();
+  await assertFails(getDoc(doc(otherDb, "dealerDrafts", "private-draft")));
+
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await updateDoc(doc(context.firestore(), "admins", "pending-draft-dealer"), {
+      active: true,
+      approvalStatus: "approved"
+    });
+  });
+  await assertSucceeds(getDoc(draftRef));
+});
+
 test("first approved dealer listing can initialize a 60-day free window and run for 75 days", async () => {
   await seed("admins", "dealer-1", dealerProfile({ freeListingEligible: true }));
   const db = testEnv.authenticatedContext("dealer-1", {
@@ -211,6 +243,38 @@ test("seller can create a paid hidden listing and its exactly linked pending pay
   }));
 });
 
+test("existing dealer without free eligibility can create a paid listing but not a free one", async () => {
+  await seed("admins", "existing-dealer", dealerProfile({ freeListingEligible: false }));
+  await seed("cars", "existing-dealer-old-car", carData("existing-dealer", {
+    listingStatus: "active",
+    paymentStatus: "paid",
+    listingFee: 25000
+  }));
+  const db = testEnv.authenticatedContext("existing-dealer", {
+    email: "dealer@example.test"
+  }).firestore();
+  const carRef = doc(db, "cars", "existing-dealer-paid-car");
+  const paymentRef = doc(db, "listingPayments", "existing-dealer-payment");
+
+  await assertSucceeds(runTransaction(db, async (transaction) => {
+    transaction.set(carRef, carData("existing-dealer", {
+      listingStatus: "pending_payment",
+      paymentStatus: "pending",
+      listingFee: 25000,
+      paymentId: paymentRef.id
+    }));
+    transaction.set(paymentRef, {
+      paymentId: paymentRef.id,
+      listingId: carRef.id,
+      sellerId: "existing-dealer",
+      amount: 25000,
+      status: "pending",
+      paymentMethod: "awaiting_payment",
+      createdAt: serverTimestamp()
+    });
+  }));
+});
+
 test("seller cannot create a payment record linked to a different car ID", async () => {
   await seed("admins", "dealer-1", dealerProfile({
     freeListingWindowStartedAt: Timestamp.fromMillis(Date.now() - 61 * DAY),
@@ -254,6 +318,37 @@ test("buyers cannot read a seller's private listing payment record", async () =>
   }).firestore();
 
   await assertFails(getDoc(doc(buyerDb, "listingPayments", "private-payment")));
+});
+
+test("a seller can read only their own payment records and cannot change payment status", async () => {
+  await seed("listingPayments", "seller-payment", {
+    paymentId: "seller-payment",
+    listingId: "seller-car",
+    sellerId: "dealer-1",
+    amount: 25000,
+    status: "pending"
+  });
+  const ownDb = testEnv.authenticatedContext("dealer-1").firestore();
+  const otherDb = testEnv.authenticatedContext("dealer-2").firestore();
+
+  await assertSucceeds(getDoc(doc(ownDb, "listingPayments", "seller-payment")));
+  await assertFails(getDoc(doc(otherDb, "listingPayments", "seller-payment")));
+  await assertFails(updateDoc(doc(ownDb, "listingPayments", "seller-payment"), {
+    status: "verified"
+  }));
+});
+
+test("non-owner accounts cannot read the owner audit log", async () => {
+  await seed("auditLog", "owner-action", {
+    action: "payment_verified",
+    actorId: "owner-1",
+    createdAt: Timestamp.fromMillis(Date.now())
+  });
+  const buyerDb = testEnv.authenticatedContext("buyer-1").firestore();
+  const sellerDb = testEnv.authenticatedContext("dealer-1").firestore();
+
+  await assertFails(getDoc(doc(buyerDb, "auditLog", "owner-action")));
+  await assertFails(getDoc(doc(sellerDb, "auditLog", "owner-action")));
 });
 
 test("owner can verify a pending payment only in the same transaction that publishes its linked car", async () => {
@@ -397,6 +492,31 @@ test("owner cannot renew a sold listing", async () => {
   const db = testEnv.authenticatedContext("owner-1").firestore();
 
   await assertFails(updateDoc(doc(db, "cars", "sold-car"), {
+    listingStatus: "active",
+    paymentStatus: "paid",
+    listingFee: 25000,
+    listingExpiresAt: Timestamp.fromMillis(Date.now() + 75 * DAY),
+    paymentReference: "CASH-RENEWAL",
+    paymentVerifiedBy: "owner-1",
+    paymentMethod: "Cash",
+    paymentAmount: 25000,
+    paymentNote: "CASH-RENEWAL",
+    paidAt: serverTimestamp(),
+    renewedAt: serverTimestamp()
+  }));
+});
+
+test("owner cannot renew a suspended listing", async () => {
+  await seed("admins", "owner-1", { role: "owner", active: true });
+  await seed("cars", "suspended-car", carData("dealer-1", {
+    listingStatus: "suspended",
+    paymentStatus: "paid",
+    listingFee: 25000,
+    listingExpiresAt: Timestamp.fromMillis(Date.now() - DAY)
+  }));
+  const db = testEnv.authenticatedContext("owner-1").firestore();
+
+  await assertFails(updateDoc(doc(db, "cars", "suspended-car"), {
     listingStatus: "active",
     paymentStatus: "paid",
     listingFee: 25000,
