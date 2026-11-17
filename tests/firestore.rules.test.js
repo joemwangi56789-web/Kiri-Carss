@@ -286,6 +286,7 @@ test("owner can verify a pending payment only in the same transaction that publi
       listingStatus: "active",
       paymentStatus: "paid",
       listingFee: 25000,
+      paymentId: "verify-payment",
       listingExpiresAt: Timestamp.fromMillis(Date.now() + 75 * DAY),
       paymentReference: "TEST-MPESA-001",
       paymentMethod: "M-Pesa",
@@ -300,6 +301,82 @@ test("owner can verify a pending payment only in the same transaction that publi
       paymentMethod: "M-Pesa",
       reference: "TEST-MPESA-001",
       note: "TEST-MPESA-001",
+      verifiedAt: serverTimestamp(),
+      verifiedBy: "owner-1"
+    });
+  }));
+});
+
+test("owner cannot activate a paid listing without atomically verifying its linked payment", async () => {
+  await seed("admins", "owner-1", { role: "owner", active: true });
+  await seed("cars", "car-needing-payment", carData("dealer-1", {
+    listingStatus: "pending_payment",
+    paymentStatus: "pending",
+    listingFee: 25000,
+    paymentId: "pending-payment"
+  }));
+  await seed("listingPayments", "pending-payment", {
+    paymentId: "pending-payment",
+    listingId: "car-needing-payment",
+    sellerId: "dealer-1",
+    amount: 25000,
+    status: "pending",
+    paymentMethod: "awaiting_payment"
+  });
+  const db = testEnv.authenticatedContext("owner-1").firestore();
+
+  await assertFails(updateDoc(doc(db, "cars", "car-needing-payment"), {
+    listingStatus: "active",
+    paymentStatus: "paid",
+    listingFee: 25000,
+    listingExpiresAt: Timestamp.fromMillis(Date.now() + 75 * DAY),
+    paymentReference: "NOT-VERIFIED",
+    paymentMethod: "M-Pesa",
+    paymentAmount: 25000,
+    paymentNote: "NOT-VERIFIED",
+    paymentVerifiedBy: "owner-1",
+    paidAt: serverTimestamp()
+  }));
+});
+
+test("owner can manually renew an older expired listing with a linked verified payment", async () => {
+  await seed("admins", "owner-1", { role: "owner", active: true });
+  await seed("cars", "legacy-expired-car", carData("dealer-1", {
+    listingStatus: "expired",
+    paymentStatus: "free_trial",
+    listingFee: 0,
+    listingExpiresAt: Timestamp.fromMillis(Date.now() - DAY)
+  }));
+  const db = testEnv.authenticatedContext("owner-1").firestore();
+  const carRef = doc(db, "cars", "legacy-expired-car");
+  const paymentRef = doc(db, "listingPayments", "renewal-payment");
+
+  await assertSucceeds(runTransaction(db, async (transaction) => {
+    transaction.update(carRef, {
+      listingStatus: "active",
+      paymentStatus: "paid",
+      paymentId: paymentRef.id,
+      listingFee: 25000,
+      listingExpiresAt: Timestamp.fromMillis(Date.now() + 75 * DAY),
+      paymentReference: "RENEWAL-001",
+      paymentMethod: "M-Pesa",
+      paymentAmount: 25000,
+      paymentNote: "RENEWAL-001",
+      paymentVerifiedBy: "owner-1",
+      paidAt: serverTimestamp(),
+      renewedAt: serverTimestamp()
+    });
+    transaction.set(paymentRef, {
+      paymentId: paymentRef.id,
+      listingId: "legacy-expired-car",
+      sellerId: "dealer-1",
+      amount: 25000,
+      status: "verified",
+      paymentMethod: "M-Pesa",
+      reference: "RENEWAL-001",
+      note: "RENEWAL-001",
+      renewal: true,
+      createdAt: serverTimestamp(),
       verifiedAt: serverTimestamp(),
       verifiedBy: "owner-1"
     });
