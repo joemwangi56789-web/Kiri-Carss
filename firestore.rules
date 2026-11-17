@@ -61,6 +61,22 @@ service cloud.firestore {
         && profile.approvalStatus == "pending";
     }
 
+    function hasActiveFreeListingWindow(userId) {
+      let profile = getAfter(/databases/$(database)/documents/admins/$(userId)).data;
+      return profile.role == "dealer"
+        && profile.approvalStatus == "approved"
+        && profile.freeListingWindowStartedAt is timestamp
+        && profile.freeListingWindowEndsAt is timestamp
+        && profile.freeListingWindowEndsAt > request.time;
+    }
+
+    function matchesPendingListingPayment(paymentId, carId, sellerId, amount) {
+      let payment = getAfter(/databases/$(database)/documents/listingPayments/$(paymentId)).data;
+      return payment.listingId == carId
+        && payment.sellerId == sellerId
+        && payment.amount == amount;
+    }
+
     match /admins/{userId} {
       allow read: if signedIn()
         && (isOwner() || request.auth.uid == userId || isActiveSeller(request.auth.uid));
@@ -254,11 +270,7 @@ service cloud.firestore {
             && request.resource.data.listingExpiresAt > request.time
             && request.resource.data.freeTrialApprovedAt == request.time
             && request.resource.data.listingExpiresAt <= request.time + duration.value(75, 'd')
-            && getAfter(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == "dealer"
-            && getAfter(/databases/$(database)/documents/admins/$(request.auth.uid)).data.approvalStatus == "approved"
-            && getAfter(/databases/$(database)/documents/admins/$(request.auth.uid)).data.freeListingWindowStartedAt is timestamp
-            && getAfter(/databases/$(database)/documents/admins/$(request.auth.uid)).data.freeListingWindowEndsAt is timestamp
-            && getAfter(/databases/$(database)/documents/admins/$(request.auth.uid)).data.freeListingWindowEndsAt > request.time
+            && hasActiveFreeListingWindow(request.auth.uid)
             && !('paymentId' in request.resource.data)
           )
           || (
@@ -268,9 +280,12 @@ service cloud.firestore {
             && request.resource.data.listingFee > 0
             && request.resource.data.paymentId is string
             && existsAfter(/databases/$(database)/documents/listingPayments/$(request.resource.data.paymentId))
-            && getAfter(/databases/$(database)/documents/listingPayments/$(request.resource.data.paymentId)).data.listingId == carId
-            && getAfter(/databases/$(database)/documents/listingPayments/$(request.resource.data.paymentId)).data.sellerId == request.auth.uid
-            && getAfter(/databases/$(database)/documents/listingPayments/$(request.resource.data.paymentId)).data.amount == request.resource.data.listingFee
+            && matchesPendingListingPayment(
+              request.resource.data.paymentId,
+              carId,
+              request.auth.uid,
+              request.resource.data.listingFee
+            )
             && !('listingExpiresAt' in request.resource.data)
             && !('freeTrialApprovedAt' in request.resource.data)
           )
