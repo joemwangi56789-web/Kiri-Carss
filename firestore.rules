@@ -77,6 +77,162 @@ service cloud.firestore {
         && payment.amount == amount;
     }
 
+
+    function validVehicleFields(data) {
+      let mileageValid = data.mileage == null
+        || (data.mileage is int && data.mileage >= 0);
+      return data.manufacturer is string
+        && data.manufacturer.size() >= 1
+        && data.manufacturer.size() <= 50
+        && data.carType in ["sedan", "suv", "hatchback", "coupe", "convertible", "wagon", "pickup", "van", "minivan", "other"]
+        && data.model is string
+        && data.model.size() >= 1
+        && data.model.size() <= 50
+        && data.year is int
+        && data.year >= 1990
+        && data.year <= 2030
+        && data.price is number
+        && data.price > 0
+        && data.status in ["Fresh Import", "Locally Used", "Brand New"]
+        && mileageValid
+        && data.fuel in ["petrol", "diesel", "hybrid", "electric", "plug_in_hybrid", "cng", "lpg"]
+        && data.transmission in ["manual", "automatic", "cvt", "dct", "amt"]
+        && data.description is string
+        && data.description.size() <= 5000
+        && data.vehicleRelationship in ["owner", "broker", "authorized_representative"]
+        && data.authorizationConfirmed == true;
+    }
+
+    function validCarCreateFields(data) {
+      return data.keys().hasOnly([
+          'manufacturer', 'carType', 'model', 'year', 'price',
+          'status', 'mileage', 'fuel', 'transmission', 'description',
+          'vehicleRelationship', 'authorizationConfirmed',
+          'images', 'imageUrl',
+          'addedBy', 'sellerWhatsApp', 'sellerName',
+          'listingStatus', 'paymentStatus', 'listingFee',
+          'createdAt', 'listingExpiresAt', 'freeTrialApprovedAt', 'paymentId'
+        ])
+        && data.keys().hasAll([
+          'manufacturer', 'carType', 'model', 'year', 'price',
+          'status', 'mileage', 'fuel', 'transmission', 'description',
+          'vehicleRelationship', 'authorizationConfirmed',
+          'images', 'imageUrl',
+          'addedBy', 'sellerWhatsApp', 'sellerName',
+          'listingStatus', 'paymentStatus', 'listingFee',
+          'createdAt'
+        ])
+        && validVehicleFields(data)
+        && data.images is list
+        && data.images.size() >= 1
+        && data.images.size() <= 20
+        && data.imageUrl is string
+        && data.imageUrl.size() > 0
+        && data.sellerWhatsApp is string
+        && data.sellerWhatsApp.size() >= 10
+        && data.sellerWhatsApp.size() <= 15
+        && data.sellerName is string
+        && data.sellerName.size() >= 2
+        && data.sellerName.size() <= 80
+        && data.createdAt == request.time;
+    }
+
+    function validFreeListingCreate(data, userId) {
+      return data.listingStatus == "active"
+        && data.paymentStatus == "free_trial"
+        && data.listingFee == 0
+        && data.listingExpiresAt is timestamp
+        && data.listingExpiresAt > request.time
+        && data.freeTrialApprovedAt == request.time
+        && data.listingExpiresAt <= request.time + duration.value(75, 'd')
+        && hasActiveFreeListingWindow(userId)
+        && !('paymentId' in data);
+    }
+
+    function validPaidListingCreate(data, carId, userId) {
+      return data.listingStatus == "pending_payment"
+        && data.paymentStatus == "pending"
+        && data.listingFee is number
+        && data.listingFee > 0
+        && data.paymentId is string
+        && existsAfter(/databases/$(database)/documents/listingPayments/$(data.paymentId))
+        && matchesPendingListingPayment(data.paymentId, carId, userId, data.listingFee)
+        && !('listingExpiresAt' in data)
+        && !('freeTrialApprovedAt' in data);
+    }
+
+    function isClosedListing(data) {
+      return ('listingStatus' in data)
+        && (data.listingStatus == "sold" || data.listingStatus == "suspended");
+    }
+
+    function validOwnerFreeActivation(data) {
+      let changed = data.diff(resource.data).affectedKeys();
+      return changed.hasOnly([
+          'listingStatus', 'paymentStatus', 'listingFee',
+          'listingExpiresAt', 'freeTrialApprovedAt', 'paymentVerifiedBy'
+        ])
+        && data.listingStatus == "active"
+        && data.paymentStatus == "free_trial"
+        && data.listingFee == 0
+        && data.listingExpiresAt is timestamp
+        && data.listingExpiresAt > request.time
+        && data.listingExpiresAt <= request.time + duration.value(75, 'd')
+        && data.freeTrialApprovedAt == request.time
+        && data.paymentVerifiedBy == request.auth.uid;
+    }
+
+    function validOwnerPaidActivation(data) {
+      let changed = data.diff(resource.data).affectedKeys();
+      return changed.hasOnly([
+          'listingStatus', 'paymentStatus', 'listingFee',
+          'listingExpiresAt', 'paymentReference', 'paymentVerifiedBy',
+          'paymentMethod', 'paymentAmount', 'paymentNote',
+          'paidAt', 'renewedAt'
+        ])
+        && data.listingStatus == "active"
+        && data.paymentStatus == "paid"
+        && data.listingFee is number
+        && data.listingFee >= 0
+        && data.listingExpiresAt is timestamp
+        && data.listingExpiresAt > request.time
+        && data.listingExpiresAt <= request.time + duration.value(75, 'd')
+        && data.paymentReference is string
+        && data.paymentReference.size() > 0
+        && data.paymentReference.size() <= 100
+        && data.paymentVerifiedBy == request.auth.uid
+        && data.paidAt == request.time
+        && (!('renewedAt' in data) || data.renewedAt == request.time);
+    }
+
+    function validOwnerVehicleEdit(data) {
+      let changed = data.diff(resource.data).affectedKeys();
+      return changed.hasOnly([
+          'manufacturer', 'carType', 'model', 'year', 'price',
+          'status', 'mileage', 'fuel', 'transmission', 'description',
+          'vehicleRelationship', 'authorizationConfirmed', 'updatedAt'
+        ])
+        && validVehicleFields(data)
+        && data.updatedAt == request.time;
+    }
+
+    function validSellerVehicleEdit(data) {
+      let changed = data.diff(resource.data).affectedKeys();
+      return changed.hasOnly([
+          'manufacturer', 'carType', 'model', 'year', 'price',
+          'status', 'mileage', 'fuel', 'transmission', 'description',
+          'vehicleRelationship', 'authorizationConfirmed',
+          'images', 'imageUrl', 'updatedAt'
+        ])
+        && validVehicleFields(data)
+        && data.images is list
+        && data.images.size() >= 1
+        && data.images.size() <= 20
+        && data.imageUrl is string
+        && data.imageUrl.size() > 0
+        && data.updatedAt == request.time;
+    }
+
     match /admins/{userId} {
       allow read: if signedIn()
         && (isOwner() || request.auth.uid == userId || isActiveSeller(request.auth.uid));
@@ -202,238 +358,37 @@ service cloud.firestore {
     }
 
     match /cars/{carId} {
-      // Active sellers can create new vehicle listings
+      // Active sellers can create new vehicle listings using the account's free window or a linked pending payment.
       allow create: if isActiveSeller(request.auth.uid)
         && request.resource.data.addedBy == request.auth.uid
-        && request.resource.data.keys().hasOnly([
-          'manufacturer', 'carType', 'model', 'year', 'price',
-          'status', 'mileage', 'fuel', 'transmission', 'description',
-          'vehicleRelationship', 'authorizationConfirmed',
-          'images', 'imageUrl',
-          'addedBy', 'sellerWhatsApp', 'sellerName',
-          'listingStatus', 'paymentStatus', 'listingFee',
-          'createdAt', 'listingExpiresAt', 'freeTrialApprovedAt', 'paymentId'
-        ])
-        && request.resource.data.keys().hasAll([
-          'manufacturer', 'carType', 'model', 'year', 'price',
-          'status', 'mileage', 'fuel', 'transmission', 'description',
-          'vehicleRelationship', 'authorizationConfirmed',
-          'images', 'imageUrl',
-          'addedBy', 'sellerWhatsApp', 'sellerName',
-          'listingStatus', 'paymentStatus', 'listingFee',
-          'createdAt'
-        ])
-        && request.resource.data.manufacturer is string
-        && request.resource.data.manufacturer.size() >= 1
-        && request.resource.data.manufacturer.size() <= 50
-        && request.resource.data.carType in ["sedan", "suv", "hatchback", "coupe", "convertible", "wagon", "pickup", "van", "minivan", "other"]
-        && request.resource.data.model is string
-        && request.resource.data.model.size() >= 1
-        && request.resource.data.model.size() <= 50
-        && request.resource.data.year is int
-        && request.resource.data.year >= 1990
-        && request.resource.data.year <= 2030
-        && request.resource.data.price is number
-        && request.resource.data.price > 0
-        && request.resource.data.status in ["Fresh Import", "Locally Used", "Brand New"]
+        && validCarCreateFields(request.resource.data)
         && (
-          request.resource.data.mileage == null
-          || (
-            request.resource.data.mileage is int
-            && request.resource.data.mileage >= 0
-          )
-        )
-        && request.resource.data.fuel in ["petrol", "diesel", "hybrid", "electric", "plug_in_hybrid", "cng", "lpg"]
-        && request.resource.data.transmission in ["manual", "automatic", "cvt", "dct", "amt"]
-        && request.resource.data.description is string
-        && request.resource.data.description.size() <= 5000
-        && request.resource.data.vehicleRelationship in ["owner", "broker", "authorized_representative"]
-        && request.resource.data.authorizationConfirmed == true
-        && request.resource.data.images is list
-        && request.resource.data.images.size() >= 1
-        && request.resource.data.images.size() <= 20
-        && request.resource.data.imageUrl is string
-        && request.resource.data.imageUrl.size() > 0
-        && request.resource.data.addedBy == request.auth.uid
-        && request.resource.data.sellerWhatsApp is string
-        && request.resource.data.sellerWhatsApp.size() >= 10
-        && request.resource.data.sellerWhatsApp.size() <= 15
-        && request.resource.data.sellerName is string
-        && request.resource.data.sellerName.size() >= 2
-        && request.resource.data.sellerName.size() <= 80
-        && (
-          (
-            request.resource.data.listingStatus == "active"
-            && request.resource.data.paymentStatus == "free_trial"
-            && request.resource.data.listingFee == 0
-            && request.resource.data.listingExpiresAt is timestamp
-            && request.resource.data.listingExpiresAt > request.time
-            && request.resource.data.freeTrialApprovedAt == request.time
-            && request.resource.data.listingExpiresAt <= request.time + duration.value(75, 'd')
-            && hasActiveFreeListingWindow(request.auth.uid)
-            && !('paymentId' in request.resource.data)
-          )
-          || (
-            request.resource.data.listingStatus == "pending_payment"
-            && request.resource.data.paymentStatus == "pending"
-            && request.resource.data.listingFee is number
-            && request.resource.data.listingFee > 0
-            && request.resource.data.paymentId is string
-            && existsAfter(/databases/$(database)/documents/listingPayments/$(request.resource.data.paymentId))
-            && matchesPendingListingPayment(
-              request.resource.data.paymentId,
-              carId,
-              request.auth.uid,
-              request.resource.data.listingFee
-            )
-            && !('listingExpiresAt' in request.resource.data)
-            && !('freeTrialApprovedAt' in request.resource.data)
-          )
+          validFreeListingCreate(request.resource.data, request.auth.uid)
+          || validPaidListingCreate(request.resource.data, carId, request.auth.uid)
         );
 
       // Anyone can read active listings
       allow read: if true;
 
-      // Sellers can update their own listings (not sold/suspended)
-      allow update: if (
-          isOwner()
-          && request.resource.data.diff(resource.data)
-            .affectedKeys().hasOnly([
-              'listingStatus', 'paymentStatus', 'listingFee',
-              'listingExpiresAt', 'freeTrialApprovedAt', 'paymentVerifiedBy'
-            ])
-          && request.resource.data.listingStatus == "active"
-          && request.resource.data.paymentStatus == "free_trial"
-          && request.resource.data.listingFee == 0
-          && request.resource.data.listingExpiresAt is timestamp
-          && request.resource.data.listingExpiresAt > request.time
-          && request.resource.data.listingExpiresAt <= request.time + duration.value(75, 'd')
-          && request.resource.data.freeTrialApprovedAt == request.time
-          && request.resource.data.paymentVerifiedBy == request.auth.uid
-          && (
-            !('listingStatus' in resource.data)
-            || resource.data.listingStatus != "sold"
-              && resource.data.listingStatus != "suspended"
-          )
-        )
-        || (
-          isOwner()
-          && request.resource.data.diff(resource.data)
-            .affectedKeys().hasOnly([
-              'listingStatus', 'paymentStatus', 'listingFee',
-              'listingExpiresAt', 'paymentReference', 'paymentVerifiedBy',
-              'paymentMethod', 'paymentAmount', 'paymentNote',
-              'paidAt', 'renewedAt'
-            ])
-          && request.resource.data.listingStatus == "active"
-          && request.resource.data.paymentStatus == "paid"
-          && request.resource.data.listingFee is number
-          && request.resource.data.listingFee >= 0
-          && request.resource.data.listingExpiresAt is timestamp
-          && request.resource.data.listingExpiresAt > request.time
-          && request.resource.data.listingExpiresAt <= request.time + duration.value(75, 'd')
-          && (
-            !('listingStatus' in resource.data)
-            || resource.data.listingStatus != "sold"
-              && resource.data.listingStatus != "suspended"
-          )
-          && request.resource.data.paymentReference is string
-          && request.resource.data.paymentReference.size() > 0
-          && request.resource.data.paymentReference.size() <= 100
-          && request.resource.data.paymentVerifiedBy == request.auth.uid
-          && request.resource.data.paidAt == request.time
-          && (
-            !('renewedAt' in request.resource.data)
-            || request.resource.data.renewedAt == request.time
-          )
-        )
-        || (
-          isOwner()
-          && resource.data.addedBy == request.auth.uid
-          && (
-            !('listingStatus' in resource.data)
-            || resource.data.listingStatus != "sold"
-              && resource.data.listingStatus != "suspended"
-          )
-          && request.resource.data.diff(resource.data)
-            .affectedKeys().hasOnly([
-              'manufacturer', 'carType', 'model', 'year', 'price',
-              'status', 'mileage', 'fuel', 'transmission', 'description',
-              'vehicleRelationship', 'authorizationConfirmed', 'updatedAt'
-            ])
-          && request.resource.data.manufacturer is string
-          && request.resource.data.manufacturer.size() >= 1
-          && request.resource.data.manufacturer.size() <= 50
-          && request.resource.data.carType in ["sedan", "suv", "hatchback", "coupe", "convertible", "wagon", "pickup", "van", "minivan", "other"]
-          && request.resource.data.model is string
-          && request.resource.data.model.size() >= 1
-          && request.resource.data.model.size() <= 50
-          && request.resource.data.year is int
-          && request.resource.data.year >= 1990
-          && request.resource.data.year <= 2030
-          && request.resource.data.price is number
-          && request.resource.data.price > 0
-          && request.resource.data.status in ["Fresh Import", "Locally Used", "Brand New"]
-          && (
-            request.resource.data.mileage == null
-            || request.resource.data.mileage is int
-              && request.resource.data.mileage >= 0
-          )
-          && request.resource.data.fuel in ["petrol", "diesel", "hybrid", "electric", "plug_in_hybrid", "cng", "lpg"]
-          && request.resource.data.transmission in ["manual", "automatic", "cvt", "dct", "amt"]
-          && request.resource.data.description is string
-          && request.resource.data.description.size() <= 5000
-          && request.resource.data.vehicleRelationship in ["owner", "broker", "authorized_representative"]
-          && request.resource.data.authorizationConfirmed == true
-          && request.resource.data.updatedAt == request.time
-        )
-        || (
-          isActiveSeller(request.auth.uid)
-          && resource.data.addedBy == request.auth.uid
-          && (
-            !('listingStatus' in resource.data)
-            || resource.data.listingStatus != "sold"
-            && resource.data.listingStatus != "suspended"
-          )
-          && request.resource.data.diff(resource.data)
-            .affectedKeys().hasOnly([
-              'manufacturer', 'carType', 'model', 'year', 'price',
-              'status', 'mileage', 'fuel', 'transmission', 'description',
-              'vehicleRelationship', 'authorizationConfirmed',
-              'images', 'imageUrl',
-              'updatedAt'
-            ])
-          && request.resource.data.manufacturer is string
-          && request.resource.data.manufacturer.size() >= 1
-          && request.resource.data.manufacturer.size() <= 50
-          && request.resource.data.carType in ["sedan", "suv", "hatchback", "coupe", "convertible", "wagon", "pickup", "van", "minivan", "other"]
-          && request.resource.data.model is string
-          && request.resource.data.model.size() >= 1
-          && request.resource.data.model.size() <= 50
-          && request.resource.data.year is int
-          && request.resource.data.year >= 1990
-          && request.resource.data.year <= 2030
-          && request.resource.data.price is number
-          && request.resource.data.price > 0
-          && request.resource.data.status in ["Fresh Import", "Locally Used", "Brand New"]
-          && (
-            request.resource.data.mileage == null
-            || (
-              request.resource.data.mileage is int
-              && request.resource.data.mileage >= 0
+      // Closed listings cannot be edited or reactivated. Owner checks are evaluated once.
+      allow update: if !isClosedListing(resource.data)
+        && (
+          (
+            isOwner()
+            && (
+              validOwnerFreeActivation(request.resource.data)
+              || validOwnerPaidActivation(request.resource.data)
+              || (
+                resource.data.addedBy == request.auth.uid
+                && validOwnerVehicleEdit(request.resource.data)
+              )
             )
           )
-          && request.resource.data.fuel in ["petrol", "diesel", "hybrid", "electric", "plug_in_hybrid", "cng", "lpg"]
-          && request.resource.data.transmission in ["manual", "automatic", "cvt", "dct", "amt"]
-          && request.resource.data.description is string
-          && request.resource.data.description.size() <= 5000
-          && request.resource.data.vehicleRelationship in ["owner", "broker", "authorized_representative"]
-          && request.resource.data.authorizationConfirmed == true
-          && request.resource.data.images is list
-          && request.resource.data.images.size() >= 1
-          && request.resource.data.images.size() <= 20
-          && request.resource.data.imageUrl is string
-          && request.resource.data.imageUrl.size() > 0
+          || (
+            isActiveSeller(request.auth.uid)
+            && resource.data.addedBy == request.auth.uid
+            && validSellerVehicleEdit(request.resource.data)
+          )
         );
 
       // Sellers can delete their own listings
