@@ -1069,6 +1069,7 @@ window.verifyPayment = async (paymentId, amountValue, methodValue, referenceValu
           transaction.update(carRef, {
             listingStatus: 'active',
             paymentStatus: 'paid',
+            paymentId: paymentId,
             listingExpiresAt: Timestamp.fromMillis(Date.now() + 75 * 24 * 60 * 60 * 1000),
             paymentReference: reference,
             paymentMethod: verifiedMethod,
