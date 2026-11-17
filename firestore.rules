@@ -223,6 +223,16 @@ service cloud.firestore {
         && data.paymentVerifiedBy == request.auth.uid
         && data.paidAt == request.time
         && (!('renewedAt' in data) || data.renewedAt == request.time)
+        // A payment can publish a hidden pending listing or renew an expired one,
+        // but it must not be reused to extend a listing that is still active.
+        && (
+          resource.data.listingStatus == "pending_payment"
+          || (
+            'listingExpiresAt' in resource.data
+            && resource.data.listingExpiresAt is timestamp
+            && resource.data.listingExpiresAt <= request.time
+          )
+        )
         && hasVerifiedLinkedPayment(data, carId, sellerId);
     }
 
@@ -518,6 +528,9 @@ service cloud.firestore {
         );
 
       allow update: if isOwner()
+        // Pending payment records are single-use: a verified/rejected record
+        // cannot be processed again or have its verification rewritten.
+        && resource.data.status == "pending"
         && request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['status', 'verifiedAt', 'verifiedBy', 'amount', 'paymentMethod', 'reference', 'note'])
         && request.resource.data.status in ["verified", "rejected"]
