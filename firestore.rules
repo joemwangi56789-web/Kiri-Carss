@@ -316,6 +316,19 @@ service cloud.firestore {
         || (
           signedIn()
           && request.auth.uid == userId
+          && resource.data.role == "dealer"
+          && resource.data.active == true
+          && resource.data.approvalStatus == "approved"
+          && resource.data.freeListingEligible == true
+          && !('freeListingWindowStartedAt' in resource.data)
+          && !('freeListingWindowEndsAt' in resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['freeListingEligible'])
+          && request.resource.data.freeListingEligible == false
+        )
+        || (
+          signedIn()
+          && request.auth.uid == userId
           && request.resource.data.diff(resource.data)
             .affectedKeys().hasOnly(['name', 'whatsapp', 'updatedAt'])
           && request.resource.data.name is string
