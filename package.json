@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "test:rules": "node --test tests/firestore.rules.test.js",
-    "test:rules:emulator": "firebase emulators:exec --only firestore --project demo-kiri-cars \"npm run test:rules\""
+    "test:rules:emulator": "firebase emulators:exec --only auth,firestore --project demo-kiri-cars \"npm run test:rules && npm run test:seller-registration\"",
+    "test:seller-registration": "node --test tests/seller-registration.test.js"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.0",
