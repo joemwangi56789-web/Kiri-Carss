@@ -34,5 +34,11 @@ jobs:
       - name: Install test dependencies
         run: npm install
 
+      - name: Check browser JavaScript syntax
+        run: |
+          node --check admin.js
+          node --check owner.js
+          node --check seller-register.js
+
       - name: Run Firestore rules tests in the emulator
         run: npm run test:rules:emulator
