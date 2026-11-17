@@ -81,6 +81,7 @@ form.addEventListener("submit", async (event) => {
       sellerType: type,
       businessName: type === "dealership" ? businessName : "",
       whatsapp,
+      freeListingPolicyVersion: 1,
       createdAt: serverTimestamp(),
       createdBy: createdUser.uid
     });
