@@ -284,8 +284,8 @@ test("seller can create a paid hidden listing and its exactly linked pending pay
   }));
 });
 
-test("existing dealer without free eligibility can create a paid listing but not a free one", async () => {
-  await seed("admins", "existing-dealer", dealerProfile({ freeListingEligible: false }));
+test("existing dealer with prior listings consumes stale free eligibility and creates a paid listing", async () => {
+  await seed("admins", "existing-dealer", dealerProfile({ freeListingEligible: true }));
   await seed("cars", "existing-dealer-old-car", carData("existing-dealer", {
     listingStatus: "active",
     paymentStatus: "paid",
@@ -298,6 +298,9 @@ test("existing dealer without free eligibility can create a paid listing but not
   const paymentRef = doc(db, "listingPayments", "existing-dealer-payment");
 
   await assertSucceeds(runTransaction(db, async (transaction) => {
+    transaction.update(doc(db, "admins", "existing-dealer"), {
+      freeListingEligible: false
+    });
     transaction.set(carRef, carData("existing-dealer", {
       listingStatus: "pending_payment",
       paymentStatus: "pending",
@@ -314,6 +317,8 @@ test("existing dealer without free eligibility can create a paid listing but not
       createdAt: serverTimestamp()
     });
   }));
+  const profileAfter = await getDoc(doc(db, "admins", "existing-dealer"));
+  assert.equal(profileAfter.data().freeListingEligible, false);
 });
 
 test("seller cannot create a payment record linked to a different car ID", async () => {
