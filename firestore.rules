@@ -279,10 +279,12 @@ service cloud.firestore {
           && resource.data.role == "dealer"
           && resource.data.active == true
           && resource.data.approvalStatus == "approved"
+          && resource.data.freeListingEligible == true
           && !('freeListingWindowStartedAt' in resource.data)
           && !('freeListingWindowEndsAt' in resource.data)
           && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['freeListingWindowStartedAt', 'freeListingWindowEndsAt'])
+            .hasOnly(['freeListingEligible', 'freeListingWindowStartedAt', 'freeListingWindowEndsAt'])
+          && request.resource.data.freeListingEligible == false
           && request.resource.data.freeListingWindowStartedAt == request.time
           && request.resource.data.freeListingWindowEndsAt is timestamp
           && request.resource.data.freeListingWindowEndsAt > request.time
