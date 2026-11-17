@@ -752,7 +752,7 @@ window.reviewFreeListingEligibility = async (id, name) => {
           eligible, existingCars: carsSnap.size, existingPayments: paymentsSnap.size
         });
         showToast(eligible
-          ? 'No existing listings or payment records found. Seller is eligible for the one-time free window.'
+          ? 'No current listings or payment records found. Check historical deleted listings before relying on this eligibility decision.'
           : 'Existing listing/payment history found. Seller will use the paid listing process.', 'success');
         await loadSellerApplicationsPage();
       } catch (e) {
