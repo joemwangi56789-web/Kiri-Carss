@@ -266,7 +266,7 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly([
             'name', 'email', 'role', 'active', 'approvalStatus',
             'verificationStatus', 'sellerType', 'businessName',
-            'whatsapp', 'createdAt', 'createdBy'
+            'whatsapp', 'freeListingPolicyVersion', 'createdAt', 'createdBy'
           ])
           && request.resource.data.keys().hasAll([
             'name', 'email', 'role', 'active', 'approvalStatus',
@@ -287,6 +287,8 @@ service cloud.firestore {
           && request.resource.data.whatsapp is string
           && request.resource.data.whatsapp.size() >= 10
           && request.resource.data.whatsapp.size() <= 15
+          && (!('freeListingPolicyVersion' in request.resource.data)
+            || request.resource.data.freeListingPolicyVersion == 1)
           && request.resource.data.createdBy == request.auth.uid
           && request.resource.data.createdAt == request.time
         );
