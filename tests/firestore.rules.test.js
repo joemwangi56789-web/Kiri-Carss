@@ -604,3 +604,176 @@ test("owner cannot set a paid listing expiry beyond 75 days", async () => {
     renewedAt: serverTimestamp()
   }));
 });
+
+
+// Regression coverage for owner-recorded renewals, expiry protection and one-time verification.
+for (const method of ["M-Pesa", "Bank transfer", "Cash"]) {
+  test(`owner can renew a legacy hidden pending listing without a payment record using ${method}`, async () => {
+    await seed("admins", "owner-1", { role: "owner", active: true });
+    await seed("cars", "legacy-hidden-car", carData("dealer-1", {
+      listingStatus: "pending_payment",
+      paymentStatus: "pending",
+      listingFee: 25000
+      // Deliberately no paymentId or listingExpiresAt: this is an older hidden listing.
+    }));
+
+    const db = testEnv.authenticatedContext("owner-1").firestore();
+    const carRef = doc(db, "cars", "legacy-hidden-car");
+    const paymentRef = doc(db, "listingPayments", `legacy-renewal-${method.toLowerCase().replace(/[^a-z]+/g, "-")}`);
+    const reference = `LEGACY-${method.toUpperCase().replace(/[^A-Z]+/g, "")}-001`;
+
+    await assertSucceeds(runTransaction(db, async (transaction) => {
+      transaction.update(carRef, {
+        listingStatus: "active",
+        paymentStatus: "paid",
+        paymentId: paymentRef.id,
+        listingExpiresAt: Timestamp.fromMillis(Date.now() + 75 * DAY - 60_000),
+        paymentReference: reference,
+        paymentMethod: method,
+        paymentAmount: 25000,
+        paymentNote: reference,
+        paymentVerifiedBy: "owner-1",
+        paidAt: serverTimestamp(),
+        renewedAt: serverTimestamp()
+      });
+      transaction.set(paymentRef, {
+        paymentId: paymentRef.id,
+        listingId: "legacy-hidden-car",
+        sellerId: "dealer-1",
+        amount: 25000,
+        status: "verified",
+        paymentMethod: method,
+        reference,
+        note: reference,
+        renewal: true,
+        createdAt: serverTimestamp(),
+        verifiedAt: serverTimestamp(),
+        verifiedBy: "owner-1"
+      });
+    }));
+
+    const renewed = await getDoc(carRef);
+    const payment = await getDoc(paymentRef);
+    assert.equal(renewed.data().listingStatus, "active");
+    assert.equal(renewed.data().paymentMethod, method);
+    assert.equal(renewed.data().paymentId, paymentRef.id);
+    assert.equal(payment.data().status, "verified");
+    assert.equal(payment.data().sellerId, "dealer-1");
+  });
+}
+
+test("seller cannot extend or rewrite the expiry of their own active listing", async () => {
+  await seed("admins", "expiry-tamper-dealer", dealerProfile({
+    freeListingWindowStartedAt: Timestamp.fromMillis(Date.now() - DAY),
+    freeListingWindowEndsAt: Timestamp.fromMillis(Date.now() + 59 * DAY)
+  }));
+  await seed("cars", "expiry-protected-car", carData("expiry-tamper-dealer", {
+    listingStatus: "active",
+    paymentStatus: "free_trial",
+    listingFee: 0,
+    listingExpiresAt: Timestamp.fromMillis(Date.now() + 10 * DAY),
+    freeTrialApprovedAt: Timestamp.fromMillis(Date.now() - DAY)
+  }));
+
+  const db = testEnv.authenticatedContext("expiry-tamper-dealer").firestore();
+  await assertFails(updateDoc(doc(db, "cars", "expiry-protected-car"), {
+    listingExpiresAt: Timestamp.fromMillis(Date.now() + 365 * DAY)
+  }));
+});
+
+test("owner cannot renew a listing before its current expiry", async () => {
+  await seed("admins", "owner-1", { role: "owner", active: true });
+  await seed("cars", "still-active-car", carData("dealer-1", {
+    listingStatus: "active",
+    paymentStatus: "paid",
+    listingFee: 25000,
+    listingExpiresAt: Timestamp.fromMillis(Date.now() + 10 * DAY)
+  }));
+
+  const db = testEnv.authenticatedContext("owner-1").firestore();
+  const carRef = doc(db, "cars", "still-active-car");
+  const paymentRef = doc(db, "listingPayments", "premature-renewal");
+  await assertFails(runTransaction(db, async (transaction) => {
+    transaction.update(carRef, {
+      listingStatus: "active",
+      paymentStatus: "paid",
+      paymentId: paymentRef.id,
+      listingExpiresAt: Timestamp.fromMillis(Date.now() + 85 * DAY),
+      paymentReference: "TOO-EARLY",
+      paymentMethod: "Cash",
+      paymentAmount: 25000,
+      paymentNote: "TOO-EARLY",
+      paymentVerifiedBy: "owner-1",
+      paidAt: serverTimestamp(),
+      renewedAt: serverTimestamp()
+    });
+    transaction.set(paymentRef, {
+      paymentId: paymentRef.id,
+      listingId: "still-active-car",
+      sellerId: "dealer-1",
+      amount: 25000,
+      status: "verified",
+      paymentMethod: "Cash",
+      reference: "TOO-EARLY",
+      note: "TOO-EARLY",
+      renewal: true,
+      createdAt: serverTimestamp(),
+      verifiedAt: serverTimestamp(),
+      verifiedBy: "owner-1"
+    });
+  }));
+});
+
+test("owner cannot verify the same payment record twice", async () => {
+  await seed("admins", "owner-1", { role: "owner", active: true });
+  await seed("cars", "duplicate-check-car", carData("dealer-1", {
+    listingStatus: "pending_payment",
+    paymentStatus: "pending",
+    listingFee: 25000,
+    paymentId: "duplicate-check-payment"
+  }));
+  await seed("listingPayments", "duplicate-check-payment", {
+    paymentId: "duplicate-check-payment",
+    listingId: "duplicate-check-car",
+    sellerId: "dealer-1",
+    amount: 25000,
+    status: "pending",
+    paymentMethod: "awaiting_payment"
+  });
+
+  const db = testEnv.authenticatedContext("owner-1").firestore();
+  const carRef = doc(db, "cars", "duplicate-check-car");
+  const paymentRef = doc(db, "listingPayments", "duplicate-check-payment");
+  await assertSucceeds(runTransaction(db, async (transaction) => {
+    transaction.update(carRef, {
+      listingStatus: "active",
+      paymentStatus: "paid",
+      listingExpiresAt: Timestamp.fromMillis(Date.now() + 75 * DAY - 60_000),
+      paymentReference: "DUPLICATE-001",
+      paymentMethod: "M-Pesa",
+      paymentAmount: 25000,
+      paymentNote: "DUPLICATE-001",
+      paymentVerifiedBy: "owner-1",
+      paidAt: serverTimestamp()
+    });
+    transaction.update(paymentRef, {
+      status: "verified",
+      amount: 25000,
+      paymentMethod: "M-Pesa",
+      reference: "DUPLICATE-001",
+      note: "DUPLICATE-001",
+      verifiedAt: serverTimestamp(),
+      verifiedBy: "owner-1"
+    });
+  }));
+
+  await assertFails(updateDoc(paymentRef, {
+    status: "verified",
+    amount: 25000,
+    paymentMethod: "M-Pesa",
+    reference: "DUPLICATE-001",
+    note: "DUPLICATE-001",
+    verifiedAt: serverTimestamp(),
+    verifiedBy: "owner-1"
+  }));
+});
