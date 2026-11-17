@@ -78,6 +78,47 @@ async function seed(path, id, data) {
   });
 }
 
+test("new seller signup may carry policy version 1 but cannot choose another version", async () => {
+  const newDealerDb = testEnv.authenticatedContext("new-policy-dealer", {
+    email: "new-policy@example.test"
+  }).firestore();
+  await assertSucceeds(setDoc(doc(newDealerDb, "admins", "new-policy-dealer"), {
+    name: "New Policy Dealer",
+    email: "new-policy@example.test",
+    role: "dealer",
+    active: false,
+    approvalStatus: "pending",
+    verificationStatus: "pending",
+    sellerType: "broker",
+    businessName: "",
+    whatsapp: "254700000000",
+    freeListingPolicyVersion: 1,
+    createdAt: serverTimestamp(),
+    createdBy: "new-policy-dealer"
+  }));
+  await assertFails(updateDoc(doc(newDealerDb, "admins", "new-policy-dealer"), {
+    freeListingPolicyVersion: 2
+  }));
+
+  const invalidDealerDb = testEnv.authenticatedContext("invalid-policy-dealer", {
+    email: "invalid-policy@example.test"
+  }).firestore();
+  await assertFails(setDoc(doc(invalidDealerDb, "admins", "invalid-policy-dealer"), {
+    name: "Invalid Policy Dealer",
+    email: "invalid-policy@example.test",
+    role: "dealer",
+    active: false,
+    approvalStatus: "pending",
+    verificationStatus: "pending",
+    sellerType: "broker",
+    businessName: "",
+    whatsapp: "254700000001",
+    freeListingPolicyVersion: 2,
+    createdAt: serverTimestamp(),
+    createdBy: "invalid-policy-dealer"
+  }));
+});
+
 test("pending dealer cannot publish a public vehicle", async () => {
   await seed("admins", "pending-1", {
     name: "Pending Dealer",
