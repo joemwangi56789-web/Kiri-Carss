@@ -683,8 +683,14 @@ function renderSellerActionButton(seller) {
     const notifyButton = phone
       ? `<button class="btn btn-sm btn-outline" onclick="notifySellerWhatsApp('${seller.id}')">Notify on WhatsApp</button>`
       : '<span class="account-muted">No valid WhatsApp number saved</span>';
+    const needsEligibilityReview = seller.freeListingEligible === undefined &&
+      !seller.freeListingWindowStartedAt && !seller.freeListingWindowEndsAt;
+    const eligibilityButton = needsEligibilityReview
+      ? `<button class="btn btn-sm btn-outline" onclick="reviewFreeListingEligibility('${seller.id}', '${escapeHtml(seller.name || '')}')">Review free-window eligibility</button>`
+      : '';
     return `
       ${notifyButton}
+      ${eligibilityButton}
       <button class="btn btn-sm btn-outline text-danger" onclick="suspendSeller('${seller.id}', '${escapeHtml(seller.name || '')}')">Suspend</button>
     `;
   }
@@ -719,11 +725,58 @@ Welcome to Kiri Cars — helping connect Kenyan car sellers with serious buyers.
   window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
 };
 
+window.reviewFreeListingEligibility = async (id, name) => {
+  showDialog('Review free-window eligibility',
+    `Check whether "${name}" has any existing vehicle listings or listing-payment history before granting a one-time free window.`,
+    async () => {
+      try {
+        const [carsSnap, paymentsSnap] = await Promise.all([
+          getDocs(query(collection(db, 'cars'), where('addedBy', '==', id))),
+          getDocs(query(collection(db, 'listingPayments'), where('sellerId', '==', id)))
+        ]);
+        const profileSnap = await getDoc(doc(db, 'admins', id));
+        if (!profileSnap.exists()) throw new Error('Seller profile no longer exists.');
+        const profile = profileSnap.data();
+        if (profile.freeListingWindowStartedAt || profile.freeListingWindowEndsAt) {
+          throw new Error('This seller already has a recorded free-window history.');
+        }
+        const eligible = carsSnap.empty && paymentsSnap.empty;
+        await updateDoc(doc(db, 'admins', id), {
+          freeListingEligible: eligible,
+          freeListingEligibilityReviewedAt: serverTimestamp(),
+          freeListingEligibilityReviewedBy: ownerUid
+        });
+        await writeAuditLog('free_listing_eligibility_reviewed', 'admin', id, name, {
+          eligible, existingCars: carsSnap.size, existingPayments: paymentsSnap.size
+        });
+        showToast(eligible
+          ? 'No existing listings or payment records found. Seller is eligible for the one-time free window.'
+          : 'Existing listing/payment history found. Seller will use the paid listing process.', 'success');
+        await loadSellerApplicationsPage();
+      } catch (e) {
+        showToast('Could not review free-window eligibility: ' + (e.message || e.code), 'error');
+      }
+    }, null, 'Review and save');
+};
+
 window.approveSeller = async (id, name) => {
   showDialog('Approve Seller', `Approve "${name}" as a verified seller? They will be able to publish vehicle listings.`, async () => {
     try {
+      const [carsSnap, paymentsSnap, profileSnap] = await Promise.all([
+        getDocs(query(collection(db, 'cars'), where('addedBy', '==', id))),
+        getDocs(query(collection(db, 'listingPayments'), where('sellerId', '==', id))),
+        getDoc(doc(db, 'admins', id))
+      ]);
+      if (!profileSnap.exists()) throw new Error('Seller profile no longer exists.');
+      const profile = profileSnap.data();
+      const alreadyUsedFreeWindow = Boolean(profile.freeListingWindowStartedAt || profile.freeListingWindowEndsAt);
+      const freeListingEligible = !alreadyUsedFreeWindow && carsSnap.empty && paymentsSnap.empty;
       await updateDoc(doc(db, 'admins', id), {
-        approvalStatus: 'approved', active: true, approvalUpdatedAt: serverTimestamp(), approvalUpdatedBy: ownerUid
+        approvalStatus: 'approved', active: true,
+        freeListingEligible,
+        freeListingEligibilityReviewedAt: serverTimestamp(),
+        freeListingEligibilityReviewedBy: ownerUid,
+        approvalUpdatedAt: serverTimestamp(), approvalUpdatedBy: ownerUid
       });
       await writeAuditLog('seller_approved', 'admin', id, name);
       showToast(`Seller "${name}" approved.`, 'success');
