@@ -560,9 +560,11 @@ carForm.addEventListener("submit", async (event) => {
 
           const now = Date.now();
           let windowEnd = timestampMillis(latest.freeListingWindowEndsAt);
-          if (currentRole === "dealer" && !hasPreviousListings && !latest.freeListingWindowStartedAt && !latest.freeListingWindowEndsAt) {
+          if (currentRole === "dealer" && latest.freeListingEligible === true &&
+              !hasPreviousListings && !latest.freeListingWindowStartedAt && !latest.freeListingWindowEndsAt) {
             windowEnd = now + 60 * 24 * 60 * 60 * 1000;
             transaction.update(profileRef, {
+              freeListingEligible: false,
               freeListingWindowStartedAt: serverTimestamp(),
               freeListingWindowEndsAt: Timestamp.fromMillis(windowEnd)
             });
@@ -872,10 +874,11 @@ async function publishDraft(car, button) {
       const now = Date.now();
       let windowEnd = timestampMillis(latest.freeListingWindowEndsAt);
       let isFreeListing = false;
-      if (currentRole === "dealer" && !hasPreviousListings &&
-          !latest.freeListingWindowStartedAt && !latest.freeListingWindowEndsAt) {
+      if (currentRole === "dealer" && latest.freeListingEligible === true &&
+          !hasPreviousListings && !latest.freeListingWindowStartedAt && !latest.freeListingWindowEndsAt) {
         windowEnd = now + 60 * 24 * 60 * 60 * 1000;
         transaction.update(profileRef, {
+          freeListingEligible: false,
           freeListingWindowStartedAt: serverTimestamp(),
           freeListingWindowEndsAt: Timestamp.fromMillis(windowEnd)
         });
