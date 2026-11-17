@@ -183,9 +183,12 @@ service cloud.firestore {
     }
 
     function hasVerifiedLinkedPayment(data, carId, sellerId) {
-      let payment = getAfter(/databases/$(database)/documents/listingPayments/$(data.paymentId)).data;
-      return data.paymentId is string
-        && existsAfter(/databases/$(database)/documents/listingPayments/$(data.paymentId))
+      let paymentExists = data.paymentId is string
+        && existsAfter(/databases/$(database)/documents/listingPayments/$(data.paymentId));
+      let payment = paymentExists
+        ? getAfter(/databases/$(database)/documents/listingPayments/$(data.paymentId)).data
+        : {};
+      return paymentExists
         && payment.paymentId == data.paymentId
         && payment.listingId == carId
         && payment.sellerId == sellerId
