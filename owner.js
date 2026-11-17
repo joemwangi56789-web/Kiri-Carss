@@ -772,10 +772,15 @@ window.approveSeller = async (id, name) => {
       if (!profileSnap.exists()) throw new Error('Seller profile no longer exists.');
       const profile = profileSnap.data();
       const alreadyUsedFreeWindow = Boolean(profile.freeListingWindowStartedAt || profile.freeListingWindowEndsAt);
-      const freeListingEligible = !alreadyUsedFreeWindow && carsSnap.empty && paymentsSnap.empty;
+      const isNewPolicyAccount = profile.freeListingPolicyVersion === 1;
+      const hasNoCurrentListingHistory = carsSnap.empty && paymentsSnap.empty;
+      const freeListingEligible = !alreadyUsedFreeWindow && isNewPolicyAccount && hasNoCurrentListingHistory;
+      const freeListingEligibilityNeedsManualReview = !alreadyUsedFreeWindow &&
+        !isNewPolicyAccount && hasNoCurrentListingHistory;
       await updateDoc(doc(db, 'admins', id), {
         approvalStatus: 'approved', active: true,
         freeListingEligible,
+        freeListingEligibilityNeedsManualReview,
         freeListingEligibilityReviewedAt: serverTimestamp(),
         freeListingEligibilityReviewedBy: ownerUid,
         approvalUpdatedAt: serverTimestamp(), approvalUpdatedBy: ownerUid
