@@ -1,5 +1,9 @@
 name: Firestore Rules Tests
 
+concurrency:
+  group: firestore-rules-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
@@ -22,7 +26,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Set up Java for the Firebase Emulator
         uses: actions/setup-java@v4
