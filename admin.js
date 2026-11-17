@@ -569,6 +569,10 @@ carForm.addEventListener("submit", async (event) => {
               freeListingWindowEndsAt: Timestamp.fromMillis(windowEnd)
             });
             isFreeListing = true;
+          } else if (currentRole === "dealer" && latest.freeListingEligible === true &&
+              hasPreviousListings && !latest.freeListingWindowStartedAt && !latest.freeListingWindowEndsAt) {
+            // A prior listing means this account must not retain an unused free entitlement.
+            transaction.update(profileRef, { freeListingEligible: false });
           } else if (currentRole === "dealer" && windowEnd !== null && windowEnd > now) {
             isFreeListing = true;
           }
@@ -883,6 +887,10 @@ async function publishDraft(car, button) {
           freeListingWindowEndsAt: Timestamp.fromMillis(windowEnd)
         });
         isFreeListing = true;
+      } else if (currentRole === "dealer" && latest.freeListingEligible === true &&
+          hasPreviousListings && !latest.freeListingWindowStartedAt && !latest.freeListingWindowEndsAt) {
+        // A prior listing means this account must not retain an unused free entitlement.
+        transaction.update(profileRef, { freeListingEligible: false });
       } else if (currentRole === "dealer" && windowEnd !== null && windowEnd > now) {
         isFreeListing = true;
       }
