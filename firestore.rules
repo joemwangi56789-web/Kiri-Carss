@@ -10,8 +10,12 @@ service cloud.firestore {
     function isOwner() {
       return signedIn()
         && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
-        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true
-        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == "owner";
+        && ownerProfileIsActive();
+    }
+
+    function ownerProfileIsActive() {
+      let profile = get(/databases/$(database)/documents/admins/$(request.auth.uid)).data;
+      return profile.active == true && profile.role == "owner";
     }
 
     function hasSellerProfile(userId) {
@@ -19,24 +23,27 @@ service cloud.firestore {
     }
 
     function isActiveSeller(userId) {
-      return hasSellerProfile(userId)
-        && get(/databases/$(database)/documents/admins/$(userId)).data.active == true
+      return hasSellerProfile(userId) && activeSellerProfile(userId);
+    }
+
+    function activeSellerProfile(userId) {
+      let profile = get(/databases/$(database)/documents/admins/$(userId)).data;
+      return profile.active == true
         && (
-          get(/databases/$(database)/documents/admins/$(userId)).data.role == "admin"
-          || get(/databases/$(database)/documents/admins/$(userId)).data.role == "owner"
-          || (
-            get(/databases/$(database)/documents/admins/$(userId)).data.role == "dealer"
-            && get(/databases/$(database)/documents/admins/$(userId)).data.approvalStatus == "approved"
-          )
+          profile.role == "admin"
+          || profile.role == "owner"
+          || (profile.role == "dealer" && profile.approvalStatus == "approved")
         );
     }
 
     function isActiveBuyer(userId) {
       return exists(/databases/$(database)/documents/buyers/$(userId))
-        && (
-          !('active' in get(/databases/$(database)/documents/buyers/$(userId)).data)
-          || get(/databases/$(database)/documents/buyers/$(userId)).data.active == true
-        );
+        && activeBuyerProfile(userId);
+    }
+
+    function activeBuyerProfile(userId) {
+      let profile = get(/databases/$(database)/documents/buyers/$(userId)).data;
+      return !('active' in profile) || profile.active == true;
     }
 
     function isActiveParticipant(userId) {
@@ -44,10 +51,14 @@ service cloud.firestore {
     }
 
     function isPendingDealer(userId) {
-      return hasSellerProfile(userId)
-        && get(/databases/$(database)/documents/admins/$(userId)).data.role == "dealer"
-        && get(/databases/$(database)/documents/admins/$(userId)).data.active == false
-        && get(/databases/$(database)/documents/admins/$(userId)).data.approvalStatus == "pending";
+      return hasSellerProfile(userId) && pendingDealerProfile(userId);
+    }
+
+    function pendingDealerProfile(userId) {
+      let profile = get(/databases/$(database)/documents/admins/$(userId)).data;
+      return profile.role == "dealer"
+        && profile.active == false
+        && profile.approvalStatus == "pending";
     }
 
     match /admins/{userId} {
