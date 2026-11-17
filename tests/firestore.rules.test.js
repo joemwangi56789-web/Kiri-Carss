@@ -43,6 +43,7 @@ function dealerProfile(extra = {}) {
     role: "dealer",
     active: true,
     approvalStatus: "approved",
+    freeListingEligible: false,
     ...extra
   };
 }
@@ -100,7 +101,7 @@ test("pending dealer cannot publish a public vehicle", async () => {
 });
 
 test("first approved dealer listing can initialize a 60-day free window and run for 75 days", async () => {
-  await seed("admins", "dealer-1", dealerProfile());
+  await seed("admins", "dealer-1", dealerProfile({ freeListingEligible: true }));
   const db = testEnv.authenticatedContext("dealer-1", {
     email: "dealer@example.test"
   }).firestore();
@@ -109,10 +110,35 @@ test("first approved dealer listing can initialize a 60-day free window and run 
 
   await assertSucceeds(runTransaction(db, async (transaction) => {
     transaction.update(profileRef, {
+      freeListingEligible: false,
       freeListingWindowStartedAt: serverTimestamp(),
       freeListingWindowEndsAt: Timestamp.fromMillis(Date.now() + 60 * DAY)
     });
     transaction.set(carRef, carData("dealer-1", {
+      listingStatus: "active",
+      paymentStatus: "free_trial",
+      listingFee: 0,
+      listingExpiresAt: Timestamp.fromMillis(Date.now() + 75 * DAY),
+      freeTrialApprovedAt: serverTimestamp()
+    }));
+  }));
+});
+
+test("approved dealer cannot self-grant free-window eligibility or initialize a window without owner authorization", async () => {
+  await seed("admins", "legacy-dealer", dealerProfile({ freeListingEligible: false }));
+  const db = testEnv.authenticatedContext("legacy-dealer", {
+    email: "dealer@example.test"
+  }).firestore();
+  const profileRef = doc(db, "admins", "legacy-dealer");
+  const carRef = doc(db, "cars", "unauthorized-free-car");
+
+  await assertFails(updateDoc(profileRef, { freeListingEligible: true }));
+  await assertFails(runTransaction(db, async (transaction) => {
+    transaction.update(profileRef, {
+      freeListingWindowStartedAt: serverTimestamp(),
+      freeListingWindowEndsAt: Timestamp.fromMillis(Date.now() + 60 * DAY)
+    });
+    transaction.set(carRef, carData("legacy-dealer", {
       listingStatus: "active",
       paymentStatus: "free_trial",
       listingFee: 0,
