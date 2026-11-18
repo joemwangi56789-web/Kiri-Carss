@@ -777,3 +777,75 @@ test("owner cannot verify the same payment record twice", async () => {
     verifiedBy: "owner-1"
   }));
 });
+
+
+test("seller cannot understate the listing fee for the vehicle price", async () => {
+  await seed("admins", "underprice-dealer", dealerProfile({
+    freeListingWindowStartedAt: Timestamp.fromMillis(Date.now() - 61 * DAY),
+    freeListingWindowEndsAt: Timestamp.fromMillis(Date.now() - DAY)
+  }));
+  const db = testEnv.authenticatedContext("underprice-dealer").firestore();
+  const carRef = doc(db, "cars", "underpriced-car");
+  const paymentRef = doc(db, "listingPayments", "underpriced-payment");
+
+  await assertFails(runTransaction(db, async (transaction) => {
+    transaction.set(carRef, carData("underprice-dealer", {
+      listingStatus: "pending_payment",
+      paymentStatus: "pending",
+      listingFee: 300,
+      paymentId: paymentRef.id
+    }));
+    transaction.set(paymentRef, {
+      paymentId: paymentRef.id,
+      listingId: carRef.id,
+      sellerId: "underprice-dealer",
+      amount: 300,
+      status: "pending",
+      paymentMethod: "awaiting_payment",
+      createdAt: serverTimestamp()
+    });
+  }));
+});
+
+test("owner cannot verify a payment amount different from the price-based listing fee", async () => {
+  await seed("admins", "owner-1", { role: "owner", active: true });
+  await seed("cars", "wrong-amount-car", carData("dealer-1", {
+    listingStatus: "pending_payment",
+    paymentStatus: "pending",
+    listingFee: 750,
+    paymentId: "wrong-amount-payment"
+  }));
+  await seed("listingPayments", "wrong-amount-payment", {
+    paymentId: "wrong-amount-payment",
+    listingId: "wrong-amount-car",
+    sellerId: "dealer-1",
+    amount: 750,
+    status: "pending",
+    paymentMethod: "awaiting_payment"
+  });
+  const db = testEnv.authenticatedContext("owner-1").firestore();
+
+  await assertFails(runTransaction(db, async (transaction) => {
+    transaction.update(doc(db, "cars", "wrong-amount-car"), {
+      listingStatus: "active",
+      paymentStatus: "paid",
+      listingFee: 750,
+      listingExpiresAt: Timestamp.fromMillis(Date.now() + 75 * DAY),
+      paymentReference: "UNDERPAID-001",
+      paymentMethod: "M-Pesa",
+      paymentAmount: 300,
+      paymentNote: "UNDERPAID-001",
+      paymentVerifiedBy: "owner-1",
+      paidAt: serverTimestamp()
+    });
+    transaction.update(doc(db, "listingPayments", "wrong-amount-payment"), {
+      status: "verified",
+      amount: 300,
+      paymentMethod: "M-Pesa",
+      reference: "UNDERPAID-001",
+      note: "UNDERPAID-001",
+      verifiedAt: serverTimestamp(),
+      verifiedBy: "owner-1"
+    });
+  }));
+});
