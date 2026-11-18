@@ -991,6 +991,18 @@ async function loadOwnerCars() {
 // ============================================================================
 // Listing Payments
 // ============================================================================
+function listingFeeForPrice(price) {
+  const amount = Number(price);
+  if (!Number.isFinite(amount) || amount <= 0) return 0;
+  if (amount < 500000) return 300;
+  if (amount < 1000000) return 500;
+  if (amount < 2000000) return 750;
+  if (amount < 4000000) return 1000;
+  if (amount < 7000000) return 1500;
+  if (amount < 10000000) return 2000;
+  return 2500;
+}
+
 async function loadListingPayments() {
   const list = $('listingPaymentsList');
   const msg = $('listingPaymentsMessage');
@@ -1021,7 +1033,7 @@ async function loadListingPayments() {
       details.textContent = 'Listing: ' + (p.listingId || 'N/A') + ' · Seller: ' + (p.sellerId || 'N/A');
       const amount = document.createElement('input');
       amount.type = 'number'; amount.min = '1'; amount.step = '1';
-      amount.value = String(Number(p.amount) || 0); amount.placeholder = 'Amount received (KSh)';
+      amount.value = String(Number(p.amount) || 0); amount.readOnly = true; amount.title = 'Invoice amount is fixed by the vehicle price.';
       const method = document.createElement('select');
       ['M-Pesa', 'Bank transfer', 'Cash', 'Other'].forEach(value => {
         const option = document.createElement('option'); option.value = value; option.textContent = value; method.appendChild(option);
@@ -1063,12 +1075,17 @@ window.verifyPayment = async (paymentId, amountValue, methodValue, referenceValu
           if (!paymentSnap.exists()) throw new Error('Payment record no longer exists.');
           const payment = paymentSnap.data();
           if (payment.status !== 'pending') throw new Error('This payment has already been processed.');
+          if (verifiedAmount !== Number(payment.amount)) throw new Error('The amount received must exactly match the original invoice of KSh ' + Number(payment.amount).toLocaleString('en-KE') + '.');
           if (!payment.listingId) throw new Error('This payment is not linked to a vehicle.');
           const carRef = doc(db, 'cars', payment.listingId);
           const carSnap = await transaction.get(carRef);
           if (!carSnap.exists()) throw new Error('The linked vehicle could not be found.');
           const linkedCar = carSnap.data();
           if (linkedCar.addedBy !== payment.sellerId) throw new Error('Seller and vehicle do not match.');
+          const expectedAmount = listingFeeForPrice(linkedCar.price);
+          if (!expectedAmount || Number(payment.amount) !== expectedAmount || Number(linkedCar.listingFee) !== expectedAmount) {
+            throw new Error('Invoice amount does not match the listing fee for this vehicle price. Please review the listing before verifying.');
+          }
           if (['sold', 'suspended'].includes(linkedCar.listingStatus)) {
             throw new Error('Sold or suspended listings cannot be published through payment verification.');
           }
@@ -1134,7 +1151,7 @@ async function loadExpiredListings() {
       info.textContent = 'Seller: ' + (car.sellerName || car.addedBy) + ' · Status: ' + (car.listingStatus || 'legacy') + ' · Expiry: ' + formatDate(car.listingExpiresAt);
       const amount = document.createElement('input');
       amount.type = 'number'; amount.min = '1'; amount.step = '1';
-      amount.placeholder = 'Amount received (KSh)'; amount.required = true;
+      amount.value = String(listingFeeForPrice(car.price)); amount.readOnly = true; amount.title = 'Renewal fee is calculated from the vehicle price.';
       const method = document.createElement('select');
       ['M-Pesa', 'Bank transfer', 'Cash', 'Other'].forEach(value => {
         const option = document.createElement('option'); option.value = value; option.textContent = value; method.appendChild(option);
@@ -1172,9 +1189,12 @@ async function manualRenewListing(listingId, amountInput, methodSelect, referenc
       if (!carSnap.exists()) throw new Error('Vehicle listing no longer exists.');
       const car = carSnap.data();
       if (['sold', 'suspended'].includes(car.listingStatus)) throw new Error('Sold or suspended listings cannot be renewed.');
+      const expectedAmount = listingFeeForPrice(car.price);
+      if (!expectedAmount || amount !== expectedAmount) throw new Error('The renewal fee for this vehicle is KSh ' + expectedAmount.toLocaleString('en-KE') + '.');
       transaction.update(carRef, {
         listingStatus: 'active',
         paymentStatus: 'paid',
+        listingFee: expectedAmount,
         paymentId: paymentRef.id,
         listingExpiresAt: Timestamp.fromMillis(Date.now() + 75 * 24 * 60 * 60 * 1000),
         paymentReference: reference,
