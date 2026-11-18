@@ -11,7 +11,7 @@ import {
 import {
   getFirestore, doc, getDoc, collection, getDocs, query, where,
   orderBy, limit, startAfter, writeBatch, serverTimestamp, updateDoc,
-  addDoc, Timestamp
+  addDoc, Timestamp, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -683,8 +683,15 @@ function renderSellerActionButton(seller) {
     const notifyButton = phone
       ? `<button class="btn btn-sm btn-outline" onclick="notifySellerWhatsApp('${seller.id}')">Notify on WhatsApp</button>`
       : '<span class="account-muted">No valid WhatsApp number saved</span>';
+    const needsEligibilityReview = (seller.freeListingEligible === undefined ||
+      seller.freeListingEligibilityNeedsManualReview === true) &&
+      !seller.freeListingWindowStartedAt && !seller.freeListingWindowEndsAt;
+    const eligibilityButton = needsEligibilityReview
+      ? `<button class="btn btn-sm btn-outline" onclick="reviewFreeListingEligibility('${seller.id}', '${escapeHtml(seller.name || '')}')">Review free-window eligibility</button>`
+      : '';
     return `
       ${notifyButton}
+      ${eligibilityButton}
       <button class="btn btn-sm btn-outline text-danger" onclick="suspendSeller('${seller.id}', '${escapeHtml(seller.name || '')}')">Suspend</button>
     `;
   }
@@ -719,11 +726,64 @@ Welcome to Kiri Cars — helping connect Kenyan car sellers with serious buyers.
   window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
 };
 
+window.reviewFreeListingEligibility = async (id, name) => {
+  showDialog('Review free-window eligibility',
+    `Check current vehicle listings and payment history for "${name}". Older sold listings that were already deleted may not appear. Grant eligibility only if you have independently confirmed this seller has never used a free listing allowance.`,
+    async () => {
+      try {
+        const [carsSnap, paymentsSnap] = await Promise.all([
+          getDocs(query(collection(db, 'cars'), where('addedBy', '==', id))),
+          getDocs(query(collection(db, 'listingPayments'), where('sellerId', '==', id)))
+        ]);
+        const profileSnap = await getDoc(doc(db, 'admins', id));
+        if (!profileSnap.exists()) throw new Error('Seller profile no longer exists.');
+        const profile = profileSnap.data();
+        if (profile.freeListingWindowStartedAt || profile.freeListingWindowEndsAt) {
+          throw new Error('This seller already has a recorded free-window history.');
+        }
+        const eligible = carsSnap.empty && paymentsSnap.empty;
+        await updateDoc(doc(db, 'admins', id), {
+          freeListingEligible: eligible,
+          freeListingEligibilityNeedsManualReview: false,
+          freeListingEligibilityReviewedAt: serverTimestamp(),
+          freeListingEligibilityReviewedBy: ownerUid
+        });
+        await writeAuditLog('free_listing_eligibility_reviewed', 'admin', id, name, {
+          eligible, existingCars: carsSnap.size, existingPayments: paymentsSnap.size
+        });
+        showToast(eligible
+          ? 'No current listings or payment records found. Check historical deleted listings before relying on this eligibility decision.'
+          : 'Existing listing/payment history found. Seller will use the paid listing process.', 'success');
+        await loadSellerApplicationsPage();
+      } catch (e) {
+        showToast('Could not review free-window eligibility: ' + (e.message || e.code), 'error');
+      }
+    }, null, 'Review and save');
+};
+
 window.approveSeller = async (id, name) => {
   showDialog('Approve Seller', `Approve "${name}" as a verified seller? They will be able to publish vehicle listings.`, async () => {
     try {
+      const [carsSnap, paymentsSnap, profileSnap] = await Promise.all([
+        getDocs(query(collection(db, 'cars'), where('addedBy', '==', id))),
+        getDocs(query(collection(db, 'listingPayments'), where('sellerId', '==', id))),
+        getDoc(doc(db, 'admins', id))
+      ]);
+      if (!profileSnap.exists()) throw new Error('Seller profile no longer exists.');
+      const profile = profileSnap.data();
+      const alreadyUsedFreeWindow = Boolean(profile.freeListingWindowStartedAt || profile.freeListingWindowEndsAt);
+      const isNewPolicyAccount = profile.freeListingPolicyVersion === 1;
+      const hasNoCurrentListingHistory = carsSnap.empty && paymentsSnap.empty;
+      const freeListingEligible = !alreadyUsedFreeWindow && isNewPolicyAccount && hasNoCurrentListingHistory;
+      const freeListingEligibilityNeedsManualReview = !alreadyUsedFreeWindow &&
+        !isNewPolicyAccount && hasNoCurrentListingHistory;
       await updateDoc(doc(db, 'admins', id), {
-        approvalStatus: 'approved', active: true, approvalUpdatedAt: serverTimestamp(), approvalUpdatedBy: ownerUid
+        approvalStatus: 'approved', active: true,
+        freeListingEligible,
+        freeListingEligibilityNeedsManualReview,
+        freeListingEligibilityReviewedAt: serverTimestamp(),
+        freeListingEligibilityReviewedBy: ownerUid,
+        approvalUpdatedAt: serverTimestamp(), approvalUpdatedBy: ownerUid
       });
       await writeAuditLog('seller_approved', 'admin', id, name);
       showToast(`Seller "${name}" approved.`, 'success');
@@ -931,52 +991,249 @@ async function loadOwnerCars() {
 // ============================================================================
 // Listing Payments
 // ============================================================================
+function listingFeeForPrice(price) {
+  const amount = Number(price);
+  if (!Number.isFinite(amount) || amount <= 0) return 0;
+  if (amount < 500000) return 300;
+  if (amount < 1000000) return 500;
+  if (amount < 2000000) return 750;
+  if (amount < 4000000) return 1000;
+  if (amount < 7000000) return 1500;
+  if (amount < 10000000) return 2000;
+  return 2500;
+}
+
 async function loadListingPayments() {
   const list = $('listingPaymentsList');
   const msg = $('listingPaymentsMessage');
+  if (!list || !msg) return;
   list.replaceChildren();
   msg.textContent = 'Loading payment queue...';
   try {
     const snap = await getDocs(collection(db, 'listingPayments'));
     const payments = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => { const at = a.createdAt && typeof a.createdAt.toMillis === 'function' ? a.createdAt.toMillis() : 0; const bt = b.createdAt && typeof b.createdAt.toMillis === 'function' ? b.createdAt.toMillis() : 0; return bt - at; });
-    if (payments.length === 0) { list.textContent = 'No pending listing payments.'; msg.textContent = 'Payment queue is empty.'; return; }
+      .filter(p => p.status === 'pending')
+      .sort((a, b) => {
+        const at = a.createdAt && typeof a.createdAt.toMillis === 'function' ? a.createdAt.toMillis() : 0;
+        const bt = b.createdAt && typeof b.createdAt.toMillis === 'function' ? b.createdAt.toMillis() : 0;
+        return bt - at;
+      });
     list.replaceChildren();
+    if (payments.length === 0) {
+      list.textContent = 'No pending listing payments.';
+      msg.textContent = 'Payment queue is empty.';
+      return;
+    }
     payments.forEach(p => {
       const item = document.createElement('div');
       item.className = 'account-item';
-      const overdue = p.dueDate && typeof p.dueDate.toDate === 'function' && p.dueDate.toDate() < new Date();
-      item.innerHTML = `
-        <strong>Payment #${p.id.slice(0, 8)}</strong>
-        <p>Listing: ${escapeHtml(p.listingId || 'N/A')} · Seller: ${escapeHtml(p.sellerId || 'N/A')}</p>
-        <p>Amount: ${formatMoney(p.amount)} · Status: ${escapeHtml(p.status || 'pending')} ${overdue ? '<span style="color:var(--accent-red)"> · OVERDUE</span>' : ''}</p>
-        <div class="account-actions">
-          <button class="btn btn-sm btn-outline" onclick="verifyPayment('${p.id}', '${escapeHtml(p.sellerId || '')}')">Verify</button>
-        </div>
-      `;
+      const title = document.createElement('strong');
+      title.textContent = 'Payment #' + p.id.slice(0, 8);
+      const details = document.createElement('p');
+      details.textContent = 'Listing: ' + (p.listingId || 'N/A') + ' · Seller: ' + (p.sellerId || 'N/A');
+      const amount = document.createElement('input');
+      amount.type = 'number'; amount.min = '1'; amount.step = '1';
+      amount.value = String(Number(p.amount) || 0); amount.readOnly = true; amount.title = 'Invoice amount is fixed by the vehicle price.';
+      const method = document.createElement('select');
+      ['M-Pesa', 'Bank transfer', 'Cash', 'Other'].forEach(value => {
+        const option = document.createElement('option'); option.value = value; option.textContent = value; method.appendChild(option);
+      });
+      const reference = document.createElement('input');
+      reference.type = 'text'; reference.maxLength = 100;
+      reference.placeholder = 'Transaction reference or payment note'; reference.required = true;
+      const action = document.createElement('button');
+      action.type = 'button';
+      action.className = 'btn btn-sm btn-primary';
+      action.textContent = 'Verify payment and publish';
+      action.addEventListener('click', () => window.verifyPayment(p.id, amount.value, method.value, reference.value));
+      item.append(title, details, amount, method, reference, action);
       list.appendChild(item);
     });
-    msg.textContent = `Found ${payments.length} payment(s) in queue.`;
+    msg.textContent = payments.length + ' pending payment(s) require review.';
   } catch (e) {
-    list.textContent = 'Could not load payment queue.';
-    msg.textContent = 'Could not load payment queue.';
+    list.textContent = 'Could not load payment queue: ' + (e.message || e.code);
+    msg.textContent = 'Payment queue could not be loaded.';
     console.error('Listing payments error:', e);
   }
 }
 
-window.verifyPayment = async (paymentId, sellerId) => {
-  showDialog('Verify Payment', 'Confirm that this listing payment has been received via M-Pesa?', async () => {
-    try {
-      await updateDoc(doc(db, 'listingPayments', paymentId), { status: 'verified', verifiedAt: serverTimestamp(), verifiedBy: ownerUid });
-      await writeAuditLog('payment_verified', 'listingPayment', paymentId, sellerId);
-      showToast('Payment verified.', 'success');
-      loadListingPayments();
-    } catch (e) {
-      showToast('Could not verify payment: ' + (e.message || e.code), 'error');
-    }
-  });
+window.verifyPayment = async (paymentId, amountValue, methodValue, referenceValue) => {
+  const verifiedAmount = Number(amountValue);
+  const verifiedMethod = String(methodValue || '').trim();
+  const verifiedReference = String(referenceValue || '').trim();
+  if (!Number.isFinite(verifiedAmount) || verifiedAmount <= 0 || !verifiedMethod || !verifiedReference || verifiedReference.length > 100) {
+    showToast('Enter the amount received, payment method and a reference or note (maximum 100 characters).', 'warning');
+    return;
+  }
+  showDialog('Verify payment and publish listing',
+    'Confirm that the full payment has been received. The linked vehicle will become visible for 75 days.',
+    async () => {
+      try {
+        await runTransaction(db, async transaction => {
+          const paymentRef = doc(db, 'listingPayments', paymentId);
+          const paymentSnap = await transaction.get(paymentRef);
+          if (!paymentSnap.exists()) throw new Error('Payment record no longer exists.');
+          const payment = paymentSnap.data();
+          if (payment.status !== 'pending') throw new Error('This payment has already been processed.');
+          if (verifiedAmount !== Number(payment.amount)) throw new Error('The amount received must exactly match the original invoice of KSh ' + Number(payment.amount).toLocaleString('en-KE') + '.');
+          if (!payment.listingId) throw new Error('This payment is not linked to a vehicle.');
+          const carRef = doc(db, 'cars', payment.listingId);
+          const carSnap = await transaction.get(carRef);
+          if (!carSnap.exists()) throw new Error('The linked vehicle could not be found.');
+          const linkedCar = carSnap.data();
+          if (linkedCar.addedBy !== payment.sellerId) throw new Error('Seller and vehicle do not match.');
+          const expectedAmount = listingFeeForPrice(linkedCar.price);
+          if (!expectedAmount || Number(payment.amount) !== expectedAmount || Number(linkedCar.listingFee) !== expectedAmount) {
+            throw new Error('Invoice amount does not match the listing fee for this vehicle price. Please review the listing before verifying.');
+          }
+          if (['sold', 'suspended'].includes(linkedCar.listingStatus)) {
+            throw new Error('Sold or suspended listings cannot be published through payment verification.');
+          }
+          const reference = verifiedReference;
+          transaction.update(carRef, {
+            listingStatus: 'active',
+            paymentStatus: 'paid',
+            paymentId: paymentId,
+            listingExpiresAt: Timestamp.fromMillis(Date.now() + 75 * 24 * 60 * 60 * 1000),
+            paymentReference: reference,
+            paymentMethod: verifiedMethod,
+            paymentAmount: verifiedAmount,
+            paymentNote: verifiedReference,
+            paymentVerifiedBy: ownerUid,
+            paidAt: serverTimestamp()
+          });
+          transaction.update(paymentRef, {
+            status: 'verified',
+            amount: verifiedAmount,
+            paymentMethod: verifiedMethod,
+            reference: verifiedReference,
+            note: verifiedReference,
+            verifiedAt: serverTimestamp(),
+            verifiedBy: ownerUid
+          });
+        });
+        await writeAuditLog('payment_verified', 'listingPayment', paymentId, paymentId);
+        showToast('Payment verified and vehicle published for 75 days.', 'success');
+        await Promise.all([loadListingPayments(), loadExpiredListings()]);
+      } catch (e) {
+        showToast('Could not verify payment: ' + (e.message || e.code), 'error');
+      }
+    }, null, 'Verify and publish');
 };
-$('loadListingPaymentsButton')?.addEventListener('click', loadListingPayments);
+
+async function loadExpiredListings() {
+  const list = $('expiredListingsList');
+  const msg = $('expiredListingsMessage');
+  if (!list || !msg) return;
+  list.replaceChildren();
+  msg.textContent = 'Loading expired listings...';
+  try {
+    const snap = await getDocs(collection(db, 'cars'));
+    const now = Date.now();
+    const expired = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(car => {
+      if (['sold', 'suspended'].includes(car.listingStatus)) return false;
+      if (car.listingStatus === 'pending_payment' && !car.paymentId) return true;
+      const expiry = car.listingExpiresAt && typeof car.listingExpiresAt.toMillis === 'function'
+        ? car.listingExpiresAt.toMillis() : null;
+      return expiry !== null && expiry <= now;
+    });
+    if (!expired.length) {
+      list.textContent = 'No expired listings need renewal.';
+      msg.textContent = 'No expired listings found.';
+      return;
+    }
+    expired.forEach(car => {
+      const card = document.createElement('div');
+      card.className = 'account-item';
+      const title = document.createElement('strong');
+      title.textContent = [car.year, car.manufacturer, car.model].filter(Boolean).join(' ');
+      const info = document.createElement('p');
+      info.textContent = 'Seller: ' + (car.sellerName || car.addedBy) + ' · Status: ' + (car.listingStatus || 'legacy') + ' · Expiry: ' + formatDate(car.listingExpiresAt);
+      const amount = document.createElement('input');
+      amount.type = 'number'; amount.min = '1'; amount.step = '1';
+      amount.value = String(listingFeeForPrice(car.price)); amount.readOnly = true; amount.title = 'Renewal fee is calculated from the vehicle price.';
+      const method = document.createElement('select');
+      ['M-Pesa', 'Bank transfer', 'Cash', 'Other'].forEach(value => {
+        const option = document.createElement('option'); option.value = value; option.textContent = value; method.appendChild(option);
+      });
+      const reference = document.createElement('input');
+      reference.type = 'text'; reference.maxLength = 100;
+      reference.placeholder = 'Transaction reference or payment note'; reference.required = true;
+      const renew = document.createElement('button');
+      renew.type = 'button'; renew.className = 'btn btn-sm btn-primary'; renew.textContent = 'Record payment & renew 75 days';
+      renew.addEventListener('click', () => manualRenewListing(car.id, amount, method, reference, renew));
+      card.append(title, info, amount, method, reference, renew);
+      list.appendChild(card);
+    });
+    msg.textContent = expired.length + ' hidden or expired listing(s) found.';
+  } catch (e) {
+    list.textContent = 'Could not load expired listings: ' + (e.message || e.code);
+    msg.textContent = 'Expired listings could not be loaded.';
+    console.error('Expired listings error:', e);
+  }
+}
+
+async function manualRenewListing(listingId, amountInput, methodSelect, referenceInput, button) {
+  const amount = Number(amountInput.value);
+  const reference = referenceInput.value.trim();
+  if (!Number.isFinite(amount) || amount <= 0 || !reference) {
+    showToast('Enter the amount received and a transaction reference or payment note.', 'warning');
+    return;
+  }
+  button.disabled = true;
+  try {
+    const paymentRef = doc(collection(db, 'listingPayments'));
+    await runTransaction(db, async transaction => {
+      const carRef = doc(db, 'cars', listingId);
+      const carSnap = await transaction.get(carRef);
+      if (!carSnap.exists()) throw new Error('Vehicle listing no longer exists.');
+      const car = carSnap.data();
+      if (['sold', 'suspended'].includes(car.listingStatus)) throw new Error('Sold or suspended listings cannot be renewed.');
+      const expectedAmount = listingFeeForPrice(car.price);
+      if (!expectedAmount || amount !== expectedAmount) throw new Error('The renewal fee for this vehicle is KSh ' + expectedAmount.toLocaleString('en-KE') + '.');
+      transaction.update(carRef, {
+        listingStatus: 'active',
+        paymentStatus: 'paid',
+        listingFee: expectedAmount,
+        paymentId: paymentRef.id,
+        listingExpiresAt: Timestamp.fromMillis(Date.now() + 75 * 24 * 60 * 60 * 1000),
+        paymentReference: reference,
+        paymentMethod: methodSelect.value,
+        paymentAmount: amount,
+        paymentNote: reference,
+        paymentVerifiedBy: ownerUid,
+        paidAt: serverTimestamp(),
+        renewedAt: serverTimestamp()
+      });
+      transaction.set(paymentRef, {
+        paymentId: paymentRef.id,
+        listingId,
+        sellerId: car.addedBy || '',
+        amount,
+        status: 'verified',
+        paymentMethod: methodSelect.value,
+        reference,
+        note: reference,
+        renewal: true,
+        createdAt: serverTimestamp(),
+        verifiedAt: serverTimestamp(),
+        verifiedBy: ownerUid
+      });
+    });
+    await writeAuditLog('listing_manually_renewed', 'car', listingId, reference, {
+      amount, paymentMethod: methodSelect.value, reference, durationDays: 75
+    });
+    showToast('Listing renewed and published for 75 days.', 'success');
+    await loadExpiredListings();
+    await loadListingPayments();
+  } catch (e) {
+    showToast('Could not renew listing: ' + (e.message || e.code), 'error');
+    button.disabled = false;
+  }
+}
+$('loadListingPaymentsButton')?.addEventListener('click', async () => {
+  await Promise.all([loadListingPayments(), loadExpiredListings()]);
+});
 $('loadAdminsButtonTop')?.addEventListener('click', loadAdminsPage);
 // ============================================================================
 // Revenue Dashboard

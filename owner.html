@@ -270,7 +270,17 @@
           </div>
         </div>
         <p id="listingPaymentsMessage" role="status" aria-live="polite"></p>
-        <div id="listingPaymentsList"></div>
+        <section class="dashboard-card">
+          <h3>Pending Payment Approvals</h3>
+          <p>Verify website payment submissions here. Verification publishes the linked vehicle for 75 days.</p>
+          <div id="listingPaymentsList"></div>
+        </section>
+        <section class="dashboard-card">
+          <h3>Hidden or Expired Listings — Manual Approval &amp; Renewal</h3>
+          <p>This also includes older hidden listings that were created before payment records were linked. Record payments received outside Kiri Cars (M-Pesa, bank, cash or another method).</p>
+          <div id="expiredListingsMessage" role="status" aria-live="polite"></div>
+          <div id="expiredListingsList"></div>
+        </section>
       </section>
 
       <!-- Revenue Dashboard Panel -->

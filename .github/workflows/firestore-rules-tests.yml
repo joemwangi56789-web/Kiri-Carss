@@ -1,0 +1,44 @@
+name: Firestore Rules Tests
+
+concurrency:
+  group: firestore-rules-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  firestore-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Set up Java for the Firebase Emulator
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install test dependencies
+        run: npm install
+
+      - name: Check browser JavaScript syntax
+        run: |
+          node --check admin.js
+          node --check owner.js
+          node --check seller-register.js
+
+      - name: Run Firestore rules tests in the emulator
+        run: npm run test:rules:emulator
