@@ -61,6 +61,17 @@ service cloud.firestore {
         && profile.approvalStatus == "pending";
     }
 
+    // Keep this schedule aligned with listingFeeForPrice() in admin.js.
+    function expectedListingFee(price) {
+      return price < 500000 ? 300
+        : price < 1000000 ? 500
+        : price < 2000000 ? 750
+        : price < 4000000 ? 1000
+        : price < 7000000 ? 1500
+        : price < 10000000 ? 2000
+        : 2500;
+    }
+
     function hasActiveFreeListingWindow(userId) {
       let profile = getAfter(/databases/$(database)/documents/admins/$(userId)).data;
       return profile.role == "dealer"
@@ -153,7 +164,7 @@ service cloud.firestore {
       return data.listingStatus == "pending_payment"
         && data.paymentStatus == "pending"
         && data.listingFee is number
-        && data.listingFee > 0
+        && data.listingFee == expectedListingFee(data.price)
         && data.paymentId is string
         && existsAfter(/databases/$(database)/documents/listingPayments/$(data.paymentId))
         && matchesPendingListingPayment(data.paymentId, carId, userId, data.listingFee)
@@ -210,7 +221,8 @@ service cloud.firestore {
         && data.listingStatus == "active"
         && data.paymentStatus == "paid"
         && data.listingFee is number
-        && data.listingFee >= 0
+        && data.listingFee == expectedListingFee(data.price)
+        && data.paymentAmount == data.listingFee
         && data.listingExpiresAt is timestamp
         && data.listingExpiresAt > request.time
         && data.listingExpiresAt <= request.time + duration.value(75, 'd')
