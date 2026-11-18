@@ -269,14 +269,14 @@ test("seller can create a paid hidden listing and its exactly linked pending pay
     transaction.set(carRef, carData("dealer-1", {
       listingStatus: "pending_payment",
       paymentStatus: "pending",
-      listingFee: 25000,
+      listingFee: 750,
       paymentId: paymentRef.id
     }));
     transaction.set(paymentRef, {
       paymentId: paymentRef.id,
       listingId: carRef.id,
       sellerId: "dealer-1",
-      amount: 25000,
+      amount: 750,
       status: "pending",
       paymentMethod: "awaiting_payment",
       createdAt: serverTimestamp()
@@ -289,7 +289,7 @@ test("existing dealer with prior listings consumes stale free eligibility and cr
   await seed("cars", "existing-dealer-old-car", carData("existing-dealer", {
     listingStatus: "active",
     paymentStatus: "paid",
-    listingFee: 25000
+    listingFee: 750
   }));
   const db = testEnv.authenticatedContext("existing-dealer", {
     email: "dealer@example.test"
@@ -304,14 +304,14 @@ test("existing dealer with prior listings consumes stale free eligibility and cr
     transaction.set(carRef, carData("existing-dealer", {
       listingStatus: "pending_payment",
       paymentStatus: "pending",
-      listingFee: 25000,
+      listingFee: 750,
       paymentId: paymentRef.id
     }));
     transaction.set(paymentRef, {
       paymentId: paymentRef.id,
       listingId: carRef.id,
       sellerId: "existing-dealer",
-      amount: 25000,
+      amount: 750,
       status: "pending",
       paymentMethod: "awaiting_payment",
       createdAt: serverTimestamp()
@@ -336,14 +336,14 @@ test("seller cannot create a payment record linked to a different car ID", async
     transaction.set(carRef, carData("dealer-1", {
       listingStatus: "pending_payment",
       paymentStatus: "pending",
-      listingFee: 25000,
+      listingFee: 750,
       paymentId: paymentRef.id
     }));
     transaction.set(paymentRef, {
       paymentId: paymentRef.id,
       listingId: "some-other-car",
       sellerId: "dealer-1",
-      amount: 25000,
+      amount: 750,
       status: "pending",
       paymentMethod: "awaiting_payment",
       createdAt: serverTimestamp()
@@ -356,7 +356,7 @@ test("buyers cannot read a seller's private listing payment record", async () =>
     paymentId: "private-payment",
     listingId: "car-1",
     sellerId: "dealer-1",
-    amount: 25000,
+    amount: 750,
     status: "pending"
   });
   const buyerDb = testEnv.authenticatedContext("buyer-1", {
@@ -371,7 +371,7 @@ test("a seller can read only their own payment records and cannot change payment
     paymentId: "seller-payment",
     listingId: "seller-car",
     sellerId: "dealer-1",
-    amount: 25000,
+    amount: 750,
     status: "pending"
   });
   const ownDb = testEnv.authenticatedContext("dealer-1").firestore();
@@ -407,14 +407,14 @@ test("owner can verify a pending payment only in the same transaction that publi
   await seed("cars", "car-to-verify", carData("dealer-1", {
     listingStatus: "pending_payment",
     paymentStatus: "pending",
-    listingFee: 25000,
+    listingFee: 750,
     paymentId: "verify-payment"
   }));
   await seed("listingPayments", "verify-payment", {
     paymentId: "verify-payment",
     listingId: "car-to-verify",
     sellerId: "dealer-1",
-    amount: 25000,
+    amount: 750,
     status: "pending",
     paymentMethod: "awaiting_payment"
   });
@@ -426,19 +426,19 @@ test("owner can verify a pending payment only in the same transaction that publi
     transaction.update(doc(db, "cars", "car-to-verify"), {
       listingStatus: "active",
       paymentStatus: "paid",
-      listingFee: 25000,
+      listingFee: 750,
       paymentId: "verify-payment",
       listingExpiresAt: Timestamp.fromMillis(Date.now() + 75 * DAY),
       paymentReference: "TEST-MPESA-001",
       paymentMethod: "M-Pesa",
-      paymentAmount: 25000,
+      paymentAmount: 750,
       paymentNote: "TEST-MPESA-001",
       paymentVerifiedBy: "owner-1",
       paidAt: serverTimestamp()
     });
     transaction.update(doc(db, "listingPayments", "verify-payment"), {
       status: "verified",
-      amount: 25000,
+      amount: 750,
       paymentMethod: "M-Pesa",
       reference: "TEST-MPESA-001",
       note: "TEST-MPESA-001",
@@ -453,14 +453,14 @@ test("owner cannot activate a paid listing without atomically verifying its link
   await seed("cars", "car-needing-payment", carData("dealer-1", {
     listingStatus: "pending_payment",
     paymentStatus: "pending",
-    listingFee: 25000,
+    listingFee: 750,
     paymentId: "pending-payment"
   }));
   await seed("listingPayments", "pending-payment", {
     paymentId: "pending-payment",
     listingId: "car-needing-payment",
     sellerId: "dealer-1",
-    amount: 25000,
+    amount: 750,
     status: "pending",
     paymentMethod: "awaiting_payment"
   });
@@ -469,11 +469,11 @@ test("owner cannot activate a paid listing without atomically verifying its link
   await assertFails(updateDoc(doc(db, "cars", "car-needing-payment"), {
     listingStatus: "active",
     paymentStatus: "paid",
-    listingFee: 25000,
+    listingFee: 750,
     listingExpiresAt: Timestamp.fromMillis(Date.now() + 75 * DAY),
     paymentReference: "NOT-VERIFIED",
     paymentMethod: "M-Pesa",
-    paymentAmount: 25000,
+    paymentAmount: 750,
     paymentNote: "NOT-VERIFIED",
     paymentVerifiedBy: "owner-1",
     paidAt: serverTimestamp()
@@ -497,11 +497,11 @@ test("owner can manually renew an older expired listing with a linked verified p
       listingStatus: "active",
       paymentStatus: "paid",
       paymentId: paymentRef.id,
-      listingFee: 25000,
+      listingFee: 750,
       listingExpiresAt: Timestamp.fromMillis(Date.now() + 75 * DAY),
       paymentReference: "RENEWAL-001",
       paymentMethod: "M-Pesa",
-      paymentAmount: 25000,
+      paymentAmount: 750,
       paymentNote: "RENEWAL-001",
       paymentVerifiedBy: "owner-1",
       paidAt: serverTimestamp(),
@@ -511,7 +511,7 @@ test("owner can manually renew an older expired listing with a linked verified p
       paymentId: paymentRef.id,
       listingId: "legacy-expired-car",
       sellerId: "dealer-1",
-      amount: 25000,
+      amount: 750,
       status: "verified",
       paymentMethod: "M-Pesa",
       reference: "RENEWAL-001",
@@ -532,7 +532,7 @@ test("owner cannot renew a sold listing", async () => {
   await seed("cars", "sold-car", carData("dealer-1", {
     listingStatus: "sold",
     paymentStatus: "paid",
-    listingFee: 25000,
+    listingFee: 750,
     listingExpiresAt: Timestamp.fromMillis(Date.now() - DAY)
   }));
   const db = testEnv.authenticatedContext("owner-1").firestore();
@@ -540,12 +540,12 @@ test("owner cannot renew a sold listing", async () => {
   await assertFails(updateDoc(doc(db, "cars", "sold-car"), {
     listingStatus: "active",
     paymentStatus: "paid",
-    listingFee: 25000,
+    listingFee: 750,
     listingExpiresAt: Timestamp.fromMillis(Date.now() + 75 * DAY),
     paymentReference: "CASH-RENEWAL",
     paymentVerifiedBy: "owner-1",
     paymentMethod: "Cash",
-    paymentAmount: 25000,
+    paymentAmount: 750,
     paymentNote: "CASH-RENEWAL",
     paidAt: serverTimestamp(),
     renewedAt: serverTimestamp()
@@ -557,7 +557,7 @@ test("owner cannot renew a suspended listing", async () => {
   await seed("cars", "suspended-car", carData("dealer-1", {
     listingStatus: "suspended",
     paymentStatus: "paid",
-    listingFee: 25000,
+    listingFee: 750,
     listingExpiresAt: Timestamp.fromMillis(Date.now() - DAY)
   }));
   const db = testEnv.authenticatedContext("owner-1").firestore();
@@ -565,12 +565,12 @@ test("owner cannot renew a suspended listing", async () => {
   await assertFails(updateDoc(doc(db, "cars", "suspended-car"), {
     listingStatus: "active",
     paymentStatus: "paid",
-    listingFee: 25000,
+    listingFee: 750,
     listingExpiresAt: Timestamp.fromMillis(Date.now() + 75 * DAY),
     paymentReference: "CASH-RENEWAL",
     paymentVerifiedBy: "owner-1",
     paymentMethod: "Cash",
-    paymentAmount: 25000,
+    paymentAmount: 750,
     paymentNote: "CASH-RENEWAL",
     paidAt: serverTimestamp(),
     renewedAt: serverTimestamp()
@@ -593,12 +593,12 @@ test("owner cannot set a paid listing expiry beyond 75 days", async () => {
   await assertFails(updateDoc(doc(db, "cars", "expired-car"), {
     listingStatus: "active",
     paymentStatus: "paid",
-    listingFee: 25000,
+    listingFee: 750,
     listingExpiresAt: Timestamp.fromMillis(Date.now() + 76 * DAY),
     paymentReference: "CASH-RENEWAL",
     paymentVerifiedBy: "owner-1",
     paymentMethod: "Cash",
-    paymentAmount: 25000,
+    paymentAmount: 750,
     paymentNote: "CASH-RENEWAL",
     paidAt: serverTimestamp(),
     renewedAt: serverTimestamp()
@@ -613,7 +613,7 @@ for (const method of ["M-Pesa", "Bank transfer", "Cash"]) {
     await seed("cars", "legacy-hidden-car", carData("dealer-1", {
       listingStatus: "pending_payment",
       paymentStatus: "pending",
-      listingFee: 25000
+      listingFee: 750
       // Deliberately no paymentId or listingExpiresAt: this is an older hidden listing.
     }));
 
@@ -630,7 +630,7 @@ for (const method of ["M-Pesa", "Bank transfer", "Cash"]) {
         listingExpiresAt: Timestamp.fromMillis(Date.now() + 75 * DAY - 60_000),
         paymentReference: reference,
         paymentMethod: method,
-        paymentAmount: 25000,
+        paymentAmount: 750,
         paymentNote: reference,
         paymentVerifiedBy: "owner-1",
         paidAt: serverTimestamp(),
@@ -640,7 +640,7 @@ for (const method of ["M-Pesa", "Bank transfer", "Cash"]) {
         paymentId: paymentRef.id,
         listingId: "legacy-hidden-car",
         sellerId: "dealer-1",
-        amount: 25000,
+        amount: 750,
         status: "verified",
         paymentMethod: method,
         reference,
@@ -686,7 +686,7 @@ test("owner cannot renew a listing before its current expiry", async () => {
   await seed("cars", "still-active-car", carData("dealer-1", {
     listingStatus: "active",
     paymentStatus: "paid",
-    listingFee: 25000,
+    listingFee: 750,
     listingExpiresAt: Timestamp.fromMillis(Date.now() + 10 * DAY)
   }));
 
@@ -701,7 +701,7 @@ test("owner cannot renew a listing before its current expiry", async () => {
       listingExpiresAt: Timestamp.fromMillis(Date.now() + 85 * DAY),
       paymentReference: "TOO-EARLY",
       paymentMethod: "Cash",
-      paymentAmount: 25000,
+      paymentAmount: 750,
       paymentNote: "TOO-EARLY",
       paymentVerifiedBy: "owner-1",
       paidAt: serverTimestamp(),
@@ -711,7 +711,7 @@ test("owner cannot renew a listing before its current expiry", async () => {
       paymentId: paymentRef.id,
       listingId: "still-active-car",
       sellerId: "dealer-1",
-      amount: 25000,
+      amount: 750,
       status: "verified",
       paymentMethod: "Cash",
       reference: "TOO-EARLY",
@@ -729,14 +729,14 @@ test("owner cannot verify the same payment record twice", async () => {
   await seed("cars", "duplicate-check-car", carData("dealer-1", {
     listingStatus: "pending_payment",
     paymentStatus: "pending",
-    listingFee: 25000,
+    listingFee: 750,
     paymentId: "duplicate-check-payment"
   }));
   await seed("listingPayments", "duplicate-check-payment", {
     paymentId: "duplicate-check-payment",
     listingId: "duplicate-check-car",
     sellerId: "dealer-1",
-    amount: 25000,
+    amount: 750,
     status: "pending",
     paymentMethod: "awaiting_payment"
   });
@@ -751,14 +751,14 @@ test("owner cannot verify the same payment record twice", async () => {
       listingExpiresAt: Timestamp.fromMillis(Date.now() + 75 * DAY - 60_000),
       paymentReference: "DUPLICATE-001",
       paymentMethod: "M-Pesa",
-      paymentAmount: 25000,
+      paymentAmount: 750,
       paymentNote: "DUPLICATE-001",
       paymentVerifiedBy: "owner-1",
       paidAt: serverTimestamp()
     });
     transaction.update(paymentRef, {
       status: "verified",
-      amount: 25000,
+      amount: 750,
       paymentMethod: "M-Pesa",
       reference: "DUPLICATE-001",
       note: "DUPLICATE-001",
@@ -769,7 +769,7 @@ test("owner cannot verify the same payment record twice", async () => {
 
   await assertFails(updateDoc(paymentRef, {
     status: "verified",
-    amount: 25000,
+    amount: 750,
     paymentMethod: "M-Pesa",
     reference: "DUPLICATE-001",
     note: "DUPLICATE-001",
