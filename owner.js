@@ -1240,19 +1240,32 @@ $('loadAdminsButtonTop')?.addEventListener('click', loadAdminsPage);
 // ============================================================================
 async function loadRevenueDashboard() {
   const statsContainer = $('revenueStats');
+  if (!statsContainer) return;
   statsContainer.replaceChildren();
   try {
-    const snap = await getDocs(collection(db, 'listingPayments'));
-    const payments = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const [paymentsSnap, sellersSnap] = await Promise.all([
+      getDocs(collection(db, 'listingPayments')),
+      getDocs(collection(db, 'admins'))
+    ]);
+    const payments = paymentsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const sellers = sellersSnap.docs
+      .map(d => d.data())
+      .filter(profile =>
+        String(profile.role || '').toLowerCase() === 'dealer' &&
+        profile.active === true &&
+        String(profile.approvalStatus || '').toLowerCase() === 'approved'
+      );
     const verified = payments.filter(p => p.status === 'verified');
     const pending = payments.filter(p => p.status === 'pending');
+    const renewals = verified.filter(p => p.renewal === true);
     const totalCollected = verified.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
     const totalPending = pending.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const totalRenewals = renewals.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
     statsContainer.innerHTML = `
       <div class="revenue-stat"><h4>Total Collected</h4><div class="value">${formatMoney(totalCollected)}</div><div class="sub">${verified.length} verified payments</div></div>
       <div class="revenue-stat"><h4>Pending</h4><div class="value">${formatMoney(totalPending)}</div><div class="sub">${pending.length} unpaid invoices</div></div>
-      <div class="revenue-stat"><h4>Overdue</h4><div class="value" style="color:var(--accent-red)">KES 0</div><div class="sub">Payments past due date</div></div>
-      <div class="revenue-stat"><h4>Active Sellers</h4><div class="value">${new Set(payments.map(p => p.sellerId)).size}</div><div class="sub">Sellers with payments</div></div>
+      <div class="revenue-stat"><h4>Renewals Collected</h4><div class="value">${formatMoney(totalRenewals)}</div><div class="sub">${renewals.length} verified renewal payments</div></div>
+      <div class="revenue-stat"><h4>Active Sellers</h4><div class="value">${sellers.length}</div><div class="sub">Approved, active dealer accounts</div></div>
     `;
     await renderRevenueQueue(pending);
     await renderRevenueBySeller(payments);
@@ -1274,7 +1287,7 @@ async function renderRevenueQueue(pending) {
       <p>Listing: ${escapeHtml(p.listingId || 'N/A')} · Seller: ${escapeHtml(p.sellerId || 'N/A')}</p>
       <p>Amount: ${formatMoney(p.amount)} · Status: ${escapeHtml(p.status || 'pending')}</p>
       <div class="account-actions">
-        <button class="btn btn-sm btn-outline" onclick="verifyPayment('${p.id}', '${escapeHtml(p.sellerId || '')}')">Verify</button>
+        <button class="btn btn-sm btn-outline" onclick="switchPanel('payments')">Open payment approvals</button>
       </div>
     `;
     container.appendChild(item);
