@@ -282,6 +282,9 @@
           return;
         }
 
+        const destination = role === "owner" ? "owner.html" : "admin.html";
+        if (redirectForTerms(profile, destination)) return;
+
         if (role === "dealer") {
           showMessage("Sign-in successful. Opening your seller dashboard...", false);
           window.location.href = "admin.html";
