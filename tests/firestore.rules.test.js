@@ -908,3 +908,81 @@ test("only the owner can suspend a buyer after a story report", async () => {
     accountStatus: "banned"
   }));
 });
+
+
+test("story authors can edit only their own published article", async () => {
+  await seed("buyers", "story-owner-author", { name: "Author", role: "buyer", active: true, termsAccepted: true, termsVersion: "2026-11-07" });
+  await seed("buyers", "other-story-user", { name: "Other User", role: "buyer", active: true, termsAccepted: true, termsVersion: "2026-11-07" });
+  await seed("stories", "editable-story", {
+    title: "Original story title",
+    category: "Automotive",
+    excerpt: "",
+    blocks: [{ type: "text", text: "Original paragraph." }],
+    authorId: "story-owner-author",
+    authorName: "Author",
+    authorRole: "buyer",
+    status: "published",
+    authorDeclaration: true,
+    termsVersion: "2026-11-07",
+    createdAt: Timestamp.fromMillis(Date.now() - 1000),
+    updatedAt: Timestamp.fromMillis(Date.now() - 1000)
+  });
+
+  const authorDb = testEnv.authenticatedContext("story-owner-author").firestore();
+  const otherDb = testEnv.authenticatedContext("other-story-user").firestore();
+  await assertSucceeds(updateDoc(doc(authorDb, "stories", "editable-story"), {
+    title: "Updated story title",
+    category: "Automotive",
+    excerpt: "Updated introduction",
+    blocks: [{ type: "text", text: "Updated paragraph." }],
+    updatedAt: serverTimestamp()
+  }));
+  await assertFails(updateDoc(doc(otherDb, "stories", "editable-story"), {
+    title: "Someone else's edit",
+    updatedAt: serverTimestamp()
+  }));
+});
+
+test("active members can like, comment on and rate a published story under their own account", async () => {
+  await seed("buyers", "story-reader", { name: "Story Reader", role: "buyer", active: true });
+  await seed("buyers", "another-reader", { name: "Another Reader", role: "buyer", active: true });
+  await seed("stories", "social-story", {
+    title: "Community story",
+    authorId: "story-author",
+    authorName: "Story Author",
+    status: "published"
+  });
+
+  const readerDb = testEnv.authenticatedContext("story-reader").firestore();
+  const otherDb = testEnv.authenticatedContext("another-reader").firestore();
+  const likeRef = doc(readerDb, "stories", "social-story", "likes", "story-reader");
+  const commentRef = doc(readerDb, "stories", "social-story", "comments", "reader-comment");
+  const ratingRef = doc(readerDb, "stories", "social-story", "ratings", "story-reader");
+
+  await assertSucceeds(setDoc(likeRef, {
+    userId: "story-reader",
+    createdAt: serverTimestamp()
+  }));
+  await assertSucceeds(setDoc(commentRef, {
+    authorId: "story-reader",
+    authorName: "Story Reader",
+    text: "Useful article.",
+    status: "visible",
+    createdAt: serverTimestamp()
+  }));
+  await assertSucceeds(setDoc(ratingRef, {
+    userId: "story-reader",
+    rating: 5,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  }));
+  await assertSucceeds(updateDoc(ratingRef, {
+    rating: 4,
+    updatedAt: serverTimestamp()
+  }));
+
+  await assertFails(setDoc(doc(otherDb, "stories", "social-story", "likes", "story-reader"), {
+    userId: "story-reader",
+    createdAt: serverTimestamp()
+  }));
+});
