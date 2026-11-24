@@ -93,6 +93,9 @@ test("new seller signup may carry policy version 1 but cannot choose another ver
     businessName: "",
     whatsapp: "254700000000",
     freeListingPolicyVersion: 1,
+    termsAccepted: true,
+    termsVersion: "2026-11-07",
+    termsAcceptedAt: serverTimestamp(),
     createdAt: serverTimestamp(),
     createdBy: "new-policy-dealer"
   }));
@@ -114,6 +117,9 @@ test("new seller signup may carry policy version 1 but cannot choose another ver
     businessName: "",
     whatsapp: "254700000001",
     freeListingPolicyVersion: 2,
+    termsAccepted: true,
+    termsVersion: "2026-11-07",
+    termsAcceptedAt: serverTimestamp(),
     createdAt: serverTimestamp(),
     createdBy: "invalid-policy-dealer"
   }));
@@ -847,5 +853,58 @@ test("owner cannot verify a payment amount different from the price-based listin
       verifiedAt: serverTimestamp(),
       verifiedBy: "owner-1"
     });
+  }));
+});
+
+
+test("buyer with current Terms can publish a story, but a buyer without acceptance cannot", async () => {
+  await seed("buyers", "story-author", {
+    name: "Story Author",
+    role: "buyer",
+    active: true,
+    termsAccepted: true,
+    termsVersion: "2026-11-07"
+  });
+  await seed("buyers", "unaccepted-author", {
+    name: "Unaccepted Author",
+    role: "buyer",
+    active: true
+  });
+
+  const storyData = (authorId, authorName) => ({
+    title: "A Kiri Stories test article",
+    category: "Automotive",
+    excerpt: "A short test introduction.",
+    blocks: [{ type: "text", text: "This is a test paragraph." }],
+    authorId,
+    authorName,
+    authorRole: "buyer",
+    status: "published",
+    authorDeclaration: true,
+    termsVersion: "2026-11-07",
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+
+  const acceptedDb = testEnv.authenticatedContext("story-author").firestore();
+  await assertSucceeds(setDoc(doc(acceptedDb, "stories", "accepted-story"), storyData("story-author", "Story Author")));
+
+  const unacceptedDb = testEnv.authenticatedContext("unaccepted-author").firestore();
+  await assertFails(setDoc(doc(unacceptedDb, "stories", "unaccepted-story"), storyData("unaccepted-author", "Unaccepted Author")));
+});
+
+test("only the owner can suspend a buyer after a story report", async () => {
+  await seed("admins", "story-owner", { name: "Owner", role: "owner", active: true });
+  await seed("buyers", "story-buyer", { name: "Story Buyer", role: "buyer", active: true });
+  const ownerDb = testEnv.authenticatedContext("story-owner").firestore();
+  const buyerDb = testEnv.authenticatedContext("story-buyer").firestore();
+
+  await assertSucceeds(updateDoc(doc(ownerDb, "buyers", "story-buyer"), {
+    active: false,
+    accountStatus: "suspended"
+  }));
+  await assertFails(updateDoc(doc(buyerDb, "buyers", "story-buyer"), {
+    active: false,
+    accountStatus: "banned"
   }));
 });
