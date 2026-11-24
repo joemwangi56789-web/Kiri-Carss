@@ -77,6 +77,7 @@
       getDoc
     } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
+    const TERMS_VERSION = "2026-11-07";
     const loginForm = document.getElementById("loginForm");
     const emailInput = document.getElementById("email");
     const passwordInput = document.getElementById("password");
@@ -84,6 +85,14 @@
     const googleLoginButton = document.getElementById("googleLoginButton");
     const message = document.getElementById("message");
     const forgotPasswordLink = document.getElementById("forgotPasswordLink");
+
+    function redirectForTerms(profile, destination) {
+      if (profile.termsAccepted !== true || profile.termsVersion !== TERMS_VERSION) {
+        window.location.href = "terms-acceptance.html?return=" + encodeURIComponent(destination);
+        return true;
+      }
+      return false;
+    }
 
     function showMessage(text, isError = true) {
       message.textContent = text;
@@ -104,8 +113,10 @@
             // Only auto-redirect if account is active and has valid role
             if (profile.active === true && profile.accountStatus !== "suspended" && 
                 (role === "dealer" || role === "admin" || role === "owner")) {
+              const destination = role === "owner" ? "owner.html" : "admin.html";
+              if (redirectForTerms(profile, destination)) return;
               showMessage("Session restored. Redirecting...", false);
-              window.location.href = role === "owner" ? "owner.html" : "admin.html";
+              window.location.href = destination;
               return;
             }
           }
@@ -139,11 +150,14 @@
         const profile = userSnap.data();
         const role = String(profile.role || "").trim().toLowerCase();
 
-        if (profile.active !== true || profile.accountStatus === "suspended") {
+        if (profile.active !== true || ["suspended", "banned"].includes(profile.accountStatus)) {
           await signOut(auth);
           showMessage("This account is inactive or suspended. Please contact Kiri Cars support.");
           return;
         }
+
+        const destination = role === "owner" ? "owner.html" : "admin.html";
+        if (redirectForTerms(profile, destination)) return;
 
         if (role === "dealer") {
           showMessage("Sign-in successful. Opening your seller dashboard...", false);
@@ -262,7 +276,7 @@
 
         const role = String(profile.role || "").trim().toLowerCase();
 
-        if (profile.active !== true || profile.accountStatus === "suspended") {
+        if (profile.active !== true || ["suspended", "banned"].includes(profile.accountStatus)) {
           await signOut(auth);
           showMessage("This account is inactive or suspended. Please contact Kiri Cars support.");
           return;
