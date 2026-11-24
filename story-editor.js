@@ -63,7 +63,7 @@ function renderBlocks() {
       textarea.value = block.text || "";
       textarea.addEventListener("input", () => { block.text = textarea.value; });
       card.appendChild(textarea);
-    } else {
+    } else if (block.type === "image") {
       const image = document.createElement("img");
       image.src = block.url;
       image.alt = block.caption || "Story image";
@@ -73,6 +73,16 @@ function renderBlocks() {
       caption.value = block.caption || "";
       caption.addEventListener("input", () => { block.caption = caption.value; });
       card.append(image, caption);
+    } else if (block.type === "video") {
+      const frame = document.createElement("iframe");
+      frame.src = block.embedUrl;
+      frame.title = "External video preview";
+      frame.loading = "lazy";
+      frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+      frame.allowFullscreen = true;
+      frame.referrerPolicy = "strict-origin-when-cross-origin";
+      card.appendChild(frame);
+      card.appendChild(element("p", "Embedded from YouTube or Vimeo. The video is hosted by that platform."));
     }
     blocksEl.appendChild(card);
   });
@@ -109,6 +119,35 @@ document.getElementById("addParagraph").addEventListener("click", () => {
 });
 
 document.getElementById("addImage").addEventListener("click", () => picker.click());
+
+function normalizeVideoUrl(value) {
+  try {
+    const url = new URL(value.trim());
+    const host = url.hostname.replace(/^www\\./, "").toLowerCase();
+    let id = "";
+    if (host === "youtu.be") id = url.pathname.split("/").filter(Boolean)[0] || "";
+    else if (host === "youtube.com" || host === "m.youtube.com" || host === "youtube-nocookie.com") {
+      id = url.searchParams.get("v") || url.pathname.match(/\\/(?:embed|shorts)\\/([A-Za-z0-9_-]+)/)?.[1] || "";
+    } else if (host === "vimeo.com" || host === "player.vimeo.com") {
+      id = url.pathname.match(/\\/(?:video\\/)?(\\d+)/)?.[1] || "";
+      if (/^\\d+$/.test(id)) return "https://player.vimeo.com/video/" + id;
+    }
+    if (/^[A-Za-z0-9_-]{6,20}$/.test(id)) return "https://www.youtube-nocookie.com/embed/" + id;
+  } catch {}
+  return "";
+}
+
+document.getElementById("addVideo").addEventListener("click", () => {
+  const input = prompt("Paste a public YouTube or Vimeo video link:");
+  if (!input?.trim()) return;
+  const embedUrl = normalizeVideoUrl(input);
+  if (!embedUrl) {
+    say("Please use a valid YouTube or Vimeo video link.", true);
+    return;
+  }
+  blocks.push({ type: "video", embedUrl });
+  renderBlocks();
+});
 
 picker.addEventListener("change", async () => {
   const file = picker.files?.[0];
@@ -188,13 +227,19 @@ publish.addEventListener("click", async () => {
   }
   const content = blocks.map(block => block.type === "text"
     ? { type: "text", text: String(block.text || "").trim() }
-    : { type: "image", url: String(block.url || ""), caption: String(block.caption || "").trim() });
+    : block.type === "image"
+      ? { type: "image", url: String(block.url || ""), caption: String(block.caption || "").trim() }
+      : { type: "video", embedUrl: String(block.embedUrl || "") });
   if (content.some(block => block.type === "text" && !block.text)) {
     say("Fill in or remove empty paragraphs.", true);
     return;
   }
   if (content.some(block => block.type === "image" && !block.url.startsWith("https://"))) {
     say("An image URL is invalid.", true);
+    return;
+  }
+  if (content.some(block => block.type === "video" && !/^https:\\/\\/(www\\.youtube-nocookie\\.com\\/embed\\/[A-Za-z0-9_-]+|player\\.vimeo\\.com\\/video\\/\\d+)$/.test(block.embedUrl))) {
+    say("A video link is invalid. Use YouTube or Vimeo.", true);
     return;
   }
 
