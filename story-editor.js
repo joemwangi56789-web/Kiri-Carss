@@ -262,7 +262,7 @@ publish.addEventListener("click", async () => {
     say("An image URL is invalid.", true);
     return;
   }
-  if (content.some(block => block.type === "video" && !/^https:\\/\\/(www\\.youtube-nocookie\\.com\\/embed\\/[A-Za-z0-9_-]+|player\\.vimeo\\.com\\/video\\/\\d+)$/.test(block.embedUrl))) {
+  if (content.some(block => block.type === "video" && !isAllowedEmbedUrl(block.embedUrl))) {
   if (content.some(block => block.type === "video" && !isAllowedEmbedUrl(block.embedUrl))) {
     return;
   }
