@@ -82,7 +82,9 @@ function renderBlocks() {
       frame.allowFullscreen = true;
       frame.referrerPolicy = "strict-origin-when-cross-origin";
       card.appendChild(frame);
-      card.appendChild(element("p", "Embedded from YouTube or Vimeo. The video is hosted by that platform."));
+      const note = document.createElement("p");
+      note.textContent = "Embedded from YouTube or Vimeo. The video is hosted by that platform.";
+      card.appendChild(note);
     }
     blocksEl.appendChild(card);
   });
@@ -123,18 +125,36 @@ document.getElementById("addImage").addEventListener("click", () => picker.click
 function normalizeVideoUrl(value) {
   try {
     const url = new URL(value.trim());
-    const host = url.hostname.replace(/^www\\./, "").toLowerCase();
-    let id = "";
-    if (host === "youtu.be") id = url.pathname.split("/").filter(Boolean)[0] || "";
+    if (url.protocol !== "https:") return "";
+    const host = url.hostname.toLowerCase().replace(/^www[.]/, "");
+    const parts = url.pathname.split("/").filter(Boolean);
+    let videoId = "";
+    if (host === "youtu.be") videoId = parts[0] || "";
     else if (host === "youtube.com" || host === "m.youtube.com" || host === "youtube-nocookie.com") {
-      id = url.searchParams.get("v") || url.pathname.match(/\\/(?:embed|shorts)\\/([A-Za-z0-9_-]+)/)?.[1] || "";
+      videoId = url.searchParams.get("v") || "";
+      if (!videoId && ["embed", "shorts"].includes(parts[0])) videoId = parts[1] || "";
+      if (/^[A-Za-z0-9_-]{6,20}$/.test(videoId)) return "https://www.youtube-nocookie.com/embed/" + videoId;
+      return "";
     } else if (host === "vimeo.com" || host === "player.vimeo.com") {
-      id = url.pathname.match(/\\/(?:video\\/)?(\\d+)/)?.[1] || "";
-      if (/^\\d+$/.test(id)) return "https://player.vimeo.com/video/" + id;
+      videoId = parts[0] === "video" ? (parts[1] || "") : (parts[0] || "");
+      if (/^[0-9]{5,15}$/.test(videoId)) return "https://player.vimeo.com/video/" + videoId;
+      return "";
     }
-    if (/^[A-Za-z0-9_-]{6,20}$/.test(id)) return "https://www.youtube-nocookie.com/embed/" + id;
+    if (/^[A-Za-z0-9_-]{6,20}$/.test(videoId)) return "https://www.youtube-nocookie.com/embed/" + videoId;
   } catch {}
   return "";
+}
+
+function isAllowedEmbedUrl(value) {
+  try {
+    const url = new URL(value);
+    const parts = url.pathname.split("/").filter(Boolean);
+    return url.protocol === "https:"
+      && ((url.hostname === "www.youtube-nocookie.com" && parts[0] === "embed" && /^[A-Za-z0-9_-]{6,20}$/.test(parts[1] || ""))
+        || (url.hostname === "player.vimeo.com" && parts[0] === "video" && /^[0-9]{5,15}$/.test(parts[1] || "")));
+  } catch {
+    return false;
+  }
 }
 
 document.getElementById("addVideo").addEventListener("click", () => {
@@ -239,7 +259,7 @@ publish.addEventListener("click", async () => {
     return;
   }
   if (content.some(block => block.type === "video" && !/^https:\\/\\/(www\\.youtube-nocookie\\.com\\/embed\\/[A-Za-z0-9_-]+|player\\.vimeo\\.com\\/video\\/\\d+)$/.test(block.embedUrl))) {
-    say("A video link is invalid. Use YouTube or Vimeo.", true);
+  if (content.some(block => block.type === "video" && !isAllowedEmbedUrl(block.embedUrl))) {
     return;
   }
 
