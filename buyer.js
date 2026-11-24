@@ -503,6 +503,11 @@ async function loadSession(user) {
       }
     }
 
+    if (currentProfile.termsAccepted !== true || currentProfile.termsVersion !== TERMS_VERSION) {
+      window.location.href = "terms-acceptance.html?return=buyer.html%3Fmode%3Dbuyer";
+      return;
+    }
+
     authPanel.hidden = true;
     inboxPanel.hidden = false;
     if (profileDropdown) profileDropdown.hidden = false;
