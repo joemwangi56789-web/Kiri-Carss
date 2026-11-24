@@ -742,7 +742,7 @@ service cloud.firestore {
       allow delete: if isOwner() || (signedIn() && canPublishStories(request.auth.uid) && resource.data.authorId == request.auth.uid);
       match /likes/{userId} {
         allow read: if isOwner() || get(/databases/$(database)/documents/stories/$(storyId)).data.status == "published";
-        allow create: if signedIn() && canPublishStories(request.auth.uid)
+        allow create: if signedIn() && isActiveParticipant(request.auth.uid)
           && request.auth.uid == userId
           && get(/databases/$(database)/documents/stories/$(storyId)).data.status == "published"
           && request.resource.data.keys().hasOnly(["userId", "createdAt"])
@@ -757,7 +757,7 @@ service cloud.firestore {
           || (get(/databases/$(database)/documents/stories/$(storyId)).data.status == "published"
             && resource.data.status == "visible")
           || (signedIn() && resource.data.authorId == request.auth.uid);
-        allow create: if signedIn() && canPublishStories(request.auth.uid)
+        allow create: if signedIn() && isActiveParticipant(request.auth.uid)
           && get(/databases/$(database)/documents/stories/$(storyId)).data.status == "published"
           && request.resource.data.keys().hasOnly(["authorId", "authorName", "text", "status", "createdAt"])
           && request.resource.data.authorId == request.auth.uid
@@ -779,7 +779,7 @@ service cloud.firestore {
 
       match /ratings/{userId} {
         allow read: if isOwner() || get(/databases/$(database)/documents/stories/$(storyId)).data.status == "published";
-        allow create: if signedIn() && canPublishStories(request.auth.uid)
+        allow create: if signedIn() && isActiveParticipant(request.auth.uid)
           && request.auth.uid == userId
           && get(/databases/$(database)/documents/stories/$(storyId)).data.status == "published"
           && request.resource.data.keys().hasOnly(["userId", "rating", "createdAt", "updatedAt"])
@@ -788,7 +788,7 @@ service cloud.firestore {
           && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
           && request.resource.data.createdAt == request.time
           && request.resource.data.updatedAt == request.time;
-        allow update: if signedIn() && canPublishStories(request.auth.uid)
+        allow update: if signedIn() && isActiveParticipant(request.auth.uid)
           && request.auth.uid == userId
           && get(/databases/$(database)/documents/stories/$(storyId)).data.status == "published"
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["rating", "updatedAt"])
