@@ -2,7 +2,7 @@ import { auth, db } from "./firebase-config.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit,
-  orderBy, query, serverTimestamp, setDoc
+  orderBy, query, serverTimestamp, setDoc, where
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
 const root = document.getElementById("storyArticle");
