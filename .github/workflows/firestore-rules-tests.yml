@@ -8,6 +8,7 @@ on:
   pull_request:
     branches:
       - main
+      - feature/listing-payments-and-renewals
   workflow_dispatch:
 
 permissions:
@@ -39,6 +40,11 @@ jobs:
           node --check admin.js
           node --check owner.js
           node --check seller-register.js
+          node --check buyer.js
+          node --check stories.js
+          node --check story.js
+          node --check story-editor.js
+          node --check story-moderation.js
 
       - name: Run Firestore rules tests in the emulator
         run: npm run test:rules:emulator
