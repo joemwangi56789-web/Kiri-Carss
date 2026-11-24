@@ -1,4 +1,4 @@
-name: Firestore Rules and Kiri Stories Tests
+name: Firestore Rules Tests
 
 concurrency:
   group: firestore-rules-${{ github.head_ref || github.ref_name }}
