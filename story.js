@@ -42,6 +42,18 @@ function isActiveAccount() {
     && !["suspended", "banned"].includes(currentProfile.accountStatus);
 }
 
+function isAllowedEmbedUrl(value) {
+  try {
+    const url = new URL(value);
+    const parts = url.pathname.split("/").filter(Boolean);
+    return url.protocol === "https:"
+      && ((url.hostname === "www.youtube-nocookie.com" && parts[0] === "embed" && /^[A-Za-z0-9_-]{6,20}$/.test(parts[1] || ""))
+        || (url.hostname === "player.vimeo.com" && parts[0] === "video" && /^[0-9]{5,15}$/.test(parts[1] || "")));
+  } catch {
+    return false;
+  }
+}
+
 function renderStory(story) {
   root.replaceChildren();
   const title = element("h1", story.title || "Untitled story");
@@ -72,6 +84,17 @@ function renderStory(story) {
       if (block.caption) figure.appendChild(element("figcaption", block.caption));
       root.appendChild(figure);
     } else if (block.type === "video" && /^https:\\/\\/(www\\.youtube-nocookie\\.com\\/embed\\/[A-Za-z0-9_-]+|player\\.vimeo\\.com\\/video\\/\\d+)$/.test(block.embedUrl || "")) {
+      const figure = document.createElement("figure");
+      const frame = document.createElement("iframe");
+      frame.src = block.embedUrl;
+      frame.title = story.title || "Kiri Stories video";
+      frame.loading = "lazy";
+      frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+      frame.allowFullscreen = true;
+      frame.referrerPolicy = "strict-origin-when-cross-origin";
+      figure.appendChild(frame);
+      root.appendChild(figure);
+    } else if (block.type === "video" && isAllowedEmbedUrl(block.embedUrl)) {
       const figure = document.createElement("figure");
       const frame = document.createElement("iframe");
       frame.src = block.embedUrl;
