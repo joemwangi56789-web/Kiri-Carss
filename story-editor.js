@@ -263,7 +263,7 @@ publish.addEventListener("click", async () => {
     return;
   }
   if (content.some(block => block.type === "video" && !isAllowedEmbedUrl(block.embedUrl))) {
-  if (content.some(block => block.type === "video" && !isAllowedEmbedUrl(block.embedUrl))) {
+    say("A video link is invalid. Use YouTube or Vimeo.", true);
     return;
   }
 
