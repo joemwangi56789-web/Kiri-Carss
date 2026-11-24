@@ -50,6 +50,13 @@ service cloud.firestore {
       return isActiveBuyer(userId) || isActiveSeller(userId);
     }
 
+    function canPublishStories(userId) {
+      return isActiveBuyer(userId)
+        || (hasSellerProfile(userId)
+          && get(/databases/$(database)/documents/admins/$(userId)).data.active == true
+          && get(/databases/$(database)/documents/admins/$(userId)).data.role in ["admin", "owner"]);
+    }
+
     function isPendingDealer(userId) {
       return hasSellerProfile(userId) && pendingDealerProfile(userId);
     }
@@ -708,7 +715,7 @@ service cloud.firestore {
     match /stories/{storyId} {
       allow read: if resource.data.status == "published" || isOwner()
         || (signedIn() && resource.data.authorId == request.auth.uid);
-      allow create: if signedIn() && isActiveParticipant(request.auth.uid)
+      allow create: if signedIn() && canPublishStories(request.auth.uid)
         && request.resource.data.keys().hasOnly(['title','category','excerpt','blocks','authorId','authorName','authorRole','status','authorDeclaration','termsVersion','createdAt','updatedAt'])
         && request.resource.data.authorId == request.auth.uid
         && request.resource.data.authorName is string && request.resource.data.authorName.size() >= 2 && request.resource.data.authorName.size() <= 100
@@ -726,16 +733,16 @@ service cloud.firestore {
           && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.termsAccepted == true
           && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.termsVersion == "2026-11-07"));
       allow update: if isOwner()
-        || (signedIn() && isActiveParticipant(request.auth.uid) && resource.data.authorId == request.auth.uid
+        || (signedIn() && canPublishStories(request.auth.uid) && resource.data.authorId == request.auth.uid
           && resource.data.status == "published"
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["title","category","excerpt","blocks","updatedAt"])
           && request.resource.data.title is string && request.resource.data.title.size() >= 4 && request.resource.data.title.size() <= 140
           && request.resource.data.blocks is list && request.resource.data.blocks.size() >= 1 && request.resource.data.blocks.size() <= 80
           && request.resource.data.updatedAt == request.time);
-      allow delete: if isOwner() || (signedIn() && isActiveParticipant(request.auth.uid) && resource.data.authorId == request.auth.uid);
+      allow delete: if isOwner() || (signedIn() && canPublishStories(request.auth.uid) && resource.data.authorId == request.auth.uid);
       match /likes/{userId} {
         allow read: if isOwner() || get(/databases/$(database)/documents/stories/$(storyId)).data.status == "published";
-        allow create: if signedIn() && isActiveParticipant(request.auth.uid)
+        allow create: if signedIn() && canPublishStories(request.auth.uid)
           && request.auth.uid == userId
           && get(/databases/$(database)/documents/stories/$(storyId)).data.status == "published"
           && request.resource.data.keys().hasOnly(["userId", "createdAt"])
@@ -750,7 +757,7 @@ service cloud.firestore {
           || (get(/databases/$(database)/documents/stories/$(storyId)).data.status == "published"
             && resource.data.status == "visible")
           || (signedIn() && resource.data.authorId == request.auth.uid);
-        allow create: if signedIn() && isActiveParticipant(request.auth.uid)
+        allow create: if signedIn() && canPublishStories(request.auth.uid)
           && get(/databases/$(database)/documents/stories/$(storyId)).data.status == "published"
           && request.resource.data.keys().hasOnly(["authorId", "authorName", "text", "status", "createdAt"])
           && request.resource.data.authorId == request.auth.uid
@@ -772,7 +779,7 @@ service cloud.firestore {
 
       match /ratings/{userId} {
         allow read: if isOwner() || get(/databases/$(database)/documents/stories/$(storyId)).data.status == "published";
-        allow create: if signedIn() && isActiveParticipant(request.auth.uid)
+        allow create: if signedIn() && canPublishStories(request.auth.uid)
           && request.auth.uid == userId
           && get(/databases/$(database)/documents/stories/$(storyId)).data.status == "published"
           && request.resource.data.keys().hasOnly(["userId", "rating", "createdAt", "updatedAt"])
@@ -781,7 +788,7 @@ service cloud.firestore {
           && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
           && request.resource.data.createdAt == request.time
           && request.resource.data.updatedAt == request.time;
-        allow update: if signedIn() && isActiveParticipant(request.auth.uid)
+        allow update: if signedIn() && canPublishStories(request.auth.uid)
           && request.auth.uid == userId
           && get(/databases/$(database)/documents/stories/$(storyId)).data.status == "published"
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["rating", "updatedAt"])
