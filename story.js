@@ -83,7 +83,7 @@ function renderStory(story) {
       figure.appendChild(image);
       if (block.caption) figure.appendChild(element("figcaption", block.caption));
       root.appendChild(figure);
-    } else if (block.type === "video" && /^https:\\/\\/(www\\.youtube-nocookie\\.com\\/embed\\/[A-Za-z0-9_-]+|player\\.vimeo\\.com\\/video\\/\\d+)$/.test(block.embedUrl || "")) {
+    } else if (block.type === "video" && isAllowedEmbedUrl(block.embedUrl)) {
       const figure = document.createElement("figure");
       const frame = document.createElement("iframe");
       frame.src = block.embedUrl;
