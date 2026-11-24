@@ -74,16 +74,20 @@ function renderBlocks() {
       caption.addEventListener("input", () => { block.caption = caption.value; });
       card.append(image, caption);
     } else if (block.type === "video") {
-      const frame = document.createElement("iframe");
-      frame.src = block.embedUrl;
-      frame.title = "External video preview";
-      frame.loading = "lazy";
-      frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
-      frame.allowFullscreen = true;
-      frame.referrerPolicy = "strict-origin-when-cross-origin";
-      card.appendChild(frame);
+      if (isAllowedEmbedUrl(block.embedUrl)) {
+        const frame = document.createElement("iframe");
+        frame.src = block.embedUrl;
+        frame.title = "External video preview";
+        frame.loading = "lazy";
+        frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+        frame.allowFullscreen = true;
+        frame.referrerPolicy = "strict-origin-when-cross-origin";
+        card.appendChild(frame);
+      }
       const note = document.createElement("p");
-      note.textContent = "Embedded from YouTube or Vimeo. The video is hosted by that platform.";
+      note.textContent = isAllowedEmbedUrl(block.embedUrl)
+        ? "Embedded from YouTube or Vimeo. The video is hosted by that platform."
+        : "This video link is not supported. Remove it and add a YouTube or Vimeo link.";
       card.appendChild(note);
     }
     blocksEl.appendChild(card);
