@@ -986,3 +986,30 @@ test("active members can like, comment on and rate a published story under their
     createdAt: serverTimestamp()
   }));
 });
+
+
+test("approved dealer accounts cannot publish Kiri Stories", async () => {
+  await seed("admins", "story-dealer", {
+    name: "Approved Dealer",
+    role: "dealer",
+    active: true,
+    approvalStatus: "approved",
+    termsAccepted: true,
+    termsVersion: "2026-11-07"
+  });
+  const dealerDb = testEnv.authenticatedContext("story-dealer").firestore();
+  await assertFails(setDoc(doc(dealerDb, "stories", "dealer-story"), {
+    title: "Dealer article",
+    category: "Automotive",
+    excerpt: "",
+    blocks: [{ type: "text", text: "Dealer story content." }],
+    authorId: "story-dealer",
+    authorName: "Approved Dealer",
+    authorRole: "dealer",
+    status: "published",
+    authorDeclaration: true,
+    termsVersion: "2026-11-07",
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  }));
+});
