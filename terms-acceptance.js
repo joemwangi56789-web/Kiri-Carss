@@ -8,9 +8,8 @@ const button = document.getElementById("acceptTermsButton");
 const message = document.getElementById("termsMessage");
 const params = new URLSearchParams(location.search);
 const requestedReturn = params.get("return");
-const returnTo = ["story-editor.html", "stories.html", "index.html"].includes(requestedReturn)
-  ? requestedReturn
-  : "story-editor.html";
+const allowedReturns = ["story-editor.html", "stories.html", "index.html", "owner.html", "admin.html", "buyer.html?mode=buyer"];
+const returnTo = allowedReturns.includes(requestedReturn) ? requestedReturn : "story-editor.html";
 let currentUser = null;
 let profileCollection = "";
 let profile = null;
