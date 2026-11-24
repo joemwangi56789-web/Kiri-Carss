@@ -79,6 +79,9 @@ test("new seller can register, receive a pending profile, and be approved by the
     businessName: "",
     whatsapp: "254712345678",
     freeListingPolicyVersion: 1,
+    termsAccepted: true,
+    termsVersion: "2026-11-07",
+    termsAcceptedAt: serverTimestamp(),
     createdAt: serverTimestamp(),
     createdBy: sellerUid
   });
