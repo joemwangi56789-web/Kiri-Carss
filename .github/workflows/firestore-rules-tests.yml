@@ -45,6 +45,7 @@ jobs:
           node --check story.js
           node --check story-editor.js
           node --check story-moderation.js
+          node --check terms-acceptance.js
 
       - name: Run Firestore rules tests in the emulator
         run: npm run test:rules:emulator
