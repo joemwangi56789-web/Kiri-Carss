@@ -2,7 +2,7 @@ import { auth, db } from "./firebase-config.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit,
-  orderBy, query, serverTimestamp, setDoc, where
+  query, serverTimestamp, setDoc, where
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
 const root = document.getElementById("storyArticle");
@@ -132,7 +132,7 @@ async function renderActions() {
     const ratingsRef = collection(db, "stories", id, "ratings");
     const [likes, comments, ratings, myLike, myRating] = await Promise.all([
       getDocs(likesRef),
-      getDocs(query(commentsRef, whereVisibleComments(), orderBy("createdAt", "asc"), limit(100))),
+      getDocs(query(commentsRef, whereVisibleComments(), limit(100))),
       getDocs(ratingsRef),
       currentUser ? getDoc(doc(db, "stories", id, "likes", currentUser.uid)) : Promise.resolve(null),
       currentUser ? getDoc(doc(db, "stories", id, "ratings", currentUser.uid)) : Promise.resolve(null)
@@ -232,7 +232,12 @@ async function renderActions() {
     actionArea.appendChild(commentsHeading);
     const commentsList = element("div", undefined, "story-comments");
     if (comments.empty) commentsList.appendChild(element("p", "No comments yet. Start the conversation."));
-    comments.forEach(item => {
+    const sortedComments = [...comments.docs].sort((a, b) => {
+      const aTime = a.data().createdAt?.seconds || 0;
+      const bTime = b.data().createdAt?.seconds || 0;
+      return aTime - bTime;
+    });
+    sortedComments.forEach(item => {
       const data = item.data();
       const card = element("article", undefined, "story-comment");
       card.append(element("strong", data.authorName || "Kiri Cars user"));
