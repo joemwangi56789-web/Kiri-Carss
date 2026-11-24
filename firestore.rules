@@ -733,6 +733,64 @@ service cloud.firestore {
           && request.resource.data.blocks is list && request.resource.data.blocks.size() >= 1 && request.resource.data.blocks.size() <= 80
           && request.resource.data.updatedAt == request.time);
       allow delete: if isOwner() || (signedIn() && isActiveParticipant(request.auth.uid) && resource.data.authorId == request.auth.uid);
+      match /likes/{userId} {
+        allow read: if isOwner() || get(/databases/$(database)/documents/stories/$(storyId)).data.status == "published";
+        allow create: if signedIn() && isActiveParticipant(request.auth.uid)
+          && request.auth.uid == userId
+          && get(/databases/$(database)/documents/stories/$(storyId)).data.status == "published"
+          && request.resource.data.keys().hasOnly(["userId", "createdAt"])
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.createdAt == request.time;
+        allow delete: if signedIn() && request.auth.uid == userId;
+        allow update: if false;
+      }
+
+      match /comments/{commentId} {
+        allow read: if isOwner()
+          || (get(/databases/$(database)/documents/stories/$(storyId)).data.status == "published"
+            && resource.data.status == "visible")
+          || (signedIn() && resource.data.authorId == request.auth.uid);
+        allow create: if signedIn() && isActiveParticipant(request.auth.uid)
+          && get(/databases/$(database)/documents/stories/$(storyId)).data.status == "published"
+          && request.resource.data.keys().hasOnly(["authorId", "authorName", "text", "status", "createdAt"])
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.authorName is string
+          && request.resource.data.authorName.size() >= 2
+          && request.resource.data.authorName.size() <= 100
+          && request.resource.data.text is string
+          && request.resource.data.text.size() >= 1
+          && request.resource.data.text.size() <= 1000
+          && request.resource.data.status == "visible"
+          && request.resource.data.createdAt == request.time;
+        allow update: if isOwner()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "moderatedAt", "moderatedBy"])
+          && request.resource.data.status in ["visible", "hidden"]
+          && request.resource.data.moderatedBy == request.auth.uid
+          && request.resource.data.moderatedAt == request.time;
+        allow delete: if isOwner() || (signedIn() && resource.data.authorId == request.auth.uid);
+      }
+
+      match /ratings/{userId} {
+        allow read: if isOwner() || get(/databases/$(database)/documents/stories/$(storyId)).data.status == "published";
+        allow create: if signedIn() && isActiveParticipant(request.auth.uid)
+          && request.auth.uid == userId
+          && get(/databases/$(database)/documents/stories/$(storyId)).data.status == "published"
+          && request.resource.data.keys().hasOnly(["userId", "rating", "createdAt", "updatedAt"])
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.rating is int
+          && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time;
+        allow update: if signedIn() && isActiveParticipant(request.auth.uid)
+          && request.auth.uid == userId
+          && get(/databases/$(database)/documents/stories/$(storyId)).data.status == "published"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["rating", "updatedAt"])
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.rating is int
+          && request.resource.data.rating >= 1 && request.resource.data.rating <= 5
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if signedIn() && request.auth.uid == userId;
+      }
     }
     match /storyReports/{reportId} {
       allow create: if signedIn() && isActiveParticipant(request.auth.uid)
