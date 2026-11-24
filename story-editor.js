@@ -215,8 +215,8 @@ onAuthStateChanged(auth, async authenticatedUser => {
     }
     if (!profile) throw new Error("Account profile not found.");
     if (profile.active === false || ["suspended", "banned"].includes(profile.accountStatus)
-      || (profile.role === "dealer" && profile.approvalStatus !== "approved")) {
-      throw new Error("This account is not currently authorised to publish stories.");
+      || profile.role === "dealer") {
+      throw new Error("Only buyer, admin and owner accounts can publish Kiri Stories.");
     }
     if (profile.termsAccepted !== true || profile.termsVersion !== TERMS) {
       say("Please accept the current Terms of Use before publishing.", true);
