@@ -12,3 +12,6 @@
 .story-report-area{margin-top:28px;padding-top:18px;border-top:1px solid var(--story-border)}
 .story-report-area h3{color:var(--story-navy)}
 .story-actions-area button:disabled{opacity:.55;cursor:not-allowed}
+
+.story-block iframe,.story-reading iframe{display:block;width:100%;aspect-ratio:16/9;border:0;border-radius:12px;background:#0b1220}
+.story-block iframe{max-height:360px}
