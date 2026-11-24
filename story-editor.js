@@ -1,1 +1,231 @@
-import{auth,db}from"./firebase-config.js";import{onAuthStateChanged}from"https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";import{addDoc,collection,doc,getDoc,serverTimestamp}from"https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";const CLOUD="mlwi9tfu",PRESET="kiri_cars_photos",TERMS="2026-11-07",blocks=[],blocksEl=document.getElementById("storyBlocks"),msg=document.getElementById("editorMessage"),picker=document.getElementById("storyImagePicker"),publish=document.getElementById("publishStory");let user=null,profile=null;function say(t,bad=false){msg.textContent=t;msg.style.color=bad?"#b42318":"#174a88";}function render(){blocksEl.replaceChildren();blocks.forEach((x,i)=>{const box=document.createElement("section");box.className="story-block";const top=document.createElement("div");top.className="story-block-top";const name=document.createElement("strong");name.textContent=(i+1)+". "+(x.type==="text"?"Paragraph":"Image");const actions=document.createElement("div");actions.className="story-block-actions";[["↑",()=>shift(i,-1)],["↓",()=>shift(i,1)],["Remove",()=>{blocks.splice(i,1);render();}]].forEach(([t,fn])=>{const b=document.createElement("button");b.type="button";b.className="story-btn secondary";b.textContent=t;b.addEventListener("click",fn);actions.appendChild(b);});top.append(name,actions);box.appendChild(top);if(x.type==="text"){const ta=document.createElement("textarea");ta.maxLength=8000;ta.placeholder="Write this paragraph…";ta.value=x.text;ta.addEventListener("input",()=>x.text=ta.value);box.appendChild(ta);}else{const im=document.createElement("img");im.src=x.url;im.alt=x.caption||"Story image";const cap=document.createElement("input");cap.placeholder="Image caption (optional)";cap.maxLength=180;cap.value=x.caption||"";cap.addEventListener("input",()=>x.caption=cap.value);box.append(im,cap);}blocksEl.appendChild(box);});}function shift(i,d){const j=i+d;if(j<0||j>=blocks.length)return;[blocks[i],blocks[j]]=[blocks[j],blocks[i]];render();}document.getElementById("addParagraph").onclick=()=>{blocks.push({type:"text",text:""});render();};document.getElementById("addImage").onclick=()=>picker.click();picker.onchange=async()=>{const f=picker.files?.[0];picker.value="";if(!f)return;if(!["image/jpeg","image/png","image/webp"].includes(f.type)||f.size>8*1024*1024){say("Choose a JPG, PNG or WebP image no larger than 8 MB.",true);return;}say("Uploading image…");try{const fd=new FormData();fd.append("file",f);fd.append("upload_preset",PRESET);const res=await fetch("https://api.cloudinary.com/v1_1/"+CLOUD+"/image/upload",{method:"POST",body:fd});if(!res.ok)throw Error("Upload failed");const data=await res.json();blocks.push({type:"image",url:data.secure_url,caption:""});render();say("Image uploaded. Add text or another image.");}catch(e){console.error(e);say("Image upload failed. Please try again.",true);}};onAuthStateChanged(auth,async u=>{user=u;if(!u){say("Sign in to publish. Redirecting…",true);setTimeout(()=>location.href="buyer.html?mode=buyer",800);return;}try{let s=await getDoc(doc(db,"buyers",u.uid));if(s.exists())profile=s.data();else{s=await getDoc(doc(db,"admins",u.uid));if(s.exists())profile=s.data();}if(!profile){say("Account profile not found.",true);publish.disabled=true;return;}if(profile.active===false||(profile.role==="dealer"&&(profile.approvalStatus!=="approved"||profile.active!==true))){say("This account is not currently authorised to publish stories.",true);publish.disabled=true;return;}if(profile.termsAccepted!==true||profile.termsVersion!==TERMS){say("Please accept the current Terms of Use before publishing.",true);if(acceptTermsLink)acceptTermsLink.hidden=false;publish.disabled=true;return;}say("Signed in as "+(profile.name||u.email)+".");}catch(e){console.error(e);say("Could not verify account permissions.",true);publish.disabled=true;}});publish.onclick=async()=>{if(!user||!profile)return;const title=document.getElementById("storyTitle").value.trim(),category=document.getElementById("storyCategory").value,excerpt=document.getElementById("storyExcerpt").value.trim();if(title.length<4||!blocks.length||blocks.length>80||!document.getElementById("authorDeclaration").checked){say("Add a title, at least one content block, and confirm author responsibility.",true);return;}const content=blocks.map(b=>b.type==="text"?{type:"text",text:b.text.trim()}:{type:"image",url:b.url,caption:(b.caption||"").trim()});if(content.some(b=>b.type==="text"&&!b.text)){say("Fill in or remove empty paragraphs.",true);return;}if(content.some(b=>b.type==="image"&&!b.url.startsWith("https://"))){say("An image URL is invalid.",true);return;}publish.disabled=true;publish.textContent="Publishing…";try{const ref=await addDoc(collection(db,"stories"),{title,category,excerpt,blocks:content,authorId:user.uid,authorName:profile.name||user.displayName||user.email||"Community author",authorRole:profile.role||"buyer",status:"published",authorDeclaration:true,termsVersion:TERMS,createdAt:serverTimestamp(),updatedAt:serverTimestamp()});say("Story published.");setTimeout(()=>location.href="story.html?id="+encodeURIComponent(ref.id),700);}catch(e){console.error(e);say("Publishing failed. The Stories Firestore rules may need to be published.",true);publish.disabled=false;publish.textContent="Publish story";}};
+import { auth, db } from "./firebase-config.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+import {
+  addDoc, collection, doc, getDoc, serverTimestamp, updateDoc
+} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+
+const CLOUD = "mlwi9tfu";
+const PRESET = "kiri_cars_photos";
+const TERMS = "2026-11-07";
+const editId = new URLSearchParams(location.search).get("id");
+const blocks = [];
+const blocksEl = document.getElementById("storyBlocks");
+const msg = document.getElementById("editorMessage");
+const picker = document.getElementById("storyImagePicker");
+const publish = document.getElementById("publishStory");
+const acceptTermsLink = document.getElementById("acceptTermsLink");
+const titleInput = document.getElementById("storyTitle");
+const categoryInput = document.getElementById("storyCategory");
+const excerptInput = document.getElementById("storyExcerpt");
+const declaration = document.getElementById("authorDeclaration");
+let user = null;
+let profile = null;
+let ready = false;
+
+function say(text, isError = false) {
+  msg.textContent = text;
+  msg.style.color = isError ? "#b42318" : "#174a88";
+}
+
+function renderBlocks() {
+  blocksEl.replaceChildren();
+  blocks.forEach((block, index) => {
+    const card = document.createElement("section");
+    card.className = "story-block";
+    const top = document.createElement("div");
+    top.className = "story-block-top";
+    const label = document.createElement("strong");
+    label.textContent = (index + 1) + ". " + (block.type === "text" ? "Paragraph" : "Image");
+    const actions = document.createElement("div");
+    actions.className = "story-block-actions";
+
+    const addAction = (text, action) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "story-btn secondary";
+      button.textContent = text;
+      button.addEventListener("click", action);
+      actions.appendChild(button);
+    };
+    addAction("↑", () => moveBlock(index, -1));
+    addAction("↓", () => moveBlock(index, 1));
+    addAction("Remove", () => {
+      blocks.splice(index, 1);
+      renderBlocks();
+    });
+    top.append(label, actions);
+    card.appendChild(top);
+
+    if (block.type === "text") {
+      const textarea = document.createElement("textarea");
+      textarea.maxLength = 8000;
+      textarea.placeholder = "Write this paragraph…";
+      textarea.value = block.text || "";
+      textarea.addEventListener("input", () => { block.text = textarea.value; });
+      card.appendChild(textarea);
+    } else {
+      const image = document.createElement("img");
+      image.src = block.url;
+      image.alt = block.caption || "Story image";
+      const caption = document.createElement("input");
+      caption.maxLength = 180;
+      caption.placeholder = "Image caption (optional)";
+      caption.value = block.caption || "";
+      caption.addEventListener("input", () => { block.caption = caption.value; });
+      card.append(image, caption);
+    }
+    blocksEl.appendChild(card);
+  });
+}
+
+function moveBlock(index, direction) {
+  const next = index + direction;
+  if (next < 0 || next >= blocks.length) return;
+  [blocks[index], blocks[next]] = [blocks[next], blocks[index]];
+  renderBlocks();
+}
+
+async function loadStoryForEditing() {
+  const snapshot = await getDoc(doc(db, "stories", editId));
+  if (!snapshot.exists()) throw new Error("This story could not be found.");
+  const story = snapshot.data();
+  if (story.authorId !== user.uid || story.status !== "published") {
+    throw new Error("You can edit only your own published stories.");
+  }
+  titleInput.value = story.title || "";
+  categoryInput.value = story.category || "Automotive";
+  excerptInput.value = story.excerpt || "";
+  blocks.splice(0, blocks.length, ...(story.blocks || []).map(block => ({ ...block })));
+  declaration.checked = true;
+  renderBlocks();
+  publish.textContent = "Save changes";
+  document.querySelector(".story-heading h1").textContent = "Edit your story";
+  say("Editing your published story. Changes will appear immediately after saving.");
+}
+
+document.getElementById("addParagraph").addEventListener("click", () => {
+  blocks.push({ type: "text", text: "" });
+  renderBlocks();
+});
+
+document.getElementById("addImage").addEventListener("click", () => picker.click());
+
+picker.addEventListener("change", async () => {
+  const file = picker.files?.[0];
+  picker.value = "";
+  if (!file) return;
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 8 * 1024 * 1024) {
+    say("Choose a JPG, PNG or WebP image no larger than 8 MB.", true);
+    return;
+  }
+  say("Uploading image…");
+  try {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("upload_preset", PRESET);
+    const response = await fetch("https://api.cloudinary.com/v1_1/" + CLOUD + "/image/upload", {
+      method: "POST",
+      body: form
+    });
+    if (!response.ok) throw new Error("Cloudinary upload failed.");
+    const result = await response.json();
+    if (!result.secure_url?.startsWith("https://")) throw new Error("Cloudinary returned an invalid image URL.");
+    blocks.push({ type: "image", url: result.secure_url, caption: "" });
+    renderBlocks();
+    say("Image uploaded. Add text or another image.");
+  } catch (error) {
+    console.error(error);
+    say("Image upload failed. Please try again.", true);
+  }
+});
+
+onAuthStateChanged(auth, async authenticatedUser => {
+  if (ready) return;
+  user = authenticatedUser;
+  if (!user) {
+    say("Sign in to publish. Redirecting…", true);
+    window.setTimeout(() => { location.href = "buyer.html?mode=buyer"; }, 800);
+    return;
+  }
+  try {
+    let snapshot = await getDoc(doc(db, "buyers", user.uid));
+    if (snapshot.exists()) profile = snapshot.data();
+    else {
+      snapshot = await getDoc(doc(db, "admins", user.uid));
+      if (snapshot.exists()) profile = snapshot.data();
+    }
+    if (!profile) throw new Error("Account profile not found.");
+    if (profile.active === false || ["suspended", "banned"].includes(profile.accountStatus)
+      || (profile.role === "dealer" && profile.approvalStatus !== "approved")) {
+      throw new Error("This account is not currently authorised to publish stories.");
+    }
+    if (profile.termsAccepted !== true || profile.termsVersion !== TERMS) {
+      say("Please accept the current Terms of Use before publishing.", true);
+      if (acceptTermsLink) acceptTermsLink.hidden = false;
+      publish.disabled = true;
+      ready = true;
+      return;
+    }
+    if (editId) await loadStoryForEditing();
+    else say("Signed in as " + (profile.name || user.email) + ".");
+    ready = true;
+  } catch (error) {
+    console.error(error);
+    say(error.message || "Could not verify account permissions.", true);
+    publish.disabled = true;
+    ready = true;
+  }
+});
+
+publish.addEventListener("click", async () => {
+  if (!user || !profile || !ready) return;
+  const title = titleInput.value.trim();
+  const category = categoryInput.value;
+  const excerpt = excerptInput.value.trim();
+  if (title.length < 4 || !blocks.length || blocks.length > 80 || !declaration.checked) {
+    say("Add a title, at least one content block, and confirm author responsibility.", true);
+    return;
+  }
+  const content = blocks.map(block => block.type === "text"
+    ? { type: "text", text: String(block.text || "").trim() }
+    : { type: "image", url: String(block.url || ""), caption: String(block.caption || "").trim() });
+  if (content.some(block => block.type === "text" && !block.text)) {
+    say("Fill in or remove empty paragraphs.", true);
+    return;
+  }
+  if (content.some(block => block.type === "image" && !block.url.startsWith("https://"))) {
+    say("An image URL is invalid.", true);
+    return;
+  }
+
+  publish.disabled = true;
+  publish.textContent = editId ? "Saving…" : "Publishing…";
+  try {
+    if (editId) {
+      await updateDoc(doc(db, "stories", editId), {
+        title, category, excerpt, blocks: content, updatedAt: serverTimestamp()
+      });
+      say("Your story has been updated.");
+      window.setTimeout(() => { location.href = "story.html?id=" + encodeURIComponent(editId); }, 650);
+    } else {
+      const created = await addDoc(collection(db, "stories"), {
+        title, category, excerpt, blocks: content,
+        authorId: user.uid,
+        authorName: profile.name || user.displayName || user.email || "Community author",
+        authorRole: profile.role || "buyer",
+        status: "published",
+        authorDeclaration: true,
+        termsVersion: TERMS,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+      say("Story published.");
+      window.setTimeout(() => { location.href = "story.html?id=" + encodeURIComponent(created.id); }, 650);
+    }
+  } catch (error) {
+    console.error(error);
+    say("Could not save your story: " + (error.code || error.message), true);
+    publish.disabled = false;
+    publish.textContent = editId ? "Save changes" : "Publish story";
+  }
+});
