@@ -39,6 +39,8 @@ const buyerPasswordInput = document.getElementById("buyerPassword");
 const nameField = document.getElementById("nameField");
 const buyerAuthButton = document.getElementById("buyerAuthButton");
 const buyerAuthMessage = document.getElementById("buyerAuthMessage");
+const buyerTermsAccepted = document.getElementById("buyerTermsAccepted");
+const TERMS_VERSION = "2026-11-07";
 const showSignup = document.getElementById("showSignup");
 const showLogin = document.getElementById("showLogin");
 
@@ -397,6 +399,10 @@ buyerAuthForm.addEventListener("submit", async (event) => {
   const password = buyerPasswordInput.value;
   try {
     if (authMode === "signup") {
+      if (!buyerTermsAccepted?.checked) {
+        setMessage(buyerAuthMessage, "Please read and accept the Terms of Use and Community Guidelines before creating your account.", true);
+        return;
+      }
       const name = buyerNameInput.value.trim();
       if (name.length < 2) {
         setMessage(buyerAuthMessage, "Please enter your name.", true);
@@ -409,6 +415,9 @@ buyerAuthForm.addEventListener("submit", async (event) => {
         name,
         email,
         role: "buyer",
+        termsAccepted: true,
+        termsVersion: TERMS_VERSION,
+        termsAcceptedAt: serverTimestamp(),
         createdAt: serverTimestamp()
       });
       creatingBuyer = false;
@@ -819,6 +828,10 @@ deleteBuyerAccountButton?.addEventListener("click", async () => {
 });
 
 buyerGoogleAuthButton.addEventListener("click", async () => {
+  if (!buyerTermsAccepted?.checked) {
+    setMessage(buyerAuthMessage, "Please accept the Terms of Use and Community Guidelines before continuing with Google.", true);
+    return;
+  }
   const provider = new GoogleAuthProvider();
   buyerGoogleAuthButton.disabled = true;
   buyerGoogleAuthText.textContent = "Signing in...";
@@ -839,8 +852,17 @@ buyerGoogleAuthButton.addEventListener("click", async () => {
         email: user.email,
         role: "buyer",
         active: true,
+        termsAccepted: true,
+        termsVersion: TERMS_VERSION,
+        termsAcceptedAt: serverTimestamp(),
         createdAt: serverTimestamp(),
         authProvider: "google"
+      });
+    } else if (buyerSnap.data().termsAccepted !== true || buyerSnap.data().termsVersion !== TERMS_VERSION) {
+      await updateDoc(buyerRef, {
+        termsAccepted: true,
+        termsVersion: TERMS_VERSION,
+        termsAcceptedAt: serverTimestamp()
       });
     }
 
