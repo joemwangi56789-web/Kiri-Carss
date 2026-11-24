@@ -15,7 +15,8 @@ import {
   where,
   getDocs,
   serverTimestamp,
-  Timestamp
+  Timestamp,
+  runTransaction
 } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 import {
   ref,
@@ -78,7 +79,7 @@ const overviewCountElements = {
 };
 
 const EXPIRING_SOON_MS = 7 * 24 * 60 * 60 * 1000;
-const FREE_TRIAL_LISTING_MS = 60 * 24 * 60 * 60 * 1000;
+const FREE_TRIAL_LISTING_MS = 75 * 24 * 60 * 60 * 1000;
 
 function timestampMillis(value) {
   if (typeof value?.toMillis === "function") return value.toMillis();
@@ -249,8 +250,8 @@ onAuthStateChanged(auth, async (user) => {
       setText(document.getElementById("listingPermissionNotice"), "Listing creation is disabled while your account is " + approvalStatus + ".", true);
       carForm.querySelectorAll("input, select, textarea, button").forEach((element) => { element.disabled = true; });
     } else if (role === "dealer") {
-      setText(adminMessage, "Your seller account is approved. New vehicles go live immediately for a 60-day free trial; no vehicle-by-vehicle approval is needed.");
-      setText(document.getElementById("listingPermissionNotice"), "Confirm your permission to advertise each vehicle. Approved dealers' listings go live immediately for 60 days, then stay private until Kiri Cars verifies the listing fee.");
+      setText(adminMessage, "Your seller account is approved. You can publish vehicles without individual listing approval. Your account has one 60-day free listing window.");
+      setText(document.getElementById("listingPermissionNotice"), "Confirm your permission to advertise each vehicle. Your account-level free window lasts 60 days from your first listing. Each free listing stays active for 75 days; later listings require payment verification.");
       addCarButton.textContent = "Publish Vehicle";
     } else {
       setText(adminMessage, "Signed in as " + currentAdminName);
@@ -518,8 +519,12 @@ carForm.addEventListener("submit", async (event) => {
       setText(formMessage, "Vehicle updated successfully!");
       await loadMyCars();
     } else {
-      // CREATE MODE: Add new vehicle
-      const isDealerTrial = currentRole === "dealer" && currentCanPublish && !listingIsDraft;
+      // CREATE MODE: save pending-account drafts privately; approved dealers receive
+      // one 60-day account-level free window, while each free listing lasts 75 days.
+      const fee = listingFeeForPrice(readNumber("price"));
+      let isFreeListing = false;
+      const carRef = doc(collection(db, "cars"));
+      const paymentRef = doc(collection(db, "listingPayments"));
       const car = {
         ...carData,
         images,
@@ -527,47 +532,81 @@ carForm.addEventListener("submit", async (event) => {
         addedBy: currentUid,
         sellerWhatsApp: currentWhatsApp,
         sellerName: currentAdminName,
-        listingStatus: listingIsDraft ? "draft" : isDealerTrial ? "active" : "pending_payment",
-        paymentStatus: listingIsDraft ? "not_due" : isDealerTrial ? "free_trial" : "pending",
-        listingFee: isDealerTrial ? 0 : listingFeeForPrice(readNumber("price")),
+        listingStatus: listingIsDraft ? "draft" : "pending_payment",
+        paymentStatus: listingIsDraft ? "not_due" : "pending",
+        listingFee: listingIsDraft ? 0 : fee,
         createdAt: serverTimestamp()
       };
-      if (isDealerTrial) {
-        car.listingExpiresAt = Timestamp.fromDate(new Date(Date.now() + FREE_TRIAL_LISTING_MS));
-        car.freeTrialApprovedAt = serverTimestamp();
-      }
-
-      // DEBUG: Log the exact car object being sent to Firestore
-      console.log("=== FIRESTORE WRITE DEBUG ===");
-      console.log("Target collection:", listingIsDraft ? "dealerDrafts" : "cars");
-      console.log("listingIsDraft:", listingIsDraft);
-      console.log("currentRole:", currentRole);
-      console.log("currentApprovalStatus:", currentApprovalStatus);
-      console.log("Car object:", JSON.stringify(car, (key, value) => {
-        if (key === 'createdAt' && value?.seconds) return `Timestamp(${value.seconds})`;
-        return value;
-      }, 2));
-      console.log("Key field checks:");
-      console.log("  price:", car.price, "type:", typeof car.price, ">0:", car.price > 0);
-      console.log("  listingFee:", car.listingFee, "type:", typeof car.listingFee, ">=0:", car.listingFee >= 0);
-      console.log("  listingStatus:", car.listingStatus);
-      console.log("  paymentStatus:", car.paymentStatus);
-      console.log("  authorizationConfirmed:", car.authorizationConfirmed);
-      console.log("  vehicleRelationship:", car.vehicleRelationship, "valid:", ["owner", "broker", "authorized_representative"].includes(car.vehicleRelationship));
-      console.log("  addedBy:", car.addedBy, "=== currentUid:", car.addedBy === currentUid);
-      console.log("==============================");
 
       setText(uploadProgress, "Photos uploaded. Saving vehicle details...");
-      const targetCollection = listingIsDraft ? "dealerDrafts" : "cars";
-      await addDoc(collection(db, targetCollection), car);
+      if (listingIsDraft) {
+        await addDoc(collection(db, "dealerDrafts"), car);
+      } else {
+        // Older dealers may already have used the original free-listing allowance.
+        // Do not silently grant them a second free window during this migration.
+        const existingCarsSnapshot = currentRole === "dealer"
+          ? await getDocs(query(collection(db, "cars"), where("addedBy", "==", currentUid)))
+          : null;
+        const hasPreviousListings = Boolean(existingCarsSnapshot && !existingCarsSnapshot.empty);
+        await runTransaction(db, async (transaction) => {
+          const profileRef = doc(db, "admins", currentUid);
+          const profileSnap = await transaction.get(profileRef);
+          if (!profileSnap.exists()) throw new Error("Seller profile could not be verified.");
+          const latest = profileSnap.data();
+          if (latest.active !== true || latest.accountStatus === "suspended" ||
+              (currentRole === "dealer" && latest.approvalStatus !== "approved")) {
+            throw new Error("Your seller account is not currently approved to publish vehicles.");
+          }
+
+          const now = Date.now();
+          let windowEnd = timestampMillis(latest.freeListingWindowEndsAt);
+          if (currentRole === "dealer" && latest.freeListingEligible === true &&
+              !hasPreviousListings && !latest.freeListingWindowStartedAt && !latest.freeListingWindowEndsAt) {
+            windowEnd = now + 60 * 24 * 60 * 60 * 1000;
+            transaction.update(profileRef, {
+              freeListingEligible: false,
+              freeListingWindowStartedAt: serverTimestamp(),
+              freeListingWindowEndsAt: Timestamp.fromMillis(windowEnd)
+            });
+            isFreeListing = true;
+          } else if (currentRole === "dealer" && latest.freeListingEligible === true &&
+              hasPreviousListings && !latest.freeListingWindowStartedAt && !latest.freeListingWindowEndsAt) {
+            // A prior listing means this account must not retain an unused free entitlement.
+            transaction.update(profileRef, { freeListingEligible: false });
+          } else if (currentRole === "dealer" && windowEnd !== null && windowEnd > now) {
+            isFreeListing = true;
+          }
+
+          if (isFreeListing) {
+            car.listingStatus = "active";
+            car.paymentStatus = "free_trial";
+            car.listingFee = 0;
+            car.listingExpiresAt = Timestamp.fromMillis(now + FREE_TRIAL_LISTING_MS);
+            car.freeTrialApprovedAt = serverTimestamp();
+            transaction.set(carRef, car);
+          } else {
+            car.paymentId = paymentRef.id;
+            transaction.set(carRef, car);
+            transaction.set(paymentRef, {
+              paymentId: paymentRef.id,
+              listingId: carRef.id,
+              sellerId: currentUid,
+              amount: fee,
+              status: "pending",
+              paymentMethod: "awaiting_payment",
+              createdAt: serverTimestamp()
+            });
+          }
+        });
+      }
+
       carForm.reset();
       photoPreview.replaceChildren();
       setText(uploadProgress, "");
-      const fee = listingFeeForPrice(car.price);
       setText(formMessage, listingIsDraft
         ? "Draft saved privately. It will not appear to buyers until your seller account is approved."
-        : isDealerTrial
-          ? "Vehicle published and now visible to buyers for a 60-day free trial. After the trial, it will stay in your seller dashboard but be hidden from buyers until Kiri Cars verifies the listing fee."
+        : isFreeListing
+          ? "Vehicle published. Your account-level 60-day free window applies; this listing will remain active for 75 days."
           : "Listing submitted with " + images.length + (images.length === 1 ? " photo. " : " photos. ") +
             "Estimated listing fee: KSh " + fee.toLocaleString("en-KE") +
             ". It remains hidden until Kiri Cars verifies payment.");
@@ -804,21 +843,88 @@ async function publishDraft(car, button) {
 
   button.disabled = true;
   try {
+    // Drafts are private while an application is pending. Publishing after approval
+    // must use the same account-level entitlement and payment flow as a new listing.
+    const existingCarsSnapshot = currentRole === "dealer"
+      ? await getDocs(query(collection(db, "cars"), where("addedBy", "==", currentUid)))
+      : null;
+    const hasPreviousListings = Boolean(existingCarsSnapshot && !existingCarsSnapshot.empty);
     const published = { ...car };
     delete published.id;
     delete published._source;
     delete published.listingExpiresAt;
     delete published.freeTrialApprovedAt;
-    const isDealerTrial = currentRole === "dealer";
-    published.listingStatus = isDealerTrial ? "active" : "pending_payment";
-    published.paymentStatus = isDealerTrial ? "free_trial" : "pending";
-    published.listingFee = isDealerTrial ? 0 : listingFeeForPrice(published.price);
-    if (isDealerTrial) {
-      published.listingExpiresAt = Timestamp.fromDate(new Date(Date.now() + FREE_TRIAL_LISTING_MS));
-      published.freeTrialApprovedAt = serverTimestamp();
+    delete published.paymentId;
+    delete published.updatedAt;
+
+    const fee = listingFeeForPrice(published.price);
+    if (!Number.isFinite(fee) || fee <= 0) {
+      throw new Error("A valid listing fee could not be calculated for this vehicle.");
     }
-    await addDoc(collection(db, "cars"), published);
+
+    const carRef = doc(collection(db, "cars"));
+    const paymentRef = doc(collection(db, "listingPayments"));
+    await runTransaction(db, async (transaction) => {
+      const profileRef = doc(db, "admins", currentUid);
+      const profileSnap = await transaction.get(profileRef);
+      if (!profileSnap.exists()) throw new Error("Seller profile could not be verified.");
+      const latest = profileSnap.data();
+      if (latest.active !== true || latest.accountStatus === "suspended" ||
+          normalizeRole(latest.role) !== currentRole ||
+          (currentRole === "dealer" && latest.approvalStatus !== "approved")) {
+        throw new Error("Your seller account is not currently approved to publish vehicles.");
+      }
+
+      const now = Date.now();
+      let windowEnd = timestampMillis(latest.freeListingWindowEndsAt);
+      let isFreeListing = false;
+      if (currentRole === "dealer" && latest.freeListingEligible === true &&
+          !hasPreviousListings && !latest.freeListingWindowStartedAt && !latest.freeListingWindowEndsAt) {
+        windowEnd = now + 60 * 24 * 60 * 60 * 1000;
+        transaction.update(profileRef, {
+          freeListingEligible: false,
+          freeListingWindowStartedAt: serverTimestamp(),
+          freeListingWindowEndsAt: Timestamp.fromMillis(windowEnd)
+        });
+        isFreeListing = true;
+      } else if (currentRole === "dealer" && latest.freeListingEligible === true &&
+          hasPreviousListings && !latest.freeListingWindowStartedAt && !latest.freeListingWindowEndsAt) {
+        // A prior listing means this account must not retain an unused free entitlement.
+        transaction.update(profileRef, { freeListingEligible: false });
+      } else if (currentRole === "dealer" && windowEnd !== null && windowEnd > now) {
+        isFreeListing = true;
+      }
+
+      if (isFreeListing) {
+        published.listingStatus = "active";
+        published.paymentStatus = "free_trial";
+        published.listingFee = 0;
+        published.listingExpiresAt = Timestamp.fromMillis(now + FREE_TRIAL_LISTING_MS);
+        published.freeTrialApprovedAt = serverTimestamp();
+        transaction.set(carRef, published);
+      } else {
+        published.listingStatus = "pending_payment";
+        published.paymentStatus = "pending";
+        published.listingFee = fee;
+        published.paymentId = paymentRef.id;
+        transaction.set(carRef, published);
+        transaction.set(paymentRef, {
+          paymentId: paymentRef.id,
+          listingId: carRef.id,
+          sellerId: currentUid,
+          amount: fee,
+          status: "pending",
+          paymentMethod: "awaiting_payment",
+          createdAt: serverTimestamp()
+        });
+      }
+    });
+
     await deleteDoc(doc(db, "dealerDrafts", car.id));
+    setText(formMessage, "Draft published successfully. " +
+      (published.paymentStatus === "free_trial"
+        ? "Your 60-day account free window applies; this listing remains active for 75 days."
+        : "It remains hidden until Kiri Cars verifies payment."));
     await loadMyCars();
   } catch (error) {
     console.error("Publish draft failed:", error);
