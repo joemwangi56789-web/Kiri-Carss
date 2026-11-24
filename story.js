@@ -71,6 +71,17 @@ function renderStory(story) {
       figure.appendChild(image);
       if (block.caption) figure.appendChild(element("figcaption", block.caption));
       root.appendChild(figure);
+    } else if (block.type === "video" && /^https:\\/\\/(www\\.youtube-nocookie\\.com\\/embed\\/[A-Za-z0-9_-]+|player\\.vimeo\\.com\\/video\\/\\d+)$/.test(block.embedUrl || "")) {
+      const figure = document.createElement("figure");
+      const frame = document.createElement("iframe");
+      frame.src = block.embedUrl;
+      frame.title = story.title || "Kiri Stories video";
+      frame.loading = "lazy";
+      frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+      frame.allowFullscreen = true;
+      frame.referrerPolicy = "strict-origin-when-cross-origin";
+      figure.appendChild(frame);
+      root.appendChild(figure);
     }
   }
 
